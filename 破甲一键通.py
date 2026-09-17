@@ -2323,25 +2323,69 @@ def header(title, sub=""):
     print(BOLD(CYAN("╚" + "═" * W + "╝")))
 
 
-def _auto_offer_pick(t, args):
-    """自动探测不到安装位置时，交互模式下主动问一句要不要手动选。
+INSTALL_HINT = {
+    "dsh": ("社区桌面版（Windows x64，约 149 MB）",
+            "https://github.com/anywhere-labs/dsh-desktop/releases/latest"),
+    "wb":  ("WorkBuddy 官网（下载安装包）",
+            "https://www.workbuddy.cn"),
+}
 
-    返回 True 表示"该目标可以继续处理"。静默/非交互模式（守护任务、--yes、管道）
-    直接返回 False，绝不弹窗，免得把后台任务挂死。
+
+def _open_download(url):
+    """用系统默认浏览器打开链接（标准库 webbrowser，零第三方依赖）。"""
+    if not url:
+        return False
+    try:
+        import webbrowser
+        return bool(webbrowser.open(url))
+    except Exception:
+        return False
+
+
+def _offer_install_help(t, args):
+    """自动探测不到安装位置时的引导：A 去下载安装 / B 手动选目录。
+
+    返回 True 表示"该目标可以继续处理"。
+    非交互（--quiet / --yes / 管道、守护任务）只打印文字提示，
+    **绝不弹窗、绝不开浏览器** —— 否则后台任务会被挂死或每 30 分钟弹一个浏览器窗口。
     """
     try:
         if t.detect_ok(args):
             return True
     except Exception:
         return True
+
+    name, url = INSTALL_HINT.get(t.key, ("", ""))
     if not can_ask(args):
+        log("没找到安装位置；装了就用 --pick %s 手动指定。" % t.key, "y", t.key)
+        if url:
+            log("  没装的话：%s（%s）" % (url, name), "dg", t.key)
         return False
+
+    bar = "  " + "-" * 68
     say("")
     say("  [%s] 自动探测没找到安装位置。" % t.label, "y")
-    say("       手动指定之后会被记住，以后不用再选。", "dg")
-    if _confirm("       现在手动选一下？（会弹出系统目录选择窗口）"):
+    say(bar)
+    say("    A  我还没装     -> 打开下载页：%s" % name)
+    say("                       %s" % url)
+    say("    B  我已经装了   -> 弹窗手动选安装目录（选完会记住，下次不用再选）")
+    say(bar)
+    try:
+        c = input("  输入 A 或 B（直接回车 = 本次跳过 %s）> " % t.key).strip().upper()
+    except (EOFError, KeyboardInterrupt):
+        say("")
+        return False
+    if c == "A":
+        if _open_download(url):
+            say("  已用默认浏览器打开下载页 —— 装好之后重跑本脚本即可。", "g")
+        else:
+            say("  没能自动打开浏览器，请手动访问上面的链接。", "y")
+        return False
+    if c == "B":
         if t.ask_pick(args):
             return True
+        return False
+    say("  已跳过 %s。" % t.label, "dg")
     return False
 
 
@@ -2350,7 +2394,7 @@ def run_status(args, targets=None):
     header("状态检测（只读）", "多套工具已合并为一个脚本 / 两个目标共用一套人格")
     for k in targets:
         t = TARGETS[k]()
-        _auto_offer_pick(t, args)
+        _offer_install_help(t, args)
         say("")
         say(BOLD(CYAN("── %s ──────────────────────────────────────────" % t.label)))
         try:
@@ -2369,7 +2413,7 @@ def run_action(args, mode, targets=None):
     for k in targets:
         t = TARGETS[k]()
         if mode != "revert":
-            _auto_offer_pick(t, args)
+            _offer_install_help(t, args)
         say("")
         say(BOLD(CYAN("── %s ──────────────────────────────────────────" % t.label)))
         try:
@@ -2403,12 +2447,11 @@ def menu(args):
                      "  [6] 还原              选择目标还原成官方原版",
                      "  [7] WorkBuddy 守护    安装 / 卸载 / 查看后台守护任务",
                      "  [8] WorkBuddy 快照    生成基准 / 与基准对比",
-                     "  [9] 指定安装目录     自动找不到时手动选（弹系统目录窗口）",
                      "  [0] 退出"):
             print(BOLD(CYAN("║")) + fit(line, W) + BOLD(CYAN("║")))
         print(BOLD(CYAN("╚" + "═" * W + "╝")))
         try:
-            c = input(BOLD(GREEN("  请选择 (0-9) > "))).strip().lstrip("\ufeff")
+            c = input(BOLD(GREEN("  请选择 (0-8) > "))).strip().lstrip("\ufeff")
         except (EOFError, KeyboardInterrupt):
             print()
             return
@@ -2439,8 +2482,6 @@ def menu(args):
                 _guard_menu(args)
             elif c == "8":
                 _snap_menu(args)
-            elif c == "9":
-                _pick_menu(args)
             else:
                 continue
         except KeyboardInterrupt:
@@ -2540,47 +2581,6 @@ def _snap_menu(args):
         t.do_compare()
 
 
-def _pick_menu(args):
-    """手动指定安装目录 —— 会调出系统原生的目录选择窗口。"""
-    say("")
-    say(BOLD(CYAN("  手动指定安装目录")))
-    say(GRAY("  自动探测找不到时用这个；指定过一次就会被记住。"))
-    say("")
-    order = ["dsh", "wb"]
-    for i, k in enumerate(order, start=1):
-        t = TARGETS[k]()
-        try:
-            ok = t.detect_ok(args)
-        except Exception:
-            ok = False
-        manual = get_manual_path(k)
-        state = ("已找到" if ok else "未找到") + ("（手动指定：" + manual + "）" if manual else "")
-        say("  [%d] %-12s %s" % (i, t.label, state), "g" if ok else "y")
-        say("      %s" % t.pick_title(), "dg")
-    say("  [3] 清除手动指定（改回自动探测）")
-    try:
-        c = input(BOLD(GREEN("  选择 > "))).strip().lstrip("\ufeff")
-    except (EOFError, KeyboardInterrupt):
-        return
-    if c in ("1", "2"):
-        do_ask_pick(TARGETS[order[int(c) - 1]](), args)
-    elif c == "3":
-        say("")
-        say("  清除哪个？[1] dsh  [2] WorkBuddy  [3] 全部")
-        try:
-            c2 = input(BOLD(GREEN("  选择 > "))).strip().lstrip("\ufeff")
-        except (EOFError, KeyboardInterrupt):
-            return
-        if c2 in ("1", "2", "3"):
-            k = order[int(c2) - 1]
-            clear_manual_path(k)
-            say("  已清除 %s 的手动指定，改回自动探测。" % TARGETS[k]().label, "g")
-        elif c2 == "4":
-            clear_manual_path()
-            say("  已清除全部手动指定，改回自动探测。", "g")
-
-
-# ══════════════════════════════════════════════════════════════════════════════
 #  七、运行库自检 + 入口
 # ══════════════════════════════════════════════════════════════════════════════
 

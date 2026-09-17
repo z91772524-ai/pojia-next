@@ -1,19 +1,18 @@
 # 破甲一键通 v6.0
 
-把桌面那**五套**桌面端 AI 客户端"破甲"工具，合并成**一个脚本**：一套人格，三个目标，**零第三方依赖**（纯 Python 标准库）。
+把桌面那**几套**桌面端 AI 客户端"破甲"工具，合并成**一个脚本**：一套人格，两个目标，**零第三方依赖**（纯 Python 标准库）。
 
-> 原五个工具目录一个字节都没动。本目录可独立使用，也可以整包发给别人。
+> 原工具目录一个字节都没动。本目录可独立使用，也可以整包发给别人。
 
-合并来源：`WorkBuddy_Unlock_一键破甲_v1`、`WorkBuddy破甲-v4`、`workbuddy国际版本破甲`、`Codex破甲工具`、`dsh-purge`。
+合并来源：`WorkBuddy_Unlock_一键破甲_v1`、`WorkBuddy破甲-v4`、`workbuddy国际版本破甲`、`dsh-purge`。
 
 ---
 
-## 一、管哪三个目标
+## 一、管哪两个目标
 
 | 目标 | 是什么 | 注入方式 |
 |---|---|---|
 | `dsh` | DeepSeek Harness（桌面端 / npm 全局 / npx 缓存 / 便携版） | 三层文件级补丁：提示词层、persona 层、区段层 |
-| `codex` | Codex CLI | 官方 `model_instructions_file` 配置项注入，**不改二进制、不抓包** |
 | `wb` | WorkBuddy | 六层靶点：模板 / `product.json` / 命令闸门 / 网页过滤 / 运行时缓存 / 会话快照 |
 
 ---
@@ -25,11 +24,11 @@
 双击 **`一键破甲.bat`** → 出菜单 → 按数字选：
 
 ```
-  [1] 一键破甲         dsh + Codex + WorkBuddy 全打一遍
+  [1] 一键破甲         DSH + WorkBuddy 全打一遍
   [2] 检测状态         只读，不改任何文件      ← 建议先看这个
   [3] 诊断详情         逐文件列出补丁/备份状态
   [4] 预演             只显示会改什么
-  [5] 选目标单打        dsh / codex / wb 任选
+  [5] 选目标单打        dsh / wb 任选
   [6] 还原              选择目标还原成官方原版
   [7] WorkBuddy 守护    安装 / 卸载 / 查看后台守护任务
   [8] WorkBuddy 快照    生成基准 / 与基准对比
@@ -56,9 +55,9 @@ python 破甲一键通.py --guard install            # 装 WorkBuddy 守护任�
 
 | 开关 | 作用 |
 |---|---|
-| `--target all\|dsh\|codex\|wb` | 选目标，可逗号分隔（默认 `all`） |
+| `--target all\|dsh\|wb` | 选目标，可逗号分隔（默认 `all`） |
 | `--full` | WorkBuddy 完全破甲：+网页过滤 +Ask 模式 +文件保护中和 |
-| `--force` | 已破甲的目标也重写（用于把三套统一成同一份人格） |
+| `--force` | 已破甲的目标也重写（用于把两套统一成同一份人格） |
 | `--pick TARGET` / `--clear` | 手动指定安装位置并记住 / 清除记住的路径 |
 | `--kill-dsh` | 允许结束正在跑的 DSH 进程（**默认禁止**，见下） |
 | `--yes` / `-y` | 非交互，不二次确认 |
@@ -70,21 +69,13 @@ python 破甲一键通.py --guard install            # 装 WorkBuddy 守护任�
 ## 三、它到底改了什么
 
 - **DSH**：把 `WORKSPACE_CONTEXT_INTRO` 一类"仅供参考、不覆盖系统指令"的免责声明升级成"ACTIVE 且强制"；剥离官方默认身份，改由 `persona.md` 作唯一身份来源。
-- **Codex**：写一份 Markdown 指令文件进 `CODEX_HOME`，然后在 `config.toml` 里用官方支持的配置项指过去：
-
-  ```toml
-  # >>> codex-unlock begin
-  model_instructions_file = "./codex-unlock-instructions.md"
-  # <<< codex-unlock end
-  ```
-
 - **WorkBuddy**：六层靶点 —— ① `templates\*.tpl` 政策块整块替换；② `cli\product.json` 内嵌提示词文本级替换（不重排 JSON）；③ `codebuddy.js` 命令闸门解锁 + 去网页内容过滤；④ 数据目录 `plugins` 里的副本；⑤ `cache\acc-product-config-v3.json` 运行时缓存；⑥ `TEMP` 会话快照（默认只清 24 小时以上的）。
 
 ---
 
 ## 四、人格怎么改
 
-改同目录的 **`persona.md`**，脚本会把它拼在内置强化版内容政策**前面**，三个客户端收到完全一致的口径。改完生效：
+改同目录的 **`persona.md`**，脚本会把它拼在内置强化版内容政策**前面**，两个客户端收到完全一致的口径。改完生效：
 
 ```bash
 python 破甲一键通.py --apply --force --yes
@@ -98,7 +89,7 @@ python 破甲一键通.py --apply --force --yes
 
 ## 五、安全 & 可逆
 
-- **改前必留备份**，后缀跟原工具保持一致，可互相还原：DSH → `<文件名>.dshpurge.bak`；Codex → `<codex-home>/codex-unlock-backups/`；WorkBuddy → `<文件名>.unlockbak`。另按时间戳归档一份到 `历史备份/`。
+- **改前必留备份**，后缀跟原工具保持一致，可互相还原：DSH → `<文件名>.dshpurge.bak`；WorkBuddy → `<文件名>.unlockbak`。另按时间戳归档一份到 `历史备份/`。
 - **升级自愈**：官方升级覆盖文件后，能识别"当前是干净官方版、备份是更老原版"，自动归档旧备份重建基准，不会出现"还原一下反而把文件降级"。
 - `--revert` / `--restore` 随时还原。只做文件级补丁，**不删包、不碰注册表/服务**。
 - `--status` / `--dry-run` 纯只读，可以先看再动手。
@@ -125,7 +116,7 @@ DSH Desktop 的进程里很可能就跑着正在跟你对话的那个会话 —�
 
 ## 八、常见问答
 
-**Q：跑完要重启吗？** —— 要。DSH 和 WorkBuddy 需完全退出（含托盘）再打开；Codex 重启 `codex` 即可。
+**Q：跑完要重启吗？** —— 要。DSH 和 WorkBuddy 需完全退出（含托盘）再打开。
 
 **Q：官方升级后补丁还在吗？** —— 升级会覆盖 `node_modules` / `resources`，补丁被冲掉，重跑 `--apply` 即可（会自动识别哪些被冲掉，只补该补的）。
 
@@ -141,7 +132,7 @@ DSH Desktop 的进程里很可能就跑着正在跟你对话的那个会话 —�
 | `一键破甲.bat` | 纯 ASCII 启动器，通配符定位 `.py`，自动找 Python |
 | `persona.md` | 唯一共用人格源 |
 | `使用说明.md` | 完整说明书（228 行） |
-| `修复报告.md` | 相比原五套工具修掉的 18 处缺陷（B1–B18）+ 3 处合并层问题（C1–C3），逐条对照 |
+| `修复报告.md` | 相比原工具修掉的 18 处缺陷（B1–B18）+ 3 处合并层问题（C1–C3），逐条对照 |
 | `赞赏码.png` | 微信支付 / 支付宝收款码（自愿打赏用，不参与功能） |
 | `LICENSE` | MIT 许可证 |
 | `.gitattributes` | 仓库内统一 LF，但 `.bat` 强制 CRLF（否则 clone 下来双击失效） |

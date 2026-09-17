@@ -1,0 +1,5 @@
+# 统一换行处理：仓库内一律 LF，只有 Windows 批处理保持 CRLF
+* text=auto
+*.py text eol=lf
+*.md text eol=lf
+*.bat text eol=crlf

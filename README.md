@@ -173,7 +173,9 @@ DSH Desktop 的进程里很可能就跑着正在跟你对话的那个会话 —�
 | **WorkBuddy**（腾讯）<br><sub>v5.5.6</sub> | [workbuddy.cn](https://www.workbuddy.cn) | 目标客户端之一；本项目前身「WorkBuddy 系列破甲工具」的提示词与逻辑来自其生态 |
 | **作者** | [@z91772524-ai](https://github.com/z91772524-ai) | 需求提出、实机验证、最终把关 |
 
-> 说明：DSH 与 WorkBuddy 的官方账号以「共同创作」名义在此署名致谢；它们**不是**本仓库在 GitHub 上的协作者（那需要对方账号授权）。
+> **关于 GitHub 上怎么署名的（重要）**：本项目在提交信息里用 `Co-authored-by` 标注了 DeepSeek Harness 与 WorkBuddy，**提交页面可以看到这两位共同作者**。
+>
+> 但 **GitHub 的 Contributors（贡献者）列表只统计「个人账号」**：组织账号（如 `anywhere-labs`）和没有 GitHub 账号的产品，无论怎么写都不会出现在那个列表里——作者实测验证过（组织的 noreply 邮箱两种写法都不被解析）。所以它们的署名以本节表格 + 提交信息为准，**不是漏掉了**。
 
 ---
 

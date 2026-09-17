@@ -1,10 +1,29 @@
 # 破甲一键通 v6.0
 
+**一个脚本，把 DSH（DeepSeek Harness）和 WorkBuddy 的提示词 / 人格一次换到位** —— 纯 Python 标准库、零依赖、双击即用、改前必留备份、随时可一键还原。
+
+[![Release](https://img.shields.io/github/v/release/z91772524-ai/pojia-next?label=release&color=2ea043)](https://github.com/z91772524-ai/pojia-next/releases)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
+[![Platform](https://img.shields.io/badge/platform-Windows-0078d4)](https://www.microsoft.com/windows)
+[![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)]()
+
 > ## ⚠️ 免责声明（务必先读）
 > **本项目仅用于学习交流，无不良引导。若他人使用本项目从事任何违法、违规或侵权行为，与作者没有任何关系，全部后果由使用者自行承担。**
 > 请遵守所在地法律法规与目标软件的服务条款。完整条款见下方「免责声明」章节。
 
 把桌面那**几套**桌面端 AI 客户端"破甲"工具，合并成**一个脚本**：一套人格，两个目标，**零第三方依赖**（纯 Python 标准库）。
+
+![界面预览](preview.png)
+
+## 为什么值得一试
+
+- ⚡ **一个脚本管两个客户端** —— DSH + WorkBuddy 共用同一份 `persona.md`，口径逐字一致，不用再各改各的
+- 📦 **零依赖、不改二进制** —— 纯文本文件级补丁，不删包、不碰注册表 / 服务；断网也能跑
+- 🛡 **改前必留备份、随时还原** —— `--revert` 一键回官方原版；官方升级覆盖后自动重建基准，不会「越还原越旧」
+- 🧯 **默认不杀进程** —— 检测到 DSH 正在运行只提示、不结束它（保住你手上的会话）
+- 🧭 **找不到安装位置也不卡住** —— 自动扫所有盘符；还找不到就给你 A/B 选择：**A** 打开下载页、**B** 弹窗选目录并记住
+- 🔍 **可以先看再动手** —— `--status` / `--dry-run` 纯只读，什么都不改
 
 > 原工具目录一个字节都没动。本目录可独立使用，也可以整包发给别人。
 
@@ -142,6 +161,7 @@ DSH Desktop 的进程里很可能就跑着正在跟你对话的那个会话 —�
 | `使用说明.md` | 完整说明书（228 行） |
 | `修复报告.md` | 相比原工具修掉的 18 处缺陷（B1–B18）+ 3 处合并层问题（C1–C3），逐条对照 |
 | `赞赏码.png` | 微信支付 / 支付宝收款码（自愿打赏用，不参与功能） |
+| `preview.png` | README 顶部的界面预览图 |
 | `LICENSE` | MIT 许可证 |
 | `.gitattributes` | 仓库内统一 LF，但 `.bat` 强制 CRLF（否则 clone 下来双击失效） |
 | `.gitignore` | 排除 `状态/`、`破甲日志.txt` 等运行时产物 |

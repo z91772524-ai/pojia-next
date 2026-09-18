@@ -14,9 +14,10 @@ import zipfile
 REPO = r"E:\DSH-Workspace\破甲next-github"
 DIST = r"E:\DSH-Workspace\破甲next-发布素材"
 
-# Release 附件里放哪些（README 里不上附件；preview.png 按设计只在仓库里）
+# Release 附件里放哪些（v7.5 起把 preview.png 也带上：README 引用了它，
+# 不带的话解压出来的 README 里那张预览图是坏图）
 ASSETS = ["破甲一键通.py", "一键破甲.bat", "persona.md", "使用说明.md",
-          "修复报告.md", "README.md", "LICENSE", "赞赏码.png"]
+          "修复报告.md", "README.md", "LICENSE", "preview.png", "赞赏码.png"]
 # 清单里额外列出的仓库文件
 EXTRA = ["persona.md"]
 

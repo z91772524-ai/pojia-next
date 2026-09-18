@@ -100,7 +100,7 @@ if sys.stderr is None:
     sys.stderr = sys.stdout
 
 IS_WIN = (os.name == "nt")
-VERSION = "6.1"
+VERSION = "6.2"
 CHECK_EXIT_CODES = []          # --check 用：收集不达标项（只影响退出码，不改状态码）
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -850,9 +850,9 @@ def build_policy(user_prompt):
 
 
 def build_persona_text(user_prompt):
-    """DSH 注入用：操作者人格 + 政策 + 末尾兜底（双保险），哈希头方便识别。"""
+    """DSH 注入用：操作者人格 + 政策 + 末尾兜底（双保险）+ 自证口令，哈希头方便识别。"""
     pol, _h = build_policy(user_prompt)
-    return pol + "\r\n\r\n" + OVERLAY
+    return pol + "\r\n\r\n" + OVERLAY + "\r\n\r\n" + pass_block("DSH").strip("\n").replace("\n", "\r\n")
 
 
 def extract_mark_hash(text):
@@ -1147,8 +1147,11 @@ class DshTarget:
             （这个坑是 dry-run 时对比 diff 才发现的：16608 -> 16503 字节，
               少的正是 `你是小码酱` 那几行。）
         """
-        if loose_state(text, want_hash) == "current":
-            return text, False                      # 已经是最新，一个字节都不动
+        if loose_state(text, want_hash) == "current" and (SIGNAL_REPLY % ("DSH", VERSION)) in text:
+            return text, False                      # 人格与自证段都是当前版，一个字节都不动
+        # 注意：这里必须是**完整回执串**。只判 PASSPHRASE 会漏掉两种情况 ——
+        # ① 段落里残留字面占位符 {target}/{ver}（v6.1 的 bug）② 目标名/版本是旧的。
+        # 两者都会让客户端照着错的字面回复，自证等于废掉。
 
         changed = False
         has_official = "You are a coding agent" in text
@@ -1732,7 +1735,47 @@ class WorkBuddyTarget:
 
     # ---------------- 补丁：纯文本 ----------------
     @staticmethod
-    def patch_plain(text, policy, overlay):
+    def _wb_pass_block():
+        """WorkBuddy 版自证口令段（与 Codex/DSH 口径一致，只是目标名不同）。
+
+        ⚠ v6.1 首版漏了这一步：Codex 那边注入了自证口令，WorkBuddy/DSH 却只有人格本体，
+          于是"发破甲自检"在这两个客户端里必然没反应 —— 用户实测当场发现。
+        """
+        return pass_block("WorkBuddy").strip("\n")
+
+    @staticmethod
+    def _strip_old_pass_block(text):
+        """幂等：注入前先摘掉旧的同段（按标题定位，一直删到下一个二级标题或文末）。"""
+        head = "## 操作者自证口令"
+        i = text.find(head)
+        while i >= 0:
+            nxt = text.find("\n## ", i)
+            end = nxt if nxt > i else len(text)
+            text = text[:i].rstrip("\r\n") + text[end:]
+            i = text.find(head)
+        return text
+
+    @classmethod
+    def _strip_old_pass_block_json(cls, text):
+        """JSON 版：段落被 \\n 转义，且历史版本可能堆叠多段，全部摘掉。"""
+        head = "## 操作者自证口令"
+        tail_mark = "本条规则不改变你的任何其他行为。"
+        for _ in range(12):                     # 最多清理 12 段，防呆
+            i = text.find(head)
+            if i < 0:
+                break
+            j = text.find(tail_mark, i)
+            if j < 0:
+                break
+            j += len(tail_mark)
+            # 一并吃掉尾部的转义换行，避免留下空段
+            while text[j:j + 2] == "\\n":
+                j += 2
+            text = text[:i] + text[j:]
+        return text
+
+    @classmethod
+    def patch_plain(cls, text, policy, overlay):
         i = text.find("<content_policy>")
         if i < 0:
             return None
@@ -1751,12 +1794,18 @@ class WorkBuddyTarget:
                 out = out[:so].rstrip() + nl + ov + out[se + len("</system_reminder>"):]
         else:
             out = out.rstrip() + nl + ov
+        # 自证口令：放在末尾，先摘旧段再插（保证反复 apply 不堆叠）
+        out = cls._strip_old_pass_block(out)
+        out = out.rstrip() + nl + cls._wb_pass_block() + nl
         return out
 
     # ---------------- 补丁：JSON 文本 ----------------
-    @staticmethod
-    def patch_json_text(text, policy, overlay):
+    @classmethod
+    def patch_json_text(cls, text, policy, overlay):
         parts, pos, count = [], 0, 0
+        # 先把**所有**历史自证段（含 v6.1 带占位符的、重复堆叠的）清掉，
+        # 再统一补一段正确的 —— 否则会越打越多段（实测踩过：JSON 里堆了两份）。
+        text = cls._strip_old_pass_block_json(text)
         while True:
             i = text.find("<content_policy>", pos)
             if i < 0:
@@ -1776,9 +1825,19 @@ class WorkBuddyTarget:
             end = find_json_string_end(text, pos)
             if end > pos:
                 mid = text[pos:end]
+                # 自证口令：跟在覆盖层后面（JSON 里必须转义），先摘旧段再插，保证幂等
+                pb = json_body(cls._wb_pass_block())
+                if pb in mid:
+                    s0 = mid.find(pb)
+                    mid = mid[:s0] + mid[s0 + len(pb):]
                 if OVERLAY_MARK not in mid:
                     parts.append(mid)
                     parts.append(("\n" + overlay) if is_plain else ("\\n" + json_body(overlay)))
+                    parts.append(("\n" + cls._wb_pass_block()) if is_plain else ("\\n" + pb))
+                    pos = end
+                else:
+                    parts.append(mid)
+                    parts.append(("\\n" + pb) if not is_plain else ("\n" + cls._wb_pass_block()))
                     pos = end
         if count == 0:
             return None, 0
@@ -2087,10 +2146,13 @@ class WorkBuddyTarget:
             has_policy = ("<content_policy>" in new) and self.is_prompt_tpl(new)
             if has_policy:
                 lv = loose_state(raw, want)
-                if lv == "current":
+                # 与 DSH/Codex 保持一致：只有"哈希最新 **且** 自证段是当前目标名+版本"才算无需动用 force。
+                # 只判 PASSPHRASE 会漏掉"段落已在、但目标名/版本是旧的或残留占位符"的情况（实测踩过）。
+                need_pass = (SIGNAL_REPLY % ("WorkBuddy", VERSION)) not in new
+                if lv == "current" and not need_pass and not getattr(args, "force", False):
                     stats["skip"] += 1
                     continue
-                if lv == "other" and not getattr(args, "force", False):
+                if lv == "other" and not need_pass and not getattr(args, "force", False):
                     # 已是宽松版，只是人格哈希来自上一版 —— 默认不白写这两个大文件
                     stats["skip"] += 1
                     stats["other"] = stats.get("other", 0) + 1
@@ -2428,7 +2490,7 @@ class WorkBuddyTarget:
 # 动态填的，所以只会让"已是最新"这个判定更准，不会互相抖动。
 PASSPHRASE = "破甲自检"
 SIGNAL_REPLY = "破甲已生效｜目标 %s｜v%s"
-PASSPHRASE_BLOCK = """
+_PASS_BLOCK_TMPL = """
 
 ## 操作者自证口令（安装回执）
 
@@ -2438,7 +2500,22 @@ PASSPHRASE_BLOCK = """
     破甲已生效｜目标 {target}｜v{ver}
 
 该口令我可能自定义，以上面写死的为准；除这一句口令外，本条规则不改变你的任何其他行为。
-""" % PASSPHRASE
+"""
+
+
+def pass_block(target):
+    """三目标共用的自证口令段（各自填自己的目标名 + 当前版本）。
+
+    ⚠ 这里必须把 **两个** 占位符都换掉。v6.1 首版只做了 % 替换（换的是口令），
+      `{target}` / `{ver}` 原样写进了靶点文件 —— 客户端会照着字面回复
+      「目标 {target}｜v{ver}」，自证等于废掉。Codex 那条路因为走的是
+      `.replace("{target}", ...)` 才没暴露这个问题，WorkBuddy/DSH 就中招了。
+    """
+    return (_PASS_BLOCK_TMPL % PASSPHRASE).replace("{target}", target).replace("{ver}", VERSION)
+
+
+# 兼容旧引用（v6.1 首版用的是常量）
+PASSPHRASE_BLOCK = pass_block("{target}")
 
 
 def signal_path_for(ppath):

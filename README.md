@@ -294,7 +294,10 @@ def write_text(path, text, bom=False, make_dirs=False):
 - **bandit**：`0 HIGH / 0 MEDIUM`；71 条 LOW 全部是"已知且可接受"的：`try/except/pass` 的尽力清理、
   以列表形式执行的 subprocess、以及把自证口令常量误判成"硬编码密码"。逐条豁免理由写在 [`.bandit.yml`](.bandit.yml)。
 - **semgrep**：`p/python` + `p/security-audit` 规则集，ERROR/WARNING 级别必须为 0。
-- 两个任务都在 [`.github/workflows/security.yml`](.github/workflows/security.yml) 里，
+  唯一排除的是 `insecure-hash-sha1` —— 本项目的 SHA1 只做"人格版本标记 / 快照目录名"，
+  **非密码学用途**，代码里已显式标注 `usedforsecurity=False`（bandit 也认可这个标注），
+  排除理由写在 workflow 注释里，而不是把整条规则关掉不看。
+- 三个任务都在 [`.github/workflows/security.yml`](.github/workflows/security.yml) 里，
   **每次 push / PR 自动跑**；徽章挂了 workflow 状态，红绿一眼可见。
 - 你可以本地复现同样的门禁（三条命令）：
 

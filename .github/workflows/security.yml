@@ -44,9 +44,13 @@ jobs:
       - run: python -m pip install --disable-pip-version-check semgrep
       - name: 门禁：ERROR / WARNING 必须为 0
         run: |
+          # 唯一排除项：insecure-hash-sha1 —— 本项目的 sha1 只用于"人格版本标记 / 快照目录名"，
+          # 非密码学用途，且代码里已显式标注 usedforsecurity=False（bandit 认可该标注）。
+          # 排除理由写在这里，而不是把整条规则关掉不看。
+          EXCLUDE="--exclude-rule python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1"
           semgrep --config p/python --config p/security-audit \
                   --severity ERROR --severity WARNING --error --metrics=off \
-                  --json -o semgrep.json 破甲一键通.py || true
+                  $EXCLUDE --json -o semgrep.json 破甲一键通.py || true
           python -c "import json,sys; d=json.load(open('semgrep.json',encoding='utf-8')); bad=[r for r in d.get('results',[]) if (r.get('extra',{}).get('severity') or '').upper() in ('ERROR','WARNING')]; print('ERROR/WARNING:',len(bad)); [print('  %s %s:%s' % (r['check_id'], r['path'], r['start']['line'])) for r in bad[:40]]; sys.exit(1 if bad else 0)"
 
   call-audit:

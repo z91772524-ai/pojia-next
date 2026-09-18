@@ -100,7 +100,7 @@ if sys.stderr is None:
     sys.stderr = sys.stdout
 
 IS_WIN = (os.name == "nt")
-VERSION = "7.0"
+VERSION = "7.1"
 CHECK_EXIT_CODES = []          # --check 用：收集不达标项（只影响退出码，不改状态码）
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -1166,6 +1166,7 @@ class DshTarget:
         # 注意：这里必须是**完整回执串**。只判 PASSPHRASE 会漏掉两种情况 ——
         # ① 段落里残留字面占位符 {target}/{ver}（v6.1 的 bug）② 目标名/版本是旧的。
         # 两者都会让客户端照着错的字面回复，自证等于废掉。
+        # 这也是老版本升级的入口：v6.x 没有自证段 → 这里判 False → 自动重写成当前版。
 
         changed = False
         has_official = "You are a coding agent" in text
@@ -2178,14 +2179,19 @@ class WorkBuddyTarget:
                 # 与 DSH/Codex 保持一致：只有"哈希最新 **且** 自证段是当前目标名+版本"才算无需动用 force。
                 # 只判 PASSPHRASE 会漏掉"段落已在、但目标名/版本是旧的或残留占位符"的情况（实测踩过）。
                 need_pass = (SIGNAL_REPLY % ("WorkBuddy", VERSION)) not in new
-                if lv == "current" and not need_pass and not getattr(args, "force", False):
+                # 老版本升级判据：人格哈希不含硬化块/自证段，光靠 need_pass 救不了"整份文件都要刷新"的情况
+                need_up = need_upgrade(data_dir or install, self.key)
+                if lv == "current" and not need_pass and not need_up and not getattr(args, "force", False):
                     stats["skip"] += 1
                     continue
-                if lv == "other" and not need_pass and not getattr(args, "force", False):
+                if lv == "other" and not need_pass and not need_up and not getattr(args, "force", False):
                     # 已是宽松版，只是人格哈希来自上一版 —— 默认不白写这两个大文件
                     stats["skip"] += 1
                     stats["other"] = stats.get("other", 0) + 1
                     continue
+                if need_up and lv == "current":
+                    log("  检测到旧版安装（护照 %s → 本版 %s）：自动重写升级。"
+                        % (passport_version(data_dir or install) or "无护照", VERSION), "c", "wb")
                 if as_json:
                     res, _c = self.patch_json_text(new, policy, OVERLAY)
                 else:
@@ -2633,7 +2639,7 @@ def target_label(key):
     注意与类上的 label（界面上用的全称，如 "DSH (DeepSeek Harness)"）区分开：
     全称适合横幅，短名才适合"预期回复：破甲已生效｜目标 DSH｜v6.1"这种回执。
     """
-    return {"dsh": "DSH", "wb": "WorkBuddy", "codex": "Codex"}.get(key, key)
+    return {"dsh": "DSH", "wb": "WorkBuddy", "codex": "Codex", "zcode": "ZCode"}.get(key, key)
 
 
 # ---- 2. 专属管理目录 / 护照 -------------------------------------------------
@@ -2748,6 +2754,28 @@ def snapshot_repair(root, key, note, extra=()):
         return ""
 
 
+def passport_version(root):
+    """从护照里读回"上次装的是哪一版"；没有护照返回 ""。"""
+    obj, _p = load_passport(root)
+    if not obj or obj.get("tool") != "pojia-yijiantong":
+        return ""
+    return str(obj.get("version", "") or "")
+
+
+def need_upgrade(root, key=""):
+    """是否需要用本版重写一遍（**老版本升级的关键判据**）。
+
+    为什么必须有它：人格哈希只算 POLICY_BASE+OVERLAY，**不含**后加的硬化块与自证段
+    —— 于是 v6.x 打的补丁在新版里依旧满足 `lv == "current"`（实测：v6.0 与 v7.0 的
+    哈希都是 6c8c200f8fe4）。只看哈希的跳过分支会让老用户**永远停在旧版**，而守护任务
+    跑的 `--apply --quiet` 不带 --force，也救不回来。
+
+    返回 True 的情形：护照版本 != 本版，或压根没有护照（从没用过本工具，或装的是更早的
+    独立工具箱）。此时重写一遍是幂等的，多写一次没有副作用。
+    """
+    return passport_version(root) != VERSION
+
+
 def passport_status(root, key):
     """返回 (状态, 说明)。用于状态检测里显示"哪个工具在管这个客户端"。"""
     obj, p = load_passport(root)
@@ -2815,7 +2843,7 @@ def run_check(args):
     """只读体检：磁盘态 + 凭证位置 + 版本一致性 + 自证就绪。永不改盘。"""
     header("体检（只读）", "只报分类与结论，不打印密钥原文，不改任何文件")
     ok_all = True
-    for k in ("dsh", "wb", "codex"):
+    for k in DEFAULT_TARGETS:   # 别再硬编码目标列表：加目标时这里会静默漏掉（踩过）
         t = TARGETS[k]()
         say("")
         say(BOLD(CYAN("── %s ──────────────────────────────────────────" % t.label)))
@@ -3080,15 +3108,19 @@ class CodexTarget:
         rel = "./" + name
 
         lv = loose_state(old_txt, want)
-        if lv == "current" and not getattr(args, "force", False):
+        up = need_upgrade(home, self.key)
+        if lv == "current" and not up and not getattr(args, "force", False):
             log("已是最新（本版人格），跳过。", "g", "codex")
             _ok, note = verify_ready(self.key, VERSION, passport_p)
             if not _ok and not dry:
                 write_receipts(home, self.key, dry=False, cfg_path=cfg_p, instr_path=instr_p)
             return {"skip": 1}
-        if lv == "other" and not getattr(args, "force", False):
+        if lv == "other" and not up and not getattr(args, "force", False):
             log("已是宽松态，但人格来自别的版本；默认不重写。要统一成本版加 --force。", "dg", "codex")
             return {"skip": 1}
+        if up and lv == "current":
+            log("检测到旧版安装（护照 %s → 本版 %s）：自动重写升级。"
+                % (passport_version(home) or "无护照", VERSION), "c", "codex")
 
         # —— 认领判定（关键安全点）——
         created_by_other = ""
@@ -3372,12 +3404,600 @@ def wb_cloudmem_status(data_dir):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+#  四·八、ZCode 相关工具（v7.1 新增目标）
+# ══════════════════════════════════════════════════════════════════════════════
+#  ZCode = zcode.z.ai（智谱 GLM 系的桌面/CLI coding agent）。官方文档确认的扩展面：
+#    · AGENTS.md                        仓库/工作区指导
+#    · ~/.zcode/                        用户级配置根（cli/ 数据、v2/setting.json、skills/、memories/）
+#    · Memory 文件                       zcode 记忆系统读取的 md
+#    · skills/<name>/SKILL.md            **深度 1 扫描**：每个直子目录自己要有 SKILL.md
+#    · ~/.agents/skills/                跨工具共享的技能根（ZCode 也扫这一层）
+#    · resources/glm/zcode.cjs          ← 系统提示词就在这个打包过的文件里（可选 patch）
+#
+#  设计取舍（与竞品的差异，都是刻意的）：
+#    ① 系统提示词 patch **默认关闭**（要显式 `--zpatch`），因为它是改打包 JS，风险最高；
+#       而且竞品那种"按压缩符号名（u9o/s9o/Xlt）定位"的做法**一升级就失效**，本工具改用
+#       锚点匹配 + node 语法校验 + 校验不过就不写，宁可少做一个通道也不写坏客户端。
+#    ② skills 同步按"深度 1 直子目录"摆（`<root>/<name>/SKILL.md`），不摆伞状目录 ——
+#       官方文档明确说伞状目录 ZCode 扫不到。
+
+ZCODE_ROOT_NAME = ".zcode"
+ZCODE_AGENTS = "AGENTS.md"
+ZCODE_STATE = "install-state.json"
+ZCODE_MEM_FILE = "pojia-yijiantong.md"
+ZCODE_MEM_DIRS = ("cli/memories/global/memory", "memories/global/memory")
+ZCODE_SKILL_DIRS = ("skills", os.path.join(".agents", "skills"))
+ZCODE_SYS_PROMPT_REL = os.path.join("resources", "glm", "zcode.cjs")
+ZCODE_MARK = "pojia-yijiantong zcode"
+
+
+def find_zcode_cjs(explicit=""):
+    """找 ZCode 的 resources/glm/zcode.cjs（只读探测，不做任何修改）。
+
+    探测顺序：显式路径 → 运行中的进程 → 注册表卸载项 → 常见安装位置 → 盘符浅扫。
+    """
+    if explicit:
+        p = os.path.normpath(explicit)
+        if os.path.isfile(p) and p.lower().endswith(".cjs"):
+            return p
+        cand = os.path.join(p, ZCODE_SYS_PROMPT_REL)
+        if os.path.isfile(cand):
+            return cand
+        return ""
+
+    # 1) 运行中的进程
+    try:
+        for _pid, _name, cmd in list_processes():
+            if not cmd:
+                continue
+            m = re.search(r'("[^"]*zcode[^"]*\.exe")', cmd, re.I)
+            if m:
+                exe = m.group(1).strip('"')
+                if os.path.isfile(exe):
+                    cand = os.path.join(os.path.dirname(exe), ZCODE_SYS_PROMPT_REL)
+                    if os.path.isfile(cand):
+                        return cand
+    except Exception:
+        pass
+
+    # 2) 注册表卸载项
+    roots = []
+    for hive in ("HKLM", "HKCU"):
+        for sub in (r"Software\Microsoft\Windows\CurrentVersion\Uninstall",
+                    r"Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall"):
+            roots.append("%s:\\%s" % (hive, sub))
+    for rp in roots:
+        try:
+            r = subprocess.run(["reg", "query", rp, "/s", "/f", "ZCode"],
+                               capture_output=True, text=True, timeout=25)
+            for m in re.finditer(r"(?im)^\s*InstallLocation\s+REG_SZ\s+(.+?)\s*$", r.stdout or ""):
+                cand = os.path.join(m.group(1).strip(), ZCODE_SYS_PROMPT_REL)
+                if os.path.isfile(cand):
+                    return cand
+        except Exception:
+            pass
+
+    # 3) 常见安装位置
+    home = os.path.expanduser("~")
+    cands = [os.path.join(home, ZCODE_SYS_PROMPT_REL)]
+    for env in ("LOCALAPPDATA", "APPDATA", "ProgramFiles", "ProgramFiles(x86)"):
+        v = os.environ.get(env)
+        if v:
+            cands += [os.path.join(v, "Programs", "ZCode", ZCODE_SYS_PROMPT_REL),
+                      os.path.join(v, "ZCode", ZCODE_SYS_PROMPT_REL)]
+    cands += [os.path.join("C:\\", "Program Files", "ZCode", ZCODE_SYS_PROMPT_REL),
+              os.path.join("C:\\", "Program Files (x86)", "ZCode", ZCODE_SYS_PROMPT_REL)]
+    for c in cands:
+        if os.path.isfile(c):
+            return c
+
+    # 4) 盘符浅扫（只往下 3 层，别把整机翻一遍）
+    for letter in string.ascii_uppercase:
+        root = letter + ":\\"
+        if not os.path.isdir(root):
+            continue
+        try:
+            for top in os.listdir(root):
+                d = os.path.join(root, top)
+                if not os.path.isdir(d) or not re.search(r"zcode", top, re.I):
+                    continue
+                cand = os.path.join(d, ZCODE_SYS_PROMPT_REL)
+                if os.path.isfile(cand):
+                    return cand
+        except OSError:
+            continue
+    return ""
+
+
+def node_syntax_ok(path):
+    """用 node --check 校验 JS 语法。返回 (是否通过, 说明)。node 不存在时返回 (None, ...)。
+
+    ⚠ 这是**写盘前的最后一道闸**：宁可不做 patch，也不能把客户端的打包 JS 写坏。
+    """
+    for exe in ("node", "node.exe"):
+        try:
+            r = subprocess.run([exe, "--check", path], capture_output=True, text=True, timeout=60)
+            if r.returncode == 0:
+                return True, "node --check 通过"
+            return False, ("node --check 失败：" + (r.stderr or "").strip()[:300])
+        except FileNotFoundError:
+            continue
+        except Exception as e:
+            return None, "校验异常：%s" % e
+    return None, "没装 node，无法做语法校验"
+
+
+def zcode_patch_sysprompt(cjs_path, payload, dry=False):
+    """把 ZCode 的系统提示词替换成 payload（锚点匹配 + 语法校验，失败就不写）。
+
+    返回 (状态, 说明)：状态 ∈ {"ok", "skip", "warn", "err"}
+      · 先找**版本稳定**的锚点：字面量 "You are ZCode…"，拿到它所属的变量名；
+      · 只替换那个字符串字面量的内容，保持 `var x="…"` 结构不变；
+      · 新内容按 JSON 转义塞进双引号里；
+      · 写前备份，写后用 node --check 校验，校验不过立刻回滚。
+    """
+    raw = read_text_safe(cjs_path)
+    if raw is None:
+        return "err", "读不到 %s" % cjs_path
+    if ZCODE_MARK in raw:
+        return "skip", "系统提示词已是本工具注入版（跳过）"
+
+    m = re.search(r'([A-Za-z_$][\w$]*)\s*=\s*"(You are ZCode[^"]{0,120})"', raw)
+    if not m:
+        return "warn", ("没找到版本稳定的锚点（\"You are ZCode…\"）；本版 ZCode 结构可能变了，"
+                        "已跳过系统提示词 patch（其余三个通道不受影响）")
+    var, old = m.group(1), m.group(2)
+    # ⚠ 必须把签名一起注入：否则"替换后必须含签名"这条自检永远不通过 → 永远拒写
+    #   （v7.1 首版就栽在这：先做自检后签名，结果通道等于没有）
+    payload = "<!-- %s %s -->\n%s" % (ZCODE_MARK, VERSION, payload)
+    lit = json.dumps(payload, ensure_ascii=False)      # 带引号的安全字面量
+    start = m.start(0)
+    end = m.end(0)
+    new = raw[:start] + ("%s=%s" % (var, lit)) + raw[end:]
+    if ZCODE_MARK not in new:
+        return "err", "替换后未包含本工具标记，放弃写入"
+    if dry:
+        return "ok", "[预演] 将替换变量 %s 里的系统提示词（%d → %d 字符）" % (var, len(old), len(payload))
+
+    bak = cjs_path + ".pojia.bak"
+    if not os.path.exists(bak):
+        try:
+            shutil.copy2(cjs_path, bak)
+        except Exception as e:
+            return "err", "备份失败，放弃写入：%s" % e
+    try:
+        write_text(cjs_path, new, bom=False)
+    except Exception as e:
+        return "err", "写入失败：%s" % e
+    ok, note = node_syntax_ok(cjs_path)
+    if ok is False:
+        try:
+            shutil.copy2(bak, cjs_path)
+        except Exception:
+            pass
+        return "err", "语法校验不过，已回滚：%s" % note
+    return "ok", "已替换（变量 %s；%s）" % (var, note)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  四·九、目标四：ZCode（v7.1 新增）
+# ══════════════════════════════════════════════════════════════════════════════
+
+ZCODE_PROC_NAMES = ("ZCode.exe", "zcode.exe", "zcode")
+ZCODE_HINT = ("ZCode 桌面端（zcode.z.ai）",
+              "https://zcode.z.ai/cn/docs")
+
+
+class ZCodeTarget:
+    key = "zcode"
+    label = "ZCode"
+    bak_suffix = ".pojia.bak"
+
+    # ---------------- 定位 ----------------
+    def pick_title(self):
+        return "选择 ZCode 的配置目录（一般是 用户目录\\.zcode）"
+
+    def pick_hint(self):
+        return os.path.expanduser("~")
+
+    def resolve_pick(self, path):
+        p = os.path.normpath(path)
+        if os.path.basename(p).lower() in (ZCODE_ROOT_NAME, ".zcode-ai"):
+            return p, ""
+        cand = os.path.join(p, ZCODE_ROOT_NAME)
+        if os.path.isdir(cand):
+            return cand, ""
+        if os.path.isdir(os.path.join(p, "cli")) or os.path.isfile(os.path.join(p, ZCODE_AGENTS)):
+            return p, ""
+        return "", "这里不像 ZCode 配置目录。要选 .zcode 那一层（里面通常有 cli/ 或 AGENTS.md）。"
+
+    def resolve_home(self, explicit=""):
+        if explicit:
+            good, _n = self.resolve_pick(explicit)
+            return good or os.path.normpath(os.path.expanduser(explicit))
+        manual = get_manual_path(self.key)
+        if manual and os.path.isdir(manual):
+            return manual
+        for var in ("ZCODE_HOME", "ZCODE_CONFIG_DIR"):
+            v = os.environ.get(var)
+            if v and os.path.isdir(os.path.normpath(os.path.expanduser(v))):
+                return os.path.normpath(os.path.expanduser(v))
+        return os.path.join(os.path.expanduser("~"), ZCODE_ROOT_NAME)
+
+    def cjs_path(self, args):
+        """zcode.cjs 的位置：--zcode-cjs 显式指定 > 自动探测（含 --zcode-dir 同层兜底）。"""
+        explicit = getattr(args, "zcode_cjs", "") or ""
+        if explicit:
+            p = os.path.normpath(explicit)
+            if os.path.isfile(p):
+                return p
+            cand = os.path.join(p, ZCODE_SYS_PROMPT_REL)
+            if os.path.isfile(cand):
+                return cand
+        return find_zcode_cjs(getattr(args, "zcode_dir", "") or "")
+
+    def detect_ok(self, args):
+        h = self.resolve_home(getattr(args, "zcode_dir", "") or "")
+        return os.path.isdir(h) or bool(find_zcode_cjs(getattr(args, "zcode_dir", "") or ""))
+
+    def ask_pick(self, args):
+        return do_ask_pick(self, args)
+
+    def running(self):
+        return find_processes(ZCODE_PROC_NAMES, ("zcode",))
+
+    # ---------------- skills（深度 1） ----------------
+    def skills_manifest(self, home):
+        p = os.path.join(avatar_dir_for(home), "zcode-skills.json")
+        try:
+            return json.loads(read_text_safe(p) or "{}")
+        except Exception:
+            return {}
+
+    def save_skills_manifest(self, home, data, dry=False):
+        p = os.path.join(avatar_dir_for(home), "zcode-skills.json")
+        if not dry:
+            write_text(p, json.dumps(data, ensure_ascii=False, indent=2) + "\n", make_dirs=True)
+        return p
+
+    def default_skill_source(self):
+        """本工具自带的技能源：<脚本目录>/skills/<name>/SKILL.md（有才装，没有就跳过）。"""
+        d = os.path.join(HERE, "skills")
+        return d if os.path.isdir(d) else ""
+
+    def install_skills(self, home, src, dry=False, only=""):
+        """按 ZCode 的**深度 1 扫描**摆技能：<root>/<skill-name>/SKILL.md。
+
+        只同步"源目录里的直子目录且自身含 SKILL.md"的项；已存在且不是我们装的
+        （名字不在清单里）**不动**，避免覆盖用户自己的技能。
+        """
+        if not src or not os.path.isdir(src):
+            return 0, ["没找到技能源目录（%s），跳过 skills" % (src or "空")]
+        want = []
+        try:
+            for name in sorted(os.listdir(src)):
+                d = os.path.join(src, name)
+                if os.path.isdir(d) and os.path.isfile(os.path.join(d, "SKILL.md")):
+                    want.append(name)
+        except OSError:
+            return 0, ["技能源读取失败"]
+        if only:
+            want = [w for w in want if w == only]
+        if not want:
+            return 0, ["技能源里没有合法的 <name>/SKILL.md，跳过"]
+        manifest = self.skills_manifest(home)
+        planted, skipped = [], []
+        for root_rel in ZCODE_SKILL_DIRS:
+            root = os.path.join(home, root_rel)
+            for name in want:
+                dst = os.path.join(root, name)
+                if os.path.exists(dst) and name not in manifest:
+                    skipped.append("%s/%s（已存在且非本工具安装，未动）" % (root_rel, name))
+                    continue
+                if dry:
+                    planted.append(os.path.join(root_rel, name))
+                    continue
+                try:
+                    if os.path.isdir(dst):
+                        shutil.rmtree(dst, ignore_errors=True)
+                    shutil.copytree(os.path.join(src, name), dst)
+                    planted.append(os.path.join(root_rel, name))
+                except Exception as e:
+                    skipped.append("%s/%s（%s）" % (root_rel, name, e))
+        if not dry and planted:
+            names = sorted(set(list(manifest.keys()) + want))
+            self.save_skills_manifest(home, {n: True for n in names})
+        note = "已同步技能 %d 个到 %s" % (len(planted), "、".join(ZCODE_SKILL_DIRS))
+        if skipped:
+            note += "（跳过 %d 个）" % len(skipped)
+        return len(planted), [note] + skipped[:5]
+
+    def remove_skills(self, home, dry=False):
+        """只删"清单里有、且和源目录逐字节一致"的技能，用户改过的保留。"""
+        manifest = self.skills_manifest(home)
+        if not manifest:
+            return 0
+        removed = 0
+        src = self.default_skill_source()
+        for root_rel in ZCODE_SKILL_DIRS:
+            for name in list(manifest.keys()):
+                dst = os.path.join(home, root_rel, name)
+                if not os.path.isdir(dst):
+                    continue
+                keep = False
+                if src and os.path.isdir(os.path.join(src, name)):
+                    a = os.path.join(src, name, "SKILL.md")
+                    b = os.path.join(dst, "SKILL.md")
+                    if os.path.isfile(b) and os.path.isfile(a):
+                        keep = (sha256_file(a) != sha256_file(b))    # 用户改过 → 保留
+                if keep:
+                    continue
+                if not dry:
+                    shutil.rmtree(dst, ignore_errors=True)
+                removed += 1
+        if not dry:
+            p = os.path.join(avatar_dir_for(home), "zcode-skills.json")
+            try:
+                os.remove(p)
+            except Exception:
+                pass
+        return removed
+
+    # ---------------- Memory 文件 ----------------
+    def mem_paths(self, home):
+        return [os.path.join(home, d, ZCODE_MEM_FILE) for d in ZCODE_MEM_DIRS]
+
+    # ---------------- 执行 ----------------
+    def apply(self, args, mode):
+        home = self.resolve_home(getattr(args, "zcode_dir", "") or "")
+        user, src_note = load_user_persona(getattr(args, "persona", "") or "")
+        _pol, want = build_policy(user)
+        persona = build_persona_text(user, "ZCode")
+        dry = (mode == "dry-run") or getattr(args, "dry_run", False)
+        zpatch = bool(getattr(args, "zpatch", False))
+
+        if mode == "revert":
+            return self.revert(args)
+
+        if not os.path.isdir(home) and not zpatch:
+            log("未找到 ZCode 配置目录：%s" % home, "red", "zcode")
+            log("  装了 ZCode 就加 --pick zcode 选一次（会自动记住），或用 --zcode-dir 指定。", "y", "zcode")
+            return {"err": 1, "skip": True}
+
+        cfg_agents = os.path.join(home, ZCODE_AGENTS)
+        mems = self.mem_paths(home)
+        old_agents = read_text_safe(cfg_agents) or ""
+        old_mem = read_text_safe(mems[0]) or ""
+        need_up = need_upgrade(home, self.key)
+        changed = False
+
+        # 1) AGENTS.md（仓库/工作区指导）
+        if not old_agents.strip() or ZCODE_MARK in old_agents or user:
+            changed = True
+        log("ZCode 配置目录：%s" % home, "", "zcode")
+
+        # 2) 系统提示词（可选通道，默认关）
+        cjs = ""
+        if zpatch:
+            cjs = self.cjs_path(args)
+            if not cjs:
+                log("  [!] --zpatch 已开，但没找到 resources/glm/zcode.cjs；跳过系统提示词 patch。", "y", "zcode")
+                log("      自定义安装路径可以用 --zcode-cjs 直接指定那个文件。", "dg", "zcode")
+            else:
+                st, note = zcode_patch_sysprompt(cjs, persona, dry=dry)
+                color = "g" if st == "ok" else ("y" if st in ("skip", "warn") else "red")
+                log("  系统提示词：%s（%s）" % (note, cjs), color, "zcode")
+                if st == "err":
+                    log("  提示：这一步失败不影响下面三个通道。", "dg", "zcode")
+                changed = changed or st == "ok"
+
+        if dry:
+            if os.path.isdir(home):
+                log("[预演] 将写 AGENTS.md：%s" % cfg_agents, "y", "zcode")
+                log("[预演] 将写 Memory 文件：%s" % "、".join(ZCODE_MEM_DIRS), "y", "zcode")
+            log("[预演] 需要改动：%s" % ("是" if (changed or need_up or not os.path.exists(cfg_agents)) else "否，已是最新"),
+                "y", "zcode")
+            return {"fixed": 1 if changed else 0}
+
+        if not os.path.isdir(home):
+            log("配置目录不存在且未开 --zpatch：跳过。", "y", "zcode")
+            return {"skip": 1}
+
+        if need_up and not changed:
+            log("检测到旧版安装（护照 %s → 本版 %s）：自动重写升级。"
+                % (passport_version(home) or "无护照", VERSION), "c", "zcode")
+
+        # 写盘（原子写 + 改前留备份）
+        if os.path.exists(cfg_agents) and old_agents.strip():
+            backup_file(cfg_agents, bak_path=cfg_agents + self.bak_suffix)
+        write_text(cfg_agents, ("<!-- %s %s -->\n" % (ZCODE_MARK, VERSION)) + persona,
+                   make_dirs=True)
+        log("  已写 AGENTS.md（%d 字符）" % len(persona), "g", "zcode")
+        for mp in mems:
+            # ⚠ 只给"不是我们写的"文件留备份。否则第二次 apply 会把我们自己写的内容
+            #   当成用户原文件存下来，revert 时"还原"成我们的旧版 —— 等于没还原。
+            cur_mem = read_text_safe(mp)
+            if (cur_mem is not None) and cur_mem.strip() and ZCODE_MARK not in cur_mem \
+                    and not os.path.exists(mp + self.bak_suffix):
+                try:
+                    shutil.copy2(mp, mp + self.bak_suffix)
+                except Exception:
+                    pass
+            try:
+                write_text(mp, "---\nname: pojia-yijiantong-%s\ndescription: %s\nmetadata:\n  type: reference\n---\n\n%s"
+                           % (VERSION, ZCODE_MARK, persona), make_dirs=True)
+            except Exception as e:
+                log("  Memory 写入失败 %s：%s" % (mp, e), "y", "zcode")
+                continue
+        log("  已写 Memory 文件 %d 处（%s）" % (len(mems), "、".join(ZCODE_MEM_DIRS)), "g", "zcode")
+
+        # skills（有源才装）
+        n_sk, sk_notes = self.install_skills(home, self.default_skill_source(), dry=False)
+        for ln in sk_notes:
+            log("  " + ln, "g" if n_sk else "dg", "zcode")
+
+        # 护照 + 回执行
+        pp = passport_new(self.key, home, "", cfg_agents, "policy", "")
+        pp["cjs"] = cjs
+        pp["mem_files"] = mems
+        old_pp, _p = load_passport(home)
+        pp["history"] = old_pp.get("history", [])
+        save_passport(home, pp)
+        _ok, note = write_receipts(home, self.key, dry=False, cfg_path="", instr_path=cfg_agents)
+        log("%s（%s）" % (note, signal_path_for(os.path.join(avatar_dir_for(home), "passport.json"))),
+            "g", "zcode")
+        log("  自证：新会话里单独发「%s」，应回复：%s"
+            % (PASSPHRASE, SIGNAL_REPLY % (target_label(self.key), VERSION)), "c", "zcode")
+        log("  提示：ZCode 要重启（或新开会话）才会读到新配置。", "dg", "zcode")
+        return {"fixed": 1}
+
+    def revert(self, args):
+        home = self.resolve_home(getattr(args, "zcode_dir", "") or "")
+        dry = getattr(args, "dry_run", False)
+        pp, pp_path = load_passport(home)
+        done = 0
+        cfg_agents = os.path.join(home, ZCODE_AGENTS)
+
+        # AGENTS.md：有备份就还原，没有就把我们写的那份删掉（只删含我们标记的）
+        bak = cfg_agents + self.bak_suffix
+        cur = read_text_safe(cfg_agents)
+        if cur is not None:
+            if dry:
+                log("[预演] 将处理 AGENTS.md", "y", "zcode")
+            elif os.path.exists(bak):
+                try:
+                    shutil.copy2(bak, cfg_agents)
+                    os.remove(bak)
+                    done += 1
+                    log("已从备份还原 AGENTS.md", "g", "zcode")
+                except Exception as e:
+                    log("AGENTS.md 还原失败：%s" % e, "red", "zcode")
+            elif ZCODE_MARK in cur:
+                try:
+                    os.remove(cfg_agents)
+                    done += 1
+                    log("已删除本工具写入的 AGENTS.md（无备份）", "g", "zcode")
+                except Exception:
+                    pass
+            else:
+                log("AGENTS.md 不是本工具写的，保留原样", "dg", "zcode")
+
+        # Memory 文件
+        for mp in self.mem_paths(home):
+            if not os.path.exists(mp):
+                continue
+            if dry:
+                log("[预演] 将处理 Memory %s" % mp, "y", "zcode")
+                continue
+            mb = mp + self.bak_suffix
+            t = read_text_safe(mp) or ""
+            try:
+                if ZCODE_MARK in t:
+                    # 文件整体是我们写的 → 直接删；备份（若存在，是用户原内容）先还回去
+                    if os.path.exists(mb):
+                        shutil.copy2(mb, mp)
+                        os.remove(mb)
+                        done += 1
+                        log("已还原用户原 Memory %s" % os.path.basename(mp), "g", "zcode")
+                    else:
+                        os.remove(mp)
+                        done += 1
+                        log("已删除本工具写入的 Memory %s" % os.path.basename(mp), "g", "zcode")
+                elif os.path.exists(mb):
+                    shutil.copy2(mb, mp)
+                    os.remove(mb)
+                    done += 1
+                    log("已还原 Memory %s" % os.path.basename(mp), "g", "zcode")
+            except Exception as e:
+                log("Memory 还原失败 %s：%s" % (mp, e), "red", "zcode")
+
+        # 系统提示词：只从我们自己的备份还原
+        cjs = (pp or {}).get("cjs", "") or self.cjs_path(args)
+        if cjs and os.path.exists(cjs + ".pojia.bak"):
+            if dry:
+                log("[预演] 将还原系统提示词 %s" % cjs, "y", "zcode")
+            else:
+                try:
+                    shutil.copy2(cjs + ".pojia.bak", cjs)
+                    os.remove(cjs + ".pojia.bak")
+                    done += 1
+                    log("已还原系统提示词（zcode.cjs）", "g", "zcode")
+                except Exception as e:
+                    log("系统提示词还原失败：%s" % e, "red", "zcode")
+        elif cjs and ZCODE_MARK in (read_text_safe(cjs) or ""):
+            log("[!] zcode.cjs 仍含注入内容，但没找到我们的备份；请重装 ZCode 或手动恢复。", "y", "zcode")
+
+        n_sk = self.remove_skills(home, dry=dry)
+        if n_sk:
+            log("已移除技能 %d 个（用户改过的保留）" % n_sk, "g", "zcode")
+        if pp_path and os.path.exists(pp_path) and not dry:
+            try:
+                os.remove(pp_path)
+            except Exception:
+                pass
+        log("ZCode 还原完成（处理 %d 项）" % done, "g", "zcode")
+        return {"revert": done}
+
+    # ---------------- 体检 ----------------
+    def check(self, args):
+        rows = []
+        home = self.resolve_home(getattr(args, "zcode_dir", "") or "")
+        cjs = self.cjs_path(args)
+        if not os.path.isdir(home) and not cjs:
+            rows.append(("warn", "没检测到 ZCode（配置目录 %s 与 zcode.cjs 都不存在）" % home,
+                         "装了 ZCode 就 --pick zcode 指定一次"))
+            return rows
+        rows.append(("info", "配置目录：%s" % home, ""))
+        ag = os.path.join(home, ZCODE_AGENTS)
+        if os.path.exists(ag):
+            t = read_text_safe(ag) or ""
+            if ZCODE_MARK in t:
+                rows.append(("ok", "AGENTS.md：本工具注入版（%d 字符）" % len(t), ""))
+            else:
+                rows.append(("warn", "AGENTS.md 存在但不是本工具写的", "加 --apply --target zcode 会先备份再写"))
+        else:
+            rows.append(("warn", "AGENTS.md 不存在", "未破甲"))
+        mems = self.mem_paths(home)
+        n_mem = [m for m in mems if os.path.exists(m) and ZCODE_MARK in (read_text_safe(m) or "")]
+        if n_mem:
+            rows.append(("ok", "Memory 文件：已注入 %d 处" % len(n_mem), "、".join(ZCODE_MEM_DIRS)))
+        else:
+            rows.append(("warn", "Memory 文件未注入", "、".join(ZCODE_MEM_DIRS)))
+        n_sk = len(self.skills_manifest(home))
+        if n_sk:
+            rows.append(("info", "技能清单：%d 个" % n_sk, "、".join(ZCODE_SKILL_DIRS)))
+        if cjs:
+            t = read_text_safe(cjs) or ""
+            if ZCODE_MARK in t:
+                rows.append(("ok", "系统提示词：已被本工具替换（%s）" % cjs, ""))
+            else:
+                rows.append(("info", "系统提示词：未 patch（默认通道，需 --zpatch）", cjs))
+        else:
+            rows.append(("info", "没找到 zcode.cjs（可能不是桌面版，或装在非常规位置）", ""))
+        st, note = passport_status(home, self.key)
+        rows.append(("own" if st == "current" else "info", "护照：%s" % note, ""))
+        procs = self.running()
+        if procs:
+            rows.append(("info", "ZCode 正在运行（%d 个进程）：改动需重启才生效" % len(procs), ""))
+        return rows
+
+    def dump(self, args, action="status"):
+        for st, note, detail in self.check(args):
+            color = {"ok": "g", "info": "", "warn": "y", "fail": "red", "own": "c"}.get(st, "")
+            log("  [%-4s] %s" % (st, note), color, "zcode")
+            if detail and getattr(args, "diagnose", False):
+                log("      " + detail, "dg", "zcode")
+        return self.check(args)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 #  五、统一调度
 # ══════════════════════════════════════════════════════════════════════════════
 
-TARGETS = {"dsh": DshTarget, "wb": WorkBuddyTarget, "codex": CodexTarget}
-TARGET_ALIAS = {"workbuddy": "wb", "dsh-desktop": "dsh", "codex-cli": "codex", "all": "all"}
-DEFAULT_TARGETS = ["dsh", "wb", "codex"]
+TARGETS = {"dsh": DshTarget, "wb": WorkBuddyTarget, "codex": CodexTarget, "zcode": ZCodeTarget}
+TARGET_ALIAS = {"workbuddy": "wb", "dsh-desktop": "dsh", "codex-cli": "codex",
+                "z-code": "zcode", "zcode-desktop": "zcode", "all": "all"}
+DEFAULT_TARGETS = ["dsh", "wb", "codex", "zcode"]
 
 
 def resolve_targets(spec):
@@ -3417,6 +4037,8 @@ INSTALL_HINT = {
             "https://www.workbuddy.cn"),
     "codex": ("Codex CLI 官方下载（.codex 配置目录通常随安装创建）",
               "https://developers.openai.com/codex/"),
+    "zcode": ("ZCode 桌面端（智谱 zcode.z.ai，安装后配置目录为 ~\\.zcode）",
+              "https://zcode.z.ai/cn/docs"),
 }
 
 
@@ -3526,11 +4148,11 @@ def menu(args):
         print(BOLD(CYAN("║")) + fit("  破甲一键通  v%s   三目标统一脚本" % VERSION, W) + BOLD(CYAN("║")))
         print(BOLD(CYAN("║")) + GRAY(fit("  " + FREE_LINE, W)) + BOLD(CYAN("║")))
         print(BOLD(CYAN("╠" + "═" * W + "╣")))
-        for line in ("  [1] 一键破甲         DSH + WorkBuddy + Codex 全打一遍",
+        for line in ("  [1] 一键破甲         DSH + WorkBuddy + Codex + ZCode 全打一遍",
                      "  [2] 检测状态         只读，不改任何文件",
                      "  [3] 诊断详情         逐文件列出补丁/备份状态",
                      "  [4] 预演             只显示会改什么",
-                     "  [5] 选目标单打        dsh / wb / codex 任选",
+                     "  [5] 选目标单打        dsh / wb / codex / zcode 任选",
                      "  [6] 还原              选择目标还原成官方原版",
                      "  [7] WorkBuddy 守护    安装 / 卸载 / 查看后台守护任务",
                      "  [8] 体检（只读）      磁盘态 / 凭证 / 自证就绪，不改盘",
@@ -3587,12 +4209,12 @@ def menu(args):
 
 def _pick_targets():
     say("")
-    say("  选目标：[1] dsh   [2] WorkBuddy   [3] Codex   [4] 全部")   # 直接回车 = 跳过本次
+    say("  选目标：[1] dsh   [2] WorkBuddy   [3] Codex   [4] ZCode   [5] 全部")   # 直接回车 = 跳过本次
     try:
         c = input("  输入序号（可多选，如 124）> ").strip()
     except (EOFError, KeyboardInterrupt):
         return []
-    m = {"1": "dsh", "2": "wb", "3": "codex", "4": "all"}
+    m = {"1": "dsh", "2": "wb", "3": "codex", "4": "zcode", "5": "all"}
     out = []
     for ch in c:
         if ch in m:
@@ -3726,7 +4348,7 @@ def build_parser():
   python 破甲一键通.py --pick all --clear           清除手动指定，改回自动探测
   python 破甲一键通.py --guard install              装 WorkBuddy 守护任务
 """)
-    p.add_argument("--target", default="all", help="all|dsh|wb|codex，可逗号分隔（默认 all）")
+    p.add_argument("--target", default="all", help="all|dsh|wb|codex|zcode，可逗号分隔（默认 all）")
     p.add_argument("--status", action="store_true", help="只读：检测三个目标")
     p.add_argument("--diagnose", action="store_true", help="只读：详细取证")
     p.add_argument("--check", action="store_true",
@@ -3755,6 +4377,11 @@ def build_parser():
     p.add_argument("--clear", action="store_true",
                    help="配合 --pick 用：清除记住的手动路径，改回自动探测")
     p.add_argument("--dsh-dir", help="手动指定 @deepseek-ai 目录或 DSH Desktop 根")
+    p.add_argument("--zcode-dir", help="手动指定 ZCode 配置目录（一般是 用户目录\\.zcode）")
+    p.add_argument("--zcode-cjs", help="手动指定 ZCode 的 resources\\glm\\zcode.cjs（自定义安装路径时用）")
+    p.add_argument("--zpatch", action="store_true",
+                   help="额外替换 ZCode 打包文件里的系统提示词（resources\\glm\\zcode.cjs；"
+                        "默认关闭。会先备份 + node 语法校验，校验不过自动回滚）")
     p.add_argument("--codex-dir", help="手动指定 .codex 配置目录")
     p.add_argument("--claim", action="store_true",
                    help="接管已存在但不是本工具写的 Codex 指令文件（会先快照 + 写认领说明）")

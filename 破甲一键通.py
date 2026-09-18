@@ -350,11 +350,14 @@ def log(msg, color="", target="", echo=True):
     prefix = ("[" + target + "] ") if target else ""
     line = "[%s] %s%s" % (_dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), prefix, msg)
     _log_buf.append(line)
-    try:
-        with open(LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(line + "\n")
-    except Exception:
-        pass
+    # v7.4：预演 / 只读体检时**不写日志文件** —— 界面自述"未改动任何文件"，
+    # 却往脚本目录追加 破甲日志.txt，自相矛盾（对抗测试抓到的低危项）。
+    if not DRY_RUN:
+        try:
+            with open(LOG_PATH, "a", encoding="utf-8") as f:
+                f.write(line + "\n")
+        except Exception:
+            pass
     if echo:
         say(prefix + msg, color)
 
@@ -375,9 +378,23 @@ def read_text(path):
 
 
 def read_text_safe(path):
+    """读文本；**解码不干净就返回 None**。
+
+    v7.4 改：原来用 `errors="replace"` 容错，于是一份 GBK / UTF-16 / 二进制靶点会被读成
+    一堆 U+FFFD，然后**照原样写回去** —— 用户的文件被静默转码弄坏（实测抓到）。
+    现在解不开就返回 None，调用方一律按"读取失败"处理并跳过该文件：
+    宁可不打这个补丁，也不要把用户的文件写坏。
+    """
     try:
-        return read_text(path)[0]
+        with open(path, "rb") as f:
+            raw = f.read()
     except Exception:
+        return None
+    if raw.startswith(b"\xef\xbb\xbf"):
+        raw = raw[3:]
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
         return None
 
 
@@ -2481,6 +2498,7 @@ class WorkBuddyTarget:
         dry = (mode == "dry-run") or getattr(args, "dry_run", False)
         full = getattr(args, "full", False)
         stats = {"fixed": 0, "skip": 0, "err": 0, "gate": 0, "clause": 0}
+        pending = []          # v7.4：本轮真正写过的文件 → 复查时回读磁盘核对，不靠内存里的 new
 
         # ---------- 云记忆通道（v7.0）：每一轮自动进系统提示词的那条 ----------
         # 必须**独立于模板修补**：模板都最新时也要能补云记忆，否则被程序清空后，
@@ -2564,6 +2582,7 @@ class WorkBuddyTarget:
                 log("已修复 | %s%s" % (rel, (" (+%d 处残留子句)" % clauses) if clauses else ""), "g", "wb")
                 stats["fixed"] += 1
                 stats["clause"] += clauses
+                pending.append((f, new))          # v7.4：写完要回读核对（见下方"复查"）
             except Exception as e:
                 stats["err"] += 1
                 log("写入失败 | %s | %s" % (rel, e), "red", "wb")
@@ -2608,8 +2627,7 @@ class WorkBuddyTarget:
                 except Exception:
                     pass
 
-        # ---------- 会话快照 ----------
-        # v7.4：默认**只统计不删**。这些快照不在备份范围内，删了 revert 不回来，
+        # ---------- 会话快照 ----------        # v7.4：默认**只统计不删**。这些快照不在备份范围内，删了 revert 不回来，
         # 所以清理必须由用户显式要求（--clean-spill 清过期 / --purge-spill 清全部）。
         if not dry:
             _no = getattr(args, "no_spill_clean", False)
@@ -2630,8 +2648,20 @@ class WorkBuddyTarget:
                         "--purge-spill（清全部）" % (n, size / 1024.0), "dg", "wb")
 
         # ---------- 复查 ----------
+        # v7.4 重写：原来只统计"文件里含 <content_policy> 且 is_prompt_tpl() 且判定为空"的靶点，
+        # 于是 product.json 这类 JSON 靶点**写失败也照样报「全部就绪」**
+        # （实测：用 icacls 拒绝写 cli\ 之后，输出是"修复 3 / 错误 0 / 复查：全部就绪"，
+        #  而磁盘上的 product.json 根本没变 —— 又是"工具说成功其实没生效"）。
+        # 现在改成：凡是本轮写过的文件，一律**回读磁盘**与预期内容逐字节比对。
         if not dry and mode == "apply":
             bad = 0
+            for f, expect in pending:
+                got = read_text_safe(f)
+                if got is None or got != expect:
+                    bad += 1
+                    stats["err"] += 1
+                    log("  写入未生效（回读不一致）: %s"
+                        % rel_display(f, install, data_dir), "red", "wb")
             for f in targets:
                 t = read_text_safe(f) or ""
                 if ("<content_policy>" in t) and self.is_prompt_tpl(t) and loose_state(t, want) == "":
@@ -3519,15 +3549,25 @@ class CodexTarget:
             log('  已确认要部署到这个目录时，显式加 --codex-dir "%s"' % home, "y", "codex")
             return {"err": 1, "skip": True}
 
-        cfg = read_text_safe(cfg_p) or ""
-        # v7.4：BOM 也要原样保留 —— read_text 会剥掉 BOM，写回去时必须按原样带上，
-        # 否则 apply→revert 一轮后 config.toml 会比原来少 3 个字节（实测 289B→285B）。
+        # v7.4：读不干净（非 UTF-8）就**跳过，不要用空串去覆盖** ——
+        # 否则一份 GBK/二进制的 config.toml 会被"patch"成只剩我们的注入块。
+        cfg = read_text_safe(cfg_p)
+        if cfg is None and os.path.exists(cfg_p):
+            log("读不了 %s（不是 UTF-8 文本？）—— 已跳过，未改动任何文件" % cfg_p, "red", "codex")
+            log("  请把该文件另存为 UTF-8 再重跑。", "y", "codex")
+            return {"err": 1, "skip": True}
+        cfg = cfg or ""
         cfg_bom = read_text(cfg_p)[1] if os.path.exists(cfg_p) else False
         _, passport_p = load_passport(home)
         cur = self.current_instr(cfg)
         name = self.decide_instr_name(home, cfg)
         instr_p = os.path.join(home, name)
-        old_txt = read_text_safe(instr_p) or ""
+        old_txt = read_text_safe(instr_p)
+        if old_txt is None and os.path.exists(instr_p):
+            log("读不了已存在的指令文件 %s（不是 UTF-8 文本？）—— 已跳过，未改动任何文件" % instr_p,
+                "red", "codex")
+            return {"err": 1, "skip": True}
+        old_txt = old_txt or ""
         instr_bom = read_text(instr_p)[1] if os.path.exists(instr_p) else False
         rel = "./" + name
 
@@ -4428,7 +4468,12 @@ class ZCodeTarget:
 
         cfg_agents = os.path.join(home, ZCODE_AGENTS)
         mems = self.mem_paths(home)
-        old_agents = read_text_safe(cfg_agents) or ""
+        # v7.4：AGENTS.md 读不干净（非 UTF-8）就跳过，别拿空串把它覆盖掉
+        old_agents = read_text_safe(cfg_agents)
+        if old_agents is None and os.path.exists(cfg_agents):
+            log("读不了 %s（不是 UTF-8 文本？）—— 已跳过，未改动任何文件" % cfg_agents, "red", "zcode")
+            return {"err": 1, "skip": True}
+        old_agents = old_agents or ""
         old_mem = read_text_safe(mems[0]) or ""
         need_up = need_upgrade(home, self.key)
         changed = False

@@ -3587,7 +3587,7 @@ def menu(args):
 
 def _pick_targets():
     say("")
-    say("  选目标：[1] dsh   [2] WorkBuddy   [3] Codex   [4] 全部")
+    say("  选目标：[1] dsh   [2] WorkBuddy   [3] Codex   [4] 全部")   # 直接回车 = 跳过本次
     try:
         c = input("  输入序号（可多选，如 124）> ").strip()
     except (EOFError, KeyboardInterrupt):

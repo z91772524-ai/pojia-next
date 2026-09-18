@@ -100,7 +100,7 @@ if sys.stderr is None:
     sys.stderr = sys.stdout
 
 IS_WIN = (os.name == "nt")
-VERSION = "7.1"
+VERSION = "7.2"
 CHECK_EXIT_CODES = []          # --check 用：收集不达标项（只影响退出码，不改状态码）
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -1147,7 +1147,7 @@ class DshTarget:
         return text, False
 
     @staticmethod
-    def strip_and_set_persona(text, persona, want_hash=""):
+    def strip_and_set_persona(text, persona, want_hash="", force_upgrade=False):
         """剥离官方默认身份 -> 注入"操作者人格 + 宽松政策 + 末尾兜底"。
 
         修掉原 dsh_purge 的三处问题：
@@ -1160,13 +1160,18 @@ class DshTarget:
             走到"删掉旧块"那一步却因为后续判重而跳过注入，把人格头部整段吃掉。
             （这个坑是 dry-run 时对比 diff 才发现的：16608 -> 16503 字节，
               少的正是 `你是小码酱` 那几行。）
+
+        跳过判据必须是**完整回执串**（目标名 + 本版版本号），不能只判 PASSPHRASE：
+          · 漏判会踩两个坑 —— ① 段落里残留字面占位符 {target}/{ver}（v6.1 的 bug）
+            ② 目标名/版本是旧的；两者都会让客户端照着错的字面回复，自证等于废掉。
+          · v6.x 没有自证段 → 这里判 False → 自动重写成当前版（老机器升级的入口之一）。
+          · v7.2 起还要接 need_upgrade：**版本号没变但内容变了**（例如只新增了硬化块）
+            的情况，光看回执串会永久跳过，所以由调用方把 force_upgrade 传进来。
         """
-        if loose_state(text, want_hash) == "current" and (SIGNAL_REPLY % ("DSH", VERSION)) in text:
+        if (loose_state(text, want_hash) == "current"
+                and (SIGNAL_REPLY % ("DSH", VERSION)) in text
+                and not force_upgrade):
             return text, False                      # 人格与自证段都是当前版，一个字节都不动
-        # 注意：这里必须是**完整回执串**。只判 PASSPHRASE 会漏掉两种情况 ——
-        # ① 段落里残留字面占位符 {target}/{ver}（v6.1 的 bug）② 目标名/版本是旧的。
-        # 两者都会让客户端照着错的字面回复，自证等于废掉。
-        # 这也是老版本升级的入口：v6.x 没有自证段 → 这里判 False → 自动重写成当前版。
 
         changed = False
         has_official = "You are a coding agent" in text
@@ -1447,6 +1452,13 @@ class DshTarget:
 
         stats = {"fixed": 0, "skip": 0, "err": 0, "revert": 0}
         touched = list(manifest_load(self.key))
+        # 老版本升级判据（v7.2 补）：DSH 之前是唯一没接 need_upgrade 的目标 ——
+        # "版本号没变但内容变了"（比如只新增硬化块）时它会永久跳过，连 --force 都救不回来。
+        # 这里按 DSH_HOME 算一次，传给每个靶点的 persona 注入。
+        _up = need_upgrade(self.dsh_home(), self.key) if mode != "revert" else False
+        if _up and mode == "apply":
+            log("检测到旧版安装（护照 %s → 本版 %s）：DSH 靶点将自动重写升级。"
+                % (passport_version(self.dsh_home()) or "无护照", VERSION), "c", "dsh")
         for b in bases:
             for fp, funcs in self.collect_targets(b):
                 if mode == "revert":
@@ -1477,7 +1489,7 @@ class DshTarget:
                 for fn in funcs:
                     if isinstance(fn, str):
                         if fn == "persona":
-                            cur, ch = self.strip_and_set_persona(cur, persona, want)
+                            cur, ch = self.strip_and_set_persona(cur, persona, want, force_upgrade=_up)
                             if ch:
                                 applied.append("persona")
                         continue
@@ -1513,16 +1525,19 @@ class DshTarget:
                     log("写入失败 | %s | %s" % (fp, e), "red", "dsh")
         if mode == "apply":
             manifest_save(self.key, touched)
-            if stats.get("fixed"):
-                h = self.dsh_home()
-                pp = passport_new(self.key, h, "", "", "policy", created_by_other="")
-                pp["bases"] = bases
-                pp["patched_files"] = touched[:200]
-                save_passport(h, pp)
-                _ok, note = write_receipts(h, self.key, dry=False)
-                log("%s（%s）" % (note, signal_path_for(os.path.join(avatar_dir_for(h), "passport.json"))), "g", "dsh")
-                log("  自证：新会话里单独发「%s」，应回复：%s"
-                    % (PASSPHRASE, SIGNAL_REPLY % (target_label(self.key), VERSION)), "c", "dsh")
+            h = self.dsh_home()
+            # 护照 + 回执行：**每次 apply 都写**（v7.2 修）—— 原来挂在 stats["fixed"] 上，
+            # 于是"全都已是最新"的那一轮不写，版本号停在旧值、升级判据跟着失真。
+            pp = passport_new(self.key, h, "", "", "policy")
+            pp["bases"] = bases
+            pp["patched_files"] = touched[:200]
+            old_pp, _p = load_passport(h)
+            pp["history"] = old_pp.get("history", [])
+            save_passport(h, pp)
+            _ok, note = write_receipts(h, self.key, dry=False)
+            log("%s（%s）" % (note, signal_path_for(os.path.join(avatar_dir_for(h), "passport.json"))), "g", "dsh")
+            log("  自证：新会话里单独发「%s」，应回复：%s"
+                % (PASSPHRASE, SIGNAL_REPLY % (target_label(self.key), VERSION)), "c", "dsh")
         return stats
 
     def revert_file(self, fp):
@@ -1786,6 +1801,10 @@ class WorkBuddyTarget:
             # 一并吃掉尾部的转义换行，避免留下空段
             while text[j:j + 2] == "\\n":
                 j += 2
+            # ⚠ v7.2 修：也要吃掉段**前面**的那个转义换行。否则每轮 apply 都会把它留下
+            #   再加一个新的 → product.json 每轮净增 2 字节（实测 4980→4982→4984…）。
+            while i >= 2 and text[i - 2:i] == "\\n":
+                i -= 2
             text = text[:i] + text[j:]
         return text
 
@@ -2190,8 +2209,11 @@ class WorkBuddyTarget:
                     stats["other"] = stats.get("other", 0) + 1
                     continue
                 if need_up and lv == "current":
-                    log("  检测到旧版安装（护照 %s → 本版 %s）：自动重写升级。"
-                        % (passport_version(data_dir or install) or "无护照", VERSION), "c", "wb")
+                    # 只报一次：这个分支在循环里，每个文件都会进来（实测刷了 17 行日志）
+                    if not stats.get("_up_logged"):
+                        stats["_up_logged"] = 1
+                        log("  检测到旧版安装（护照 %s → 本版 %s）：自动重写升级。"
+                            % (passport_version(data_dir or install) or "无护照", VERSION), "c", "wb")
                 if as_json:
                     res, _c = self.patch_json_text(new, policy, OVERLAY)
                 else:
@@ -2309,7 +2331,11 @@ class WorkBuddyTarget:
         elif not dry:
             log("请完全退出 WorkBuddy（含右下角托盘）再重开，改动才生效。", "y", "wb")
 
-        if mode == "apply" and not dry and stats.get("fixed"):
+        # 护照 + 回执行：**每次 apply 都写**（v7.2 修）
+        # 原来挂在 stats["fixed"] 上 —— 于是"模板全都已是最新"的那一轮就不写护照，
+        # 版本号永远停在旧值（实测 v7.2 重打后 WB 护照还写着 7.1），升级判据也就跟着失真。
+        # 写护照是幂等的，多写一次没有任何副作用。
+        if mode == "apply" and not dry:
             anchor = data_dir if (data_dir and os.path.isdir(data_dir)) else install
             if anchor:
                 pp = passport_new(self.key, anchor, "", "", "policy")
@@ -2954,20 +2980,44 @@ class CodexTarget:
         m = re.search(r'(?m)^[ \t]*model_instructions_file[ \t]*=[ \t]*["\']([^"\']+)["\']', cfg)
         return m.group(1) if m else ""
 
-    @staticmethod
-    def strip_block(cfg):
-        """只剥自己写的标记块。用 [ \\t] 而不是 \\s —— 多行模式下 \\s 会吃掉空行，
-        导致每次 apply 都判定"有变化"从而反复重写（这个坑归档版修过一次）。"""
-        pat = re.compile(r"(?m)^[ \t]*" + re.escape(MARK_BEGIN) + r".*?^[ \t]*"
-                         + re.escape(MARK_END) + r"[ \t]*\n?", re.S)
-        return pat.sub("", cfg)
+    def strip_block(self, cfg):
+        """剥掉自己写的标记块，并按块里记录的 `trail=` **原样还原**原文尾部换行序列。
+
+        尾巴这里改错四次（多留一个换行 / 吃掉原尾换行 / CRLF 混进 LF / 无尾换行被补），
+        根因都是"想从块与正文的关系反推原文尾部" —— 信息不够。所以现在不推：
+        patch_config 把原文末尾的换行序列**原样**写进块（`# trail=\\n\\n`），这里照着贴回。
+        """
+        pat = re.compile(r"^[ \t]*" + re.escape(MARK_BEGIN)
+                         + r".*?^[ \t]*" + re.escape(MARK_END)
+                         + r"[ \t]*(?:\r?\n)?", re.S | re.M)
+        m = pat.search(cfg)
+        blk = cfg[m.start():m.end()] if m else ""
+        head = cfg[:m.start()] if m else cfg
+        mt = re.search(r"#\s*trail\s*=\s*(\S*)", blk) if blk else None
+        if mt:
+            tok = mt.group(1)
+            trail = ("-" if tok == "-" else
+                     tok.replace("\\r", "\r").replace("\\n", "\n").replace("\\t", "\t"))
+            if trail == "-":
+                trail = ""
+        else:
+            trail = "\n" if m else ""          # 有块但没记录 → 兼容旧格式；没块 → 原样返回
+        out = head.rstrip("\r\n\t ")
+        if not out.strip():
+            return ""
+        return out + trail
 
     def patch_config(self, cfg, rel_path):
-        base = self.strip_block(cfg).rstrip("\r\n")
         nl = detect_nl(cfg) or "\n"
-        blk = "%s%s%s%s%s%s%s" % (MARK_BEGIN, nl, 'model_instructions_file = "%s"' % rel_path,
-                                  nl, MARK_END, nl, "")
-        return (base + nl * 2 + blk) if base else blk
+        # 原文末尾的换行序列（原样记录；空格/制表符也一并算进尾巴，revert 才能逐字节回去）
+        mt = re.search(r"([\r\n\t ]*)$", cfg)
+        trail = mt.group(1) if mt else ""
+        tok = trail.replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t") or "-"
+        base = self.strip_block(cfg).rstrip("\r\n\t ")
+        blk = "%s%s%s%s%s%s" % (MARK_BEGIN, nl, 'model_instructions_file = "%s"' % rel_path,
+                                nl, MARK_END, nl)
+        blk += "# trail=%s%s" % (tok, nl)
+        return (base + nl + blk) if base else blk
 
     def decide_instr_name(self, root, cfg):
         """优先沿用 config 里已经写着的那份文件名 —— 避免白白留下一个孤儿文件。"""
@@ -3205,7 +3255,15 @@ class CodexTarget:
                     rows.append(("config", cfg_p, new_cfg))
             if instr_p:
                 bak = instr_p + self.bak_suffix
-                rows.append(("instr", instr_p, None if os.path.exists(bak) else "del"))
+                # ⚠ v7.2 修：备份里若已经带本工具标记，说明它是"本工具上一版写的内容"，
+                #   不是用户原始文件 —— 这种情况应该**删掉**而不是还原（老版本 v6 升级后
+                #   出现过：revert 把 v6 的内容"复活"成一个原本不存在的文件）。
+                bk_txt = read_text_safe(bak) if os.path.exists(bak) else None
+                if bk_txt is not None and HASH_MARK in bk_txt:
+                    rows.append(("instr", instr_p, "del"))
+                    rows.append(("stale_bak", bak, "del"))
+                else:
+                    rows.append(("instr", instr_p, None if os.path.exists(bak) else "del"))
             if agents_p and pp.get("agents_created") and os.path.exists(agents_p):
                 rows.append(("agents", agents_p, "del"))
             for kind, path, payload in rows:
@@ -3226,6 +3284,13 @@ class CodexTarget:
                 elif kind == "agents":
                     try:
                         os.remove(path)
+                    except Exception:
+                        pass
+                elif kind == "stale_bak":
+                    # 备份里是本工具旧版的内容（不是用户原文件）→ 一并清掉，不留误导
+                    try:
+                        os.remove(path)
+                        log("已清理过期的旧版备份：%s" % os.path.basename(path), "dg", "codex")
                     except Exception:
                         pass
                 n += 1

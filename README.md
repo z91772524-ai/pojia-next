@@ -1,6 +1,6 @@
 # 破甲一键通 v7.4
 
-**一个脚本，把 DSH（DeepSeek Harness）、WorkBuddy、Codex CLI、ZCode 四个客户端的提示词 / 人格一次换到位** —— 纯 Python 标准库、零依赖、双击即用、改前必留备份、装完当场可自证、随时可一键还原。
+**一个脚本，把 DSH（DeepSeek Harness）、WorkBuddy、ZCode 三个客户端的提示词 / 人格一次换到位** —— 纯 Python 标准库、零依赖、双击即用、改前必留备份、装完当场可自证、随时可一键还原。
 
 [![Release](https://img.shields.io/github/v/release/z91772524-ai/pojia-next?label=release&color=2ea043)](https://github.com/z91772524-ai/pojia-next/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -15,13 +15,18 @@
 > **本项目仅用于学习交流，无不良引导。若他人使用本项目从事任何违法、违规或侵权行为，与作者没有任何关系，全部后果由使用者自行承担。**
 > 请遵守所在地法律法规与目标软件的服务条款。完整条款见下方「免责声明」章节。
 
+> ## ⚠️ v7.5 版本说明：**Codex 目标已移除**
+> 从 v7.5 起本工具只支持 **DSH / WorkBuddy / ZCode** 三个客户端，Codex 通道（`--claim` / `--codex-dir` 等）一并撤下。
+> 含 Codex 的最后一版是 **v7.4**（脚本与测试都已归档：`归档/破甲一键通-v7.4-含Codex.py`），需要时可用它继续维护 Codex。
+> 历史说明与当初的实现理由保留在下方更新记录与 `修复报告.md` 里，不抹掉。
+
 把桌面那**几套**桌面端 AI 客户端"破甲"工具，合并成**一个脚本**：一套人格，四个目标，**零第三方依赖**（纯 Python 标准库）。
 
 ![界面预览](preview.png)
 
 ## 为什么值得一试
 
-- ⚡ **一个脚本管四个客户端** —— DSH + WorkBuddy + Codex + ZCode 共用同一份 `persona.md`，口径逐字一致，不用再各改各的
+- ⚡ **一个脚本管三个客户端** —— DSH + WorkBuddy + ZCode 共用同一份 `persona.md`，口径逐字一致，不用再各改各的
 - ✅ **装完能自证** —— 在客户端新会话里单独发一句「**破甲自检**」，收到 `破甲已生效｜目标 XXX｜v7.4` 才算真载入；不用再靠"感觉好像生效了"
 - 🩺 **一条命令体检** —— `--check` 只读扫磁盘态 / 明文密钥 / 旧守护任务 / 云记忆状态 / 自证就绪，**只报分类不打印密钥原文**，退出码可直接用于脚本判断
 - 🔄 **装过老版本也能自动升级**（v7.3 修）—— 判据是"护照里的版本 != 本版就重写"，不再只看人格哈希；否则老补丁会被判成"已是最新"而**永远升不上去**（守护任务跑的 `--apply` 不带 `--force`，救不回来）
@@ -103,7 +108,6 @@
 |---|---|---|
 | `dsh` | DeepSeek Harness（桌面端 / npm 全局 / npx 缓存 / 便携版） | 三层文件级补丁：提示词层、persona 层、区段层 |
 | `wb` | WorkBuddy | 六层靶点：模板 / `product.json` / 命令闸门 / 网页过滤 / 运行时缓存 / 会话快照 **＋ 账号级云记忆 `memoryBlock`**（每轮自动注入） |
-| `codex` | Codex CLI（`.codex` 配置目录） | 官方配置键 `model_instructions_file` 指向指令副本 + 身份标记幂等块；**不碰二进制、不抓包** |
 | `zcode` | ZCode 桌面端（智谱 [zcode.z.ai](https://zcode.z.ai/cn/docs)） | `~/.zcode/AGENTS.md` + Memory 文件（`cli/memories/global/memory/`）+ 技能（`~/.zcode/skills/` 与 `~/.agents/skills/`，**深度 1 直子目录**）；可选 `--zpatch` 替换 `resources/glm/zcode.cjs` 里的系统提示词 |
 
 ---
@@ -115,11 +119,11 @@
 双击 **`一键破甲.bat`** → 出菜单 → 按数字选：
 
 ```
-  [1] 一键破甲         DSH + WorkBuddy + Codex 全打一遍
+  [1] 一键破甲         DSH + WorkBuddy + ZCode 全打一遍
   [2] 检测状态         只读，不改任何文件      ← 建议先看这个
   [3] 诊断详情         逐文件列出补丁/备份状态
   [4] 预演             只显示会改什么
-  [5] 选目标单打        dsh / wb / codex 任选
+  [5] 选目标单打        dsh / wb / zcode 任选
   [6] 还原              选择目标还原成官方原版
   [7] WorkBuddy 守护    安装 / 卸载 / 查看后台守护任务
   [8] 体检（只读）      磁盘态 / 明文密钥 / 自证就绪，不改盘
@@ -136,7 +140,6 @@ python 破甲一键通.py --check                    # 只读体检（有问题�
 python 破甲一键通.py --diagnose                 # 只读：详细取证
 python 破甲一键通.py --dry-run                  # 预演，不改盘
 python 破甲一键通.py --apply --yes              # 真打（自动跳过没装的）
-python 破甲一键通.py --apply --target codex --claim --yes   # 接管已有的 .codex 指令文件（先快照）
 python 破甲一键通.py --apply --target wb --full --yes   # 只打 WorkBuddy 的完全破甲
 python 破甲一键通.py --revert --target dsh --yes        # 只还原 DSH
 python 破甲一键通.py --apply --persona 我的.md --force --yes
@@ -148,10 +151,8 @@ python 破甲一键通.py --guard install            # 装 WorkBuddy 守护任�
 
 | 开关 | 作用 |
 |---|---|
-| `--target all\|dsh\|wb\|codex` | 选目标，可逗号分隔（默认 `all`） |
+| `--target all\|dsh\|wb\|zcode` | 选目标，可逗号分隔（默认 `all`） |
 | `--check` | **只读体检**：磁盘态 / 明文密钥提示 / 旧守护任务 / 自证就绪；**绝不改盘**，有问题退出码 1 |
-| `--claim` | 接管**不是本工具写的** Codex 指令文件（接管前自动存快照 + 留认领说明） |
-| `--codex-dir` | 手动指定 `.codex` 配置目录 |
 | `--full` | WorkBuddy 完全破甲：+网页过滤 +Ask 模式 +文件保护中和 |
 | `--force` | 已破甲的目标也重写（用于把几套统一成同一份人格） |
 | `--pick TARGET` / `--clear` | 手动指定安装位置并记住 / 清除记住的路径 |
@@ -193,7 +194,7 @@ python 破甲一键通.py --apply --force --yes
 装完之后，脚本会在客户端的**管理目录**里留一份回执行，你在客户端里随手一验就知道：
 
 ```bash
-# 在 DSH / WorkBuddy / Codex / ZCode 的【新会话】里，单独发这四个字：
+# 在 DSH / WorkBuddy / ZCode 的【新会话】里，单独发这四个字：
 破甲自检
 ```
 
@@ -276,7 +277,7 @@ python 破甲一键通.py --zcode-cjs "D:\ZCode\resources\glm\zcode.cjs" --zpatc
 python 破甲一键通.py --check
 ```
 
-它会逐目标报告：靶点生效比例、命令闸门、**旧的 V4 守护任务**（那种每 30 分钟用旧人格覆盖一遍的坑）、Codex 注入块与指令文件身份、**明文密钥提示**（只给行号 + 脱敏形态，**绝不打印原文**）、以及自证是否就绪。全程只读，有问题退出码 `1`，可以直接 `if python 破甲一键通.py --check; then ...`。
+它会逐目标报告：靶点生效比例、命令闸门、**旧的 V4 守护任务**（那种每 30 分钟用旧人格覆盖一遍的坑）、**明文密钥提示**（只给行号 + 脱敏形态，**绝不打印原文**）、以及自证是否就绪。全程只读，有问题退出码 `1`，可以直接 `if python 破甲一键通.py --check; then ...`。
 
 ---
 
@@ -382,7 +383,7 @@ sha256sum -c SHA256SUMS.txt          # 文件名对得上就直接逐项校验
 
 | 文件 | SHA256（完整值见清单） | 字节 |
 |---|---|---|
-| `破甲一键通.py` | `f898535911b91124d4719f5b10478216`… | 263170 |
+| `破甲一键通.py` | `c3fc0f1df6a2fb1e93c79d98ba4a4f10`… | 233651 |
 | `一键破甲.bat` | `b90dc1d5752d106d0fab371eacfe6372`… | 1862 |
 | `persona.md` | `870bf45587f31bb91c88b92346686c8b`… | 2049 |
 
@@ -395,9 +396,9 @@ sha256sum -c SHA256SUMS.txt          # 文件名对得上就直接逐项校验
 
 ## 七、安全 & 可逆
 
-- **改前必留备份**，后缀跟原工具保持一致，可互相还原：DSH → `<文件名>.dshpurge.bak`；WorkBuddy → `<文件名>.unlockbak`；Codex → `<文件名>.codexunlock.bak`。另按时间戳归档一份到 `历史备份/`。
+- **改前必留备份**，后缀跟原工具保持一致，可互相还原：DSH → `<文件名>.dshpurge.bak`；WorkBuddy → `<文件名>.unlockbak`。另按时间戳归档一份到 `历史备份/`。
 - **护照驱动还原（v7.3）**：装完会在 `managed-prompts/pojia-yijiantong/passport.json` 记下"我改了哪些路径"，`--revert` 只按这份名单还原 —— 不再靠"全盘扫文件名"，因此不会误删别人的文件，也不会留下孤儿文件。
-- **不静默接管（v7.3）**：Codex 那边如果发现指令文件不是本工具写的（没有本工具身份标记），**默认拒绝接管**；确认要接管再加 `--claim`，接管前会先存快照、写一份 `*.claimed-by-pojia.txt` 说明原委。
+- **不静默接管（v7.3 引入，v7.5 随 Codex 目标一并撤下）**：当年 Codex 那边如果发现指令文件不是本工具写的，**默认拒绝接管**，要接管得加 `--claim`（先存快照 + 写 `*.claimed-by-pojia.txt` 说明原委）。这条设计留在这里作为历史记录；含它的最后一版是 v7.4（已归档）。
 - **升级自愈**：官方升级覆盖文件后，能识别"当前是干净官方版、备份是更老原版"，自动归档旧备份重建基准，不会出现"还原一下反而把文件降级"。
 - `--revert` / `--restore` 随时还原。只做文件级补丁，**不删包、不碰注册表/服务**。
 - `--status` / `--check` / `--dry-run` 纯只读，可以先看再动手。
@@ -426,15 +427,13 @@ DSH Desktop 的进程里很可能就跑着正在跟你对话的那个会话 —�
 
 ## 十、常见问答
 
-**Q：跑完要重启吗？** —— 要。DSH 和 WorkBuddy 需完全退出（含托盘）再打开；Codex 重开一个新会话即可。
+**Q：跑完要重启吗？** —— 要。DSH 和 WorkBuddy 需完全退出（含托盘）再打开。
 
 **Q：怎么确认真的生效了？** —— 在客户端新会话里单独发「**破甲自检**」，应回 `破甲已生效｜目标 XXX｜v7.4`。没回就是没载入（最常见原因是没重启）。
 
 **Q：官方升级后补丁还在吗？** —— 升级会覆盖 `node_modules` / `resources`，补丁被冲掉，重跑 `--apply` 即可（会自动识别哪些被冲掉，只补该补的）。
 
-**Q：怎么知道补丁有没有被冲掉？** —— `python 破甲一键通.py --check`（一条命令看完四个目标）；WorkBuddy 还可 `--snapshot` 留基准、`--compare` 对比。
-
-**Q：我的 `.codex` 里已经有一份别人工具留下的指令文件，会怎样？** —— 默认**不动它**，只告诉你"这个不是本工具写的"。确认要换成统一人格，加 `--claim`：会先存快照 + 留认领说明再接管。
+**Q：怎么知道补丁有没有被冲掉？** —— `python 破甲一键通.py --check`（一条命令看完三个目标）；WorkBuddy 还可 `--snapshot` 留基准、`--compare` 对比。
 
 ---
 
@@ -446,7 +445,7 @@ DSH Desktop 的进程里很可能就跑着正在跟你对话的那个会话 —�
 | `一键破甲.bat` | 纯 ASCII 启动器，通配符定位 `.py`，自动找 Python |
 | `persona.md` | 唯一共用人格源（四个目标共用） |
 | `使用说明.md` | 完整说明书 |
-| `修复报告.md` | 相比原工具修掉的 18 处缺陷（B1–B18）+ 3 处合并层问题（C1–C3）+ v7.3 的 20 项（N1–N20）+ **v7.4 的 19 项（N21–N39）**，逐条对照（每条都写了复现方式与修法） |
+| `修复报告.md` | 相比原工具修掉的 18 处缺陷（B1–B18）+ 3 处合并层问题（C1–C3）+ v7.3 的 20 项（N1–N20）+ **v7.4 的 19 项（N21–N39）+ v7.5 的 2 项（N41–N42）**，逐条对照（每条都写了复现方式与修法） |
 | `赞赏码.png` | 微信支付 / 支付宝收款码（自愿打赏用，不参与功能） |
 | `preview.png` | README 顶部的界面预览图 |
 | `LICENSE` | MIT 许可证 |

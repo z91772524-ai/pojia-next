@@ -461,12 +461,29 @@ def sha256_bytes(b):
 
 
 def json_body(s):
-    """把文本转成可安全塞进 JSON 字符串字面量的转义形式。"""
-    s = s.replace("\\", "\\\\")
-    s = s.replace('"', '\\"')
-    s = s.replace("\r\n", "\\n").replace("\n", "\\n").replace("\r", "\\n")
-    s = s.replace("\t", "\\t")
-    return s
+    """把文本转成可安全塞进 JSON 字符串字面量的转义形式。
+
+    v7.4 修：原来只处理 `\\` `"` `\\n` `\\t`，**漏了 C0 控制字符**（NUL / VT / FF / BS / ESC…）。
+    于是拿一个二进制文件当 `--persona` 时，控制字符会被原样写进 product.json 的字符串字面量里，
+    **整份 JSON 直接非法**（实测抓到）。这里按字符逐个转义，顺带处理 U+2028/U+2029
+    （它们在 JSON 里合法，但在 JS 里当换行，会破坏客户端解析）。
+    """
+    out = []
+    for ch in s:
+        o = ord(ch)
+        if ch == "\\":
+            out.append("\\\\")
+        elif ch == '"':
+            out.append('\\"')
+        elif ch in ("\n", "\r"):
+            out.append("\\n")
+        elif ch == "\t":
+            out.append("\\t")
+        elif o < 0x20 or o in (0x2028, 0x2029):
+            out.append("\\u%04x" % o)
+        else:
+            out.append(ch)
+    return "".join(out)
 
 
 def find_json_string_end(text, start):
@@ -918,9 +935,30 @@ def load_user_persona(override=""):
             if override:
                 say("[!] --persona 指定的文件不存在：%s" % path, "red")
             continue
+        # v7.4：先按严格 UTF-8 校验。拿二进制文件/编码不对的文件当人格时，
+        # 以前会一路 U+FFFD 塞进 product.json 与 5 个靶点（"永远不会有非 ASCII 问题"的假设是错的），
+        # 现在直接拒绝使用并改用内置人格 —— 宁可不换人格，也不把客户端配置写脏。
         try:
-            txt = read_text(path)[0]
+            with open(path, "rb") as _f:
+                _raw = _f.read()
         except Exception:
+            continue
+        _bad = ""
+        try:
+            txt = _raw[3:].decode("utf-8") if _raw.startswith(b"\xef\xbb\xbf") else _raw.decode("utf-8")
+        except UnicodeDecodeError as e:
+            _bad = "不是 UTF-8 文本（%s）" % e
+            txt = _raw.decode("utf-8", "replace")
+        if not _bad:
+            _ctrl = [c for c in txt if ord(c) < 0x20 and c not in "\r\n\t"]
+            if _ctrl:
+                _bad = "含 %d 个控制字符（例如 U+%04X）—— 看起来是二进制文件" % (len(_ctrl), ord(_ctrl[0]))
+            elif "\ufffd" in txt:
+                _bad = "含 U+FFFD（解码失败标记），说明源文件编码不对"
+        if _bad:
+            say("[!] %s（%s）**不能当人格用**：%s" % (label, path, _bad), "red")
+            say("    已忽略该文件，改用内置人格（没有写坏任何客户端配置）。"
+                "请把它另存为 UTF-8 纯文本再试。", "y")
             continue
         # 两种注释约定都支持：
         #   · `<!-- ... -->` 区间注释（persona.md 用这个）

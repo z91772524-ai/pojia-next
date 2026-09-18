@@ -669,6 +669,20 @@ def _decode_console(raw):
     return raw.decode("utf-8", "replace")
 
 
+def _npm_env():
+    """spawn npm/node 时用的环境：**关掉 node 的编译缓存**。
+
+    v7.5 加：Node 22+ 默认会把编译缓存写进用户 HOME（`node-compile-cache/`）。
+    本工具在探测 npm 全局目录 / npx 缓存时会 spawn npm 两次，于是"只读命令不落盘"
+    的承诺失真 —— 路人验收实测：空 HOME 被 npm 写出了 72 个缓存文件。
+    关掉之后实测 0 个文件，探测结果不受影响。
+    """
+    env = dict(os.environ)
+    env["NODE_COMPILE_CACHE"] = ""
+    env["NODE_DISABLE_COMPILE_CACHE"] = "1"
+    return env
+
+
 def _run(cmd, timeout=60):
     r"""执行一条系统命令并返回 (输出, 退出码)。
 
@@ -1197,7 +1211,8 @@ class DshTarget:
         # 3) npm 全局
         for exe in (("npm", "npm.cmd") if IS_WIN else ("npm",)):
             try:
-                r = subprocess.run([exe, "root", "-g"], capture_output=True, text=True, timeout=15)
+                r = subprocess.run([exe, "root", "-g"], capture_output=True, text=True,
+                                   timeout=15, env=_npm_env())
                 out = (r.stdout or "").strip()
                 if out:
                     add(os.path.join(out, "@deepseek-ai"))
@@ -1218,15 +1233,9 @@ class DshTarget:
         caches = []
         for exe in (("npm", "npm.cmd") if IS_WIN else ("npm",)):
             try:
-                # v7.5：给 npm 子进程关掉 node 的编译缓存 —— 否则 Node 22+ 会往
-                # 用户 HOME 里写 node-compile-cache，让"只读命令不落盘"的承诺失真
-                # （路人验收里实测到的：空 HOME 被 npm 写出了编译缓存）。
-                env = dict(os.environ)
-                env["NODE_COMPILE_CACHE"] = ""
-                env["NODE_DISABLE_COMPILE_CACHE"] = "1"
                 out = subprocess.run([exe, "config", "get", "cache"],
                                      capture_output=True, text=True, timeout=15,
-                                     env=env).stdout.strip()
+                                     env=_npm_env()).stdout.strip()
                 if out and out.lower() != "undefined":
                     caches.append(out)
             except Exception:
@@ -3941,9 +3950,12 @@ class ZCodeTarget:
             return self.revert(args)
 
         if not os.path.isdir(home) and not zpatch:
-            log("未找到 ZCode 配置目录：%s" % home, "red", "zcode")
-            log("  装了 ZCode 就加 --pick zcode 选一次（会自动记住），或用 --zcode-dir 指定。", "y", "zcode")
-            return {"err": 1, "skip": True}
+            # v7.5：这里原来返回 {"err": 1}，于是"机器上没装 ZCode"会被算成错误 →
+            # 进程退出码 1。路人第一次跑 --dry-run/--apply 就会看到"失败"，其实只是没装。
+            # 与 DSH（未检测到安装 → skip）保持一致：**没装 = 跳过，不是错误**。
+            log("未检测到 ZCode 安装，跳过。（装了就用 --pick zcode 指定，或用 --zcode-dir）",
+                "y", "zcode")
+            return {"skip": 1}
 
         cfg_agents = os.path.join(home, ZCODE_AGENTS)
         mems = self.mem_paths(home)

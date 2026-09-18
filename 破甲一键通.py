@@ -104,8 +104,9 @@ if sys.stderr is None:
     sys.stderr = sys.stdout
 
 IS_WIN = (os.name == "nt")
-VERSION = "7.3"
+VERSION = "7.4"
 CHECK_EXIT_CODES = []          # --check 用：收集不达标项（只影响退出码，不改状态码）
+ERRORS = 0                     # v7.4：apply/revert 里的失败项累计（>0 → 进程退出码 1）
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SELF = os.path.abspath(__file__)
@@ -280,8 +281,8 @@ def _init_console():
             pass
     if IS_WIN:
         try:
-            # 触发一次 VT 初始化，让第一次输出就带色（只执行空命令，不传任何用户输入）
-            subprocess.run("cmd /c exit", capture_output=True, timeout=10)
+            # 触发一次 VT 初始化，让第一次输出就带色（列表形式，参数不含任何外部输入）
+            subprocess.run(["cmd", "/c", "exit"], capture_output=True, timeout=10)
         except Exception:
             pass
 
@@ -380,7 +381,34 @@ def read_text_safe(path):
         return None
 
 
+# v7.4：全局预演开关。run_action 进入 dry-run 时置位，write_text/backup_file 一律拒写。
+# 这是"预演一个字节都不改"承诺的**兜底**：万一将来又有人漏写 dry 判断，
+# 也不会把用户的文件改掉（DSH/WB 的 revert 分支就漏过一次）。
+DRY_RUN = False
+
+
+def _atomic_write(path, data):
+    """先写同目录临时文件，再 os.replace 顶替 —— 中途失败不会把原文件截成半截。"""
+    d = os.path.dirname(os.path.abspath(path)) or "."
+    tmp = os.path.join(d, "~%s.pojia-tmp" % os.path.basename(path))
+    try:
+        with open(tmp, "wb") as f:
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+        return True
+    except Exception:
+        try:
+            os.remove(tmp)
+        except Exception:
+            pass
+        return False
+
+
 def write_text(path, text, bom=False, make_dirs=False):
+    if DRY_RUN:
+        return False
     if make_dirs:
         d = os.path.dirname(path)
         if d and not os.path.isdir(d):
@@ -388,8 +416,11 @@ def write_text(path, text, bom=False, make_dirs=False):
     data = text.encode("utf-8")
     if bom:
         data = b"\xef\xbb\xbf" + data
-    with open(path, "wb") as f:
-        f.write(data)
+    # v7.4：改成原子写（旧实现是 open(path,"wb") 直接写，写一半失败就把原文件毁了）
+    if not _atomic_write(path, data):
+        with open(path, "wb") as f:
+            f.write(data)
+    return True
 
 
 def detect_nl(text):
@@ -477,6 +508,30 @@ def _archive(path, tag):
         return ""
 
 
+# v7.4：识别"这份内容已经是本工具写的"。
+# 用途只有一个但很关键 —— 备份时**绝不能**把我们自己注入的内容存成"用户原档"。
+# 一旦存错，--revert 就会把注入的人格当作"用户的原始文件"还原回去，用户的原内容
+# 静默丢失且无从追回（实测：删掉 .pojia.bak 后再跑一次 apply 就能复现）。
+OURS_ARTIFACT_MARKS = ("pojia-yijiantong", "unlock-v6:h=", "unlock-v4:h=",
+                       "managed-prompts/pojia", "pojia-yijiantong cloudmem v")
+
+
+def _is_our_artifact(text):
+    """文本里是否带本工具自己的标记（= 这份内容是本工具写的，不是用户原档）。"""
+    if not text:
+        return False
+    return any(mk in text for mk in OURS_ARTIFACT_MARKS)
+
+
+def _not_ours(text):
+    """给 `backup_file(is_pristine=)` 用：没有本工具标记 = 还是"官方/用户原版"。
+
+    v7.4：Codex / ZCode 之前没接这个判据，于是官方升级覆盖过文件之后，
+    备份还停在**升级前**的旧内容，`--revert` 会把文件降级回旧版（实测抓出来的）。
+    """
+    return not _is_our_artifact(text)
+
+
 def backup_file(path, suffix=None, bak_path=None, is_pristine=None):
     """确保"未打补丁的原始版本"有一份备份。
 
@@ -486,14 +541,25 @@ def backup_file(path, suffix=None, bak_path=None, is_pristine=None):
       · bak 存在且当前文件已是"有补丁"状态 -> 什么都不做（保住原始基准）
       · bak 存在但当前文件是干净的官方版（说明官方升级覆盖过）-> 归档旧 bak，重建基准
     bak_path 用来支持 DSH 那种"备份不能放在原目录旁边"的密封目录场景。
+
+    v7.4 补：bak 不存在、但当前文件**已经是我们写的**时，拒绝备份（见 _is_our_artifact）。
+    之前这一条会把注入版当原档存下来 —— 备份被清理工具删掉后重跑一次就中招，
+    revert 便"还原"成注入内容，等于什么都没还原还丢掉了用户原文件。
     """
     bak = bak_path or (path + (suffix or ".bak"))
     try:
+        if DRY_RUN:
+            return bak
         if bak_path:
             d = os.path.dirname(bak)
             if d and not os.path.isdir(d):
                 os.makedirs(d, exist_ok=True)
         if not os.path.exists(bak):
+            cur = read_text_safe(path)
+            if cur is not None and _is_our_artifact(cur):
+                log("  [!] %s 的原始备份已丢失，且当前内容是本工具写的：不建备份"
+                    "（避免把注入版当成用户原档）" % os.path.basename(path), "y")
+                return bak
             shutil.copy2(path, bak)
             return bak
         if is_pristine is not None:
@@ -564,14 +630,23 @@ def _decode_console(raw):
 
 
 def _run(cmd, timeout=60):
-    """执行一条系统命令并返回 (输出, 退出码)。
+    r"""执行一条系统命令并返回 (输出, 退出码)。
 
-    命令**只来自本脚本内的字面量**（taskkill / schtasks / git 等），不接受任何外部输入，
-    所以列表形式执行即可，不需要 shell（bandit 的 B602/B605 就是盯着这个）。
+    **只接受列表**（命令与参数都是脚本内字面量，不接受外部输入，所以不需要 shell）。
+    v7.4 修：v7.3 让它接受字符串并走 `shlex.split(posix=False)` —— 那个模式下**不剥引号**，
+    于是 `schtasks /Query /TN "有名任务"` 会被拆成 `'/TN', '"有名任务"'`（引号跟着进参数），
+    `schtasks /Create ... /TR "\"C:\a b\x.exe\" ..."` 更会被拆成一堆碎块 ——
+    结果就是**计划任务的查/删/建全被拆坏**。所以字符串形式现在只做兼容处理：
+    拆开后把成对的引号剥掉、`\\"` 还原成 `"`，并提示调用方改用列表。
     """
     try:
         if isinstance(cmd, str):
-            cmd = shlex.split(cmd, posix=False)
+            argv = []
+            for tok in shlex.split(cmd, posix=False):
+                if len(tok) >= 2 and tok[0] == '"' and tok[-1] == '"':
+                    tok = tok[1:-1].replace('\\"', '"')
+                argv.append(tok)
+            cmd = argv
         r = subprocess.run(cmd, capture_output=True, timeout=timeout)
         return _decode_console((r.stdout or b"") + (r.stderr or b"")), r.returncode
     except Exception as e:
@@ -661,7 +736,7 @@ def kill_processes(procs, dry_run=False):
             continue
         try:
             if IS_WIN:
-                _msg, rc = _run("taskkill /PID %d /F /T" % pid, timeout=15)
+                _msg, rc = _run(["taskkill", "/PID", str(pid), "/F", "/T"], timeout=15)
                 out.append("%s 进程 %s (%s)" % ("已结束" if rc == 0 else "结束失败", pid, name))
             else:
                 os.kill(pid, 9)
@@ -1139,7 +1214,11 @@ class DshTarget:
         if not self.is_sealed_bin(d):
             return fp + self.bak_suffix
         root = os.path.join(self.dsh_home(), "dsh-purge", "shim-backups")
-        os.makedirs(root, exist_ok=True)
+        # v7.4：只读模式（--status / --check / --dry-run）下**不建目录** ——
+        # 以前只是"看一眼状态"也会在 DSH_HOME 里凭空多出一个 dsh-purge\shim-backups，
+        # 跟界面自述的"未改动任何文件"自相矛盾。
+        if not DRY_RUN:
+            os.makedirs(root, exist_ok=True)
         digest = hashlib.sha1(os.path.normpath(fp).encode("utf-8"),
                               usedforsecurity=False).hexdigest()[:20]
         return os.path.join(root, "%s.%s.bak" % (os.path.basename(fp), digest))
@@ -1200,6 +1279,8 @@ class DshTarget:
 
         changed = False
         has_official = "You are a coding agent" in text
+        orig_text = text                 # v7.4：安全网用的原文快照
+        emptied = 0                      # 被"清空"的键数（原本有内容的才算）
 
         del_keys = ["prefix", "personaPrefix", "persona"]
         if has_official:
@@ -1209,21 +1290,25 @@ class DshTarget:
             if fold.search(text):
                 text = fold.sub(lambda m: m.group(1) + key + ': >-', text)
                 changed = True
+                emptied += 1
             lit = re.compile(r'(?m)^(\s*)' + re.escape(key) + r':\s*\|-[^\S\n]*'
                              r'(?:\n(?:\1[ \t]+[^\n]*|[ \t]*(?=\n)))*')
             if lit.search(text):
                 text = lit.sub(lambda m: m.group(1) + key + ': >-', text)
                 changed = True
+                emptied += 1
             # 内联双引号形式（原版写法）
             inline = re.compile(r'(?m)^(\s*)' + re.escape(key) + r':\s*"You are a coding agent powered by[^\n]*"')
             if inline.search(text):
                 text = inline.sub(lambda m: m.group(1) + key + ': ""', text)
                 changed = True
+                emptied += 1
             # 内联无引号身份（minimal 预设：prefix: You are a helpful ...）
             inline_any = re.compile(r'(?m)^(\s*)' + re.escape(key) + r':[ \t]*(You are [^\n"\'|>]*)$')
             if inline_any.search(text):
                 text = inline_any.sub(lambda m: m.group(1) + key + ': >-', text)
                 changed = True
+                emptied += 1
         for skey in ("suffix", "personaSuffix"):
             suf = re.compile(r'(?m)^(\s*)' + re.escape(skey) + r':\s*Your working directory is \{\{cwd\}\}\.')
             if suf.search(text):
@@ -1236,6 +1321,7 @@ class DshTarget:
 
         # 走到这里说明不是最新版（严格态，或是上一版人格），删除 + 重新注入
         content = persona
+        injected = False
 
         def inject(m):
             indent, key = m.group(1), m.group(2)
@@ -1244,14 +1330,23 @@ class DshTarget:
                 block += (indent + "  " + ln).rstrip() + "\n"
             return block.rstrip("\n")
 
-        for cand in (("prefix", "personaPrefix"), ("persona", "text")):
-            inj = re.compile(r'(?m)^(\s*)(' + "|".join(cand) + r'):\s*>-[^\S\n]*$')
+        for key in ("prefix", "personaPrefix", "persona", "text"):
+            # v7.4 修：原来写成 `for cand in (("prefix","personaPrefix"), ("persona","text"))`
+            # 配 `if "text" in cand` —— cand 是**整个元组**，所以只要轮到第二组就恒为真，
+            # 于是一份带 `persona: >-` 但没写官方身份句的 yml 会被"先清空、后拒绝注入"：
+            # 人格块被吃成空的，日志还报"已打补丁"（实测复现）。改成按单个键依次处理。
+            if key == "text" and not has_official:
+                continue            # `text:` 只在官方形态里是人格位，别乱动
+            inj = re.compile(r'(?m)^(\s*)(' + re.escape(key) + r'):\s*>-[^\S\n]*$')
             if inj.search(text):
-                if "text" in cand and not has_official:
-                    continue
                 text = inj.sub(inject, text)
                 changed = True
+                injected = True
                 break
+
+        # v7.4 安全网：清了内容却没注进去 = 把人格整段吃掉。宁可一个字节都不动。
+        if emptied and not injected:
+            return orig_text, False
         return text, changed
 
     def _pick_persona_funcs(self, raw):
@@ -1487,10 +1582,22 @@ class DshTarget:
         for b in bases:
             for fp, funcs in self.collect_targets(b):
                 if mode == "revert":
+                    # v7.4 修：这里原来没有 dry 判断 —— `--revert --dry-run` 会**真的写盘**并删掉备份。
+                    # （main 里 args.revert 的分支排在 dry_run 之前，所以预演标志到不了这里。）
+                    if getattr(args, "dry_run", False):
+                        log("[预演] 将还原 | " + rel_display(fp, b), "y", "dsh")
+                        stats["skip"] += 1
+                        continue
                     r = self.revert_file(fp)
                     if r == "done":
                         stats["revert"] += 1
                         log("已还原 | " + rel_display(fp, b), "g", "dsh")
+                    elif r == "nobak" and _is_our_artifact(read_text_safe(fp)):
+                        # v7.4：备份没了，但文件确实是我们改过的 —— 如实说明，别让用户
+                        # 以为"跳过"等于"已经是原样"，也别拿注入版冒充原档去还原。
+                        stats["skip"] += 1
+                        log("无备份可还原（当前内容是本工具写的，保持不动，未冒充原档） | "
+                            + rel_display(fp, b), "y", "dsh")
                     else:
                         stats["skip"] += 1
                     continue
@@ -1989,6 +2096,88 @@ class WorkBuddyTarget:
         except Exception:
             return ""
 
+    @staticmethod
+    def task_wellformed(name):
+        """计划任务的结构是否**真能跑起来**（返回 (ok, 说明)）。
+
+        v7.4 新增。踩过的坑：本机 `WorkBuddyUnlockV6_Hourly` 的 XML 长得像这样 ——
+
+            <Command>"C:\\...\\pythonw.exe E:\\...\\破甲一键通.py --quiet"</Command>
+
+        整条命令行都被塞进了 `<Command>`，没有 `<Arguments>`。Windows 会把它当成
+        "一个名字里带空格的程序" 去找，结果 Last Result = -2147020576（参数错误），
+        **一次都没跑成**。而自检只做"脚本名是否出现在命令串里"的子串匹配，
+        于是照报「[正常] 守护任务」—— 工具在骗用户。
+        现在按结构判断：`<Command>` 只应该是解释器本身，脚本路径必须出现在 `<Arguments>` 里。
+        """
+        try:
+            r = subprocess.run(["schtasks", "/Query", "/TN", name, "/XML"],
+                               capture_output=True, timeout=60)
+            raw = r.stdout or b""
+            s = None
+            for enc in ("utf-16", "utf-8-sig", "utf-8", "gbk"):
+                try:
+                    t = raw.decode(enc)
+                except Exception:
+                    continue
+                if "<Task" in t:
+                    s = t
+                    break
+            if s is None:
+                return False, "取不到任务定义"
+            m = re.search(r"<Command>(.*?)</Command>", s, re.S)
+            a = re.search(r"<Arguments>(.*?)</Arguments>", s, re.S)
+            cmd = (m.group(1).strip() if m else "")
+            arg = (a.group(1).strip() if a else "")
+            script = os.path.basename(SELF)
+            if not cmd:
+                return False, "任务里没有 <Command>"
+            # 健康形态：Command = "解释器路径"，Arguments 里带脚本
+            if script.lower() in arg.lower() or (not arg and script.lower() not in cmd.lower()):
+                if arg or script.lower() not in cmd.lower():
+                    return True, ""
+            if script.lower() in cmd.lower() and not arg:
+                return False, ("整条命令行被塞进了 <Command>、没有 <Arguments> → "
+                               "Windows 会当成一个带空格的程序名去找，任务跑不起来")
+            if not arg and cmd.lower().endswith(".exe"):
+                return False, "只有解释器、没有脚本参数 → 任务起来也不会做任何事"
+            if script.lower() not in (cmd + " " + arg).lower():
+                return False, "任务命令没指向本脚本"
+            return True, ""
+        except Exception as e:
+            return False, "检查失败：%s" % e
+
+    @staticmethod
+    def task_last_result(name):
+        """任务上次运行结果（取不到返回 None）。267009=正在运行，267011=还没跑过。"""
+        try:
+            r = subprocess.run(["schtasks", "/Query", "/TN", name, "/V", "/FO", "LIST"],
+                               capture_output=True, timeout=60)
+            raw = r.stdout or b""
+            s = None
+            for enc in ("utf-16", "utf-8-sig", "utf-8", "gbk", "latin-1"):
+                try:
+                    t = raw.decode(enc)
+                except Exception:
+                    continue
+                if ":" in t:
+                    s = t
+                    break
+            if not s:
+                return None
+            for ln in s.splitlines():                      # 中英文系统都能识别
+                if ":" not in ln:
+                    continue
+                k, _sep, v = ln.partition(":")
+                kl = k.strip().lower()
+                if "result" in kl or "结果" in k:
+                    v = v.strip()
+                    if re.fullmatch(r"-?\d+", v):
+                        return int(v)
+            return None
+        except Exception:
+            return None
+
     def scheduled_task_names(self):
         return [n for n in ALL_TASKS if self._task_exists(n)]
 
@@ -1997,7 +2186,7 @@ class WorkBuddyTarget:
         for name in ALL_TASKS:
             if not self._task_exists(name):
                 continue
-            _run('schtasks /Delete /TN "%s" /F' % name)
+            _run(["schtasks", "/Delete", "/TN", name, "/F"])   # 列表形式：任务名不会被引号污染
             if self._task_exists(name):
                 failed.append(name)
             else:
@@ -2015,44 +2204,75 @@ class WorkBuddyTarget:
 
     def install_guard_tasks(self, admin):
         py = self._pick_quiet_python()
+        # /TR 的值本身要带内层引号（路径可能有空格）；作为**单个 argv 元素**传给 schtasks，
+        # 由 subprocess 在 Windows 上按 argv 规则转义，schtasks 收到的是 `"py" "脚本" --quiet`。
         tr = '"%s" "%s" --quiet' % (py, SELF)
-        _m1, _rc1 = _run('schtasks /Create /TN "%s" /SC MINUTE /MO 30 /TR "\\"%s\\"" /F' % (TASK_HOURLY, tr))
-        rl = " /RL HIGHEST" if admin else ""
-        _m2, _rc2 = _run('schtasks /Create /TN "%s" /SC ONLOGON /TR "\\"%s\\"" /F%s' % (TASK_LOGON, tr, rl))
+        _m1, _rc1 = _run(["schtasks", "/Create", "/TN", TASK_HOURLY, "/SC", "MINUTE", "/MO", "30",
+                          "/TR", tr, "/F"])
+        argv2 = ["schtasks", "/Create", "/TN", TASK_LOGON, "/SC", "ONLOGON", "/TR", tr, "/F"]
+        if admin:
+            argv2 += ["/RL", "HIGHEST"]          # 登录任务要提权才能注册（需管理员）
+        _m2, _rc2 = _run(argv2)
         ok_h, ok_l = self._task_exists(TASK_HOURLY), self._task_exists(TASK_LOGON)
         # 校验任务真的指向本脚本（不然"存在"也是静默失败）
         cmds = (self.task_command(TASK_HOURLY) + self.task_command(TASK_LOGON)).lower()
         points_here = os.path.basename(SELF).lower() in cmds
+        # v7.4：再加一道**结构校验** —— 「存在」和「名字出现在命令串里」都不代表能跑起来。
+        # 老版本建出来的任务把整条命令行塞进 <Command>，一次都没执行成功，却一直被报成"已安装"。
+        wf_h, why_h = self.task_wellformed(TASK_HOURLY) if ok_h else (False, "")
+        wf_l, why_l = self.task_wellformed(TASK_LOGON) if ok_l else (False, "")
         return {"hourly": ok_h, "logon": ok_l, "admin": admin, "python": py,
                 "points_here": points_here,
-                "cmd": self.task_command(TASK_HOURLY)}
+                "wellformed": bool(wf_h and (wf_l or not ok_l)),
+                "wellformed_msg": why_h or why_l,
+                "cmd": self.task_command(TASK_HOURLY),
+                # v7.4：把 schtasks 的原始报错带回给调用方。
+                # 之前这两条消息被丢弃，用户只看到「未安装」却不知道为什么——
+                # 最常见的原因就是「非管理员 → 登录任务 ERROR: Access is denied」。
+                "msg_hourly": _m1.strip(), "msg_logon": _m2.strip(),
+                "rc": (_rc1, _rc2)}
 
     def audit_guard_tasks(self, verbose=True):
         good, bad = [], []
         selfname = os.path.basename(SELF).lower()
         for t in self.scheduled_task_names():
             cmd = self.task_command(t)
-            if selfname and selfname in cmd.lower():
+            ok_wf, why = self.task_wellformed(t)
+            if selfname and selfname in cmd.lower() and ok_wf:
                 good.append(t)
             else:
                 miss = ""
                 m = re.search(r'"([^"]+\.(?:bat|cmd|ps1|exe|py))"', cmd, re.I)
                 if m and not os.path.exists(m.group(1)):
                     miss = m.group(1)
-                bad.append((t, cmd, miss))
+                bad.append((t, cmd, miss, why))
         if verbose:
             for t in good:
                 log("  [正常] 守护任务 %s" % t, "g", "wb")
-            for t, cmd, miss in bad:
-                log("  [异常] 守护任务 %s 指向的不是本脚本" % t, "y", "wb")
+            for t, cmd, miss, why in bad:
+                if why:
+                    log("  [异常] 守护任务 %s：%s" % (t, why), "red", "wb")
+                    log("         修法：以管理员身份运行 --guard install（会删掉重建）", "y", "wb")
+                else:
+                    log("  [异常] 守护任务 %s 指向的不是本脚本" % t, "y", "wb")
                 log("         目标 = %s" % (cmd or "(取不到)"), "dg", "wb")
                 if miss:
                     log("         而且该文件已不存在：%s" % miss, "red", "wb")
+                lr = self.task_last_result(t)
+                if lr is not None and lr not in (0, 267009, 267011):
+                    log("         上次运行结果 = %d（非 0 = 没跑成功）" % lr, "y", "wb")
         return good, bad
 
     # ---------------- 会话快照清理 ----------------
     @staticmethod
-    def clear_session_spill(data_dir, max_age_hours=24, purge_all=False):
+    def clear_session_spill(data_dir, max_age_hours=24, purge_all=False, dry=False):
+        """统计/清理会话快照。
+
+        v7.4：加了 dry 开关，并把**默认行为改成"只统计不删"**。原因：这些快照
+        （`cache\\conversation-product-spill\\*.json` 与 `%TEMP%\\workbuddy-product-spill-*`）
+        不在备份范围内，删了就 revert 不回来 —— 实测一次普通 `--apply` 就会把用户
+        72 小时前的会话快照删掉。清理属于"用户数据"操作，必须是显式要求才做。
+        """
         n, size = 0, 0
         cut = _dt.datetime.now() - _dt.timedelta(hours=max_age_hours)
         items = []
@@ -2077,11 +2297,15 @@ class WorkBuddyTarget:
                 if os.path.isdir(p):
                     size += sum(os.path.getsize(os.path.join(r, f))
                                 for r, _d, fs in os.walk(p) for f in fs)
-                    shutil.rmtree(p, ignore_errors=True)
                 else:
                     size += os.path.getsize(p)
-                    os.remove(p)
                 n += 1
+                if dry:
+                    continue
+                if os.path.isdir(p):
+                    shutil.rmtree(p, ignore_errors=True)
+                else:
+                    os.remove(p)
             except Exception:
                 pass
         return n, size
@@ -2158,7 +2382,22 @@ class WorkBuddyTarget:
 
         # ---------- 还原 ----------
         if mode == "revert":
+            # v7.4 修：原来这条分支完全没有 dry 判断，`--revert --dry-run` 会真把 .unlockbak
+            # 拷回去、还会重写云记忆档案 —— 违背"预演一个字节都不改"的承诺。
+            dry_rv = (mode == "dry-run") or getattr(args, "dry_run", False)
             n = 0
+            if dry_rv:
+                for root in (data_dir, install):
+                    if not root or not os.path.isdir(root):
+                        continue
+                    for r, _d, files in os.walk(root):
+                        for fn in files:
+                            if fn.endswith(BAK_WB):
+                                n += 1
+                                log("[预演] 将还原 | %s" % os.path.join(r, fn[:-len(BAK_WB)]), "y", "wb")
+                log("[预演] 将处理云记忆档案 %d 份（不写盘）" % len(wb_cloudmem_candidates(data_dir)), "y", "wb")
+                log("[预演] 共需还原 %d 个文件（预演，未改盘）" % n, "y", "wb")
+                return {"revert": n, "dry": 1}
             for root in (data_dir, install):
                 if not root or not os.path.isdir(root):
                     continue
@@ -2309,10 +2548,25 @@ class WorkBuddyTarget:
                     pass
 
         # ---------- 会话快照 ----------
-        if not dry and not getattr(args, "no_spill_clean", False):
-            n, size = self.clear_session_spill(data_dir, 24, getattr(args, "purge_spill", False))
-            if n:
-                log("已清理过期会话快照 %d 份（%.1f KB）" % (n, size / 1024.0), "g", "wb")
+        # v7.4：默认**只统计不删**。这些快照不在备份范围内，删了 revert 不回来，
+        # 所以清理必须由用户显式要求（--clean-spill 清过期 / --purge-spill 清全部）。
+        if not dry:
+            _no = getattr(args, "no_spill_clean", False)
+            _purge = getattr(args, "purge_spill", False)
+            _clean = getattr(args, "clean_spill", False)
+            if _no:
+                pass
+            elif _purge or _clean:
+                n, size = self.clear_session_spill(data_dir, 24, _purge)
+                if n:
+                    log("已清理会话快照 %d 份（%.1f KB）%s"
+                        % (n, size / 1024.0, "（全部）" if _purge else "（24 小时以前的）"), "g", "wb")
+            else:
+                n, size = self.clear_session_spill(data_dir, 24, False, dry=True)
+                if n:
+                    log("发现 %d 份过期会话快照（%.1f KB）—— **未删除**（不在备份范围内，"
+                        "删了还原不回来）。要清理请加 --clean-spill（只清过期的）或 "
+                        "--purge-spill（清全部）" % (n, size / 1024.0), "dg", "wb")
 
         # ---------- 复查 ----------
         if not dry and mode == "apply":
@@ -2337,7 +2591,7 @@ class WorkBuddyTarget:
 
         if getattr(args, "restart_wb", False) and not dry and install:
             log("正在重启 WorkBuddy...", "y", "wb")
-            _run("taskkill /IM WorkBuddy.exe /F")
+            _run(["taskkill", "/IM", "WorkBuddy.exe", "/F"])
             time.sleep(3)
             exe = None
             for r, dirs, files in os.walk(install):
@@ -2849,12 +3103,17 @@ SECRET_KEYS = ("token", "bearer", "api_key", "apikey", "secret", "password", "pa
 
 
 def mask_secret(s):
+    """脱敏显示。v7.4 修：旧实现对 9 字符的密钥会显示出 8 个字符（`s[:4]+…+s[-4:]`），
+    等于没脱敏。现在按长度分档 —— 短密钥整段打掉，长的最多露首尾各 2 位。"""
     if not s:
         return ""
     s = str(s).strip()
-    if len(s) <= 8:
-        return "***"
-    return s[:4] + "…" + s[-4:] + "（已脱敏，长度 %d）" % len(s)
+    n = len(s)
+    if n <= 12:
+        return "***（已脱敏，长度 %d）" % n
+    if n <= 24:
+        return s[:2] + "…" + s[-2:] + "（已脱敏，长度 %d）" % n
+    return s[:2] + "…" + s[-2:] + "（已脱敏，长度 %d）" % n
 
 
 def scan_config_hints(cfg_path, root):
@@ -2862,28 +3121,36 @@ def scan_config_hints(cfg_path, root):
 
     硬性约定：**绝不打印密钥原文**，只给位置、键名和脱敏后的形态；也不读被引用的
     其它文件。这是"体检"，不是"试用"。
+    v7.4 修两处脱敏漏洞：
+      · 原来还要再过一遍窄清单（token/bearer/api_key/...），于是 `passwd` / `cookie` /
+        `credential` 这些 SECRET_KEYS 里的键**永远不会被报**（死键），等于漏检；
+      · `base_url` 只取了 netloc，像 `https://user:pass@relay.example.com` 这种
+        带账号密码的中转会**把凭据原样打在屏幕上**。
     """
     out = []
     raw = read_text_safe(cfg_path) if cfg_path else None
     if raw is None:
         return out
     for i, ln in enumerate(raw.splitlines(), 1):
-        low = ln.lower()
         if "=" not in ln:
             continue
         key = ln.split("=", 1)[0].strip().lower()
         if not any(k in key for k in SECRET_KEYS):
             continue
-        if any(k in low for k in ("token", "bearer", "api_key", "apikey", "secret",
-                                  "password", "authorization")):
-            val = ln.split("=", 1)[1].strip().strip('"').strip("'")
-            out.append(("warn", "第 %d 行 %s = %s" % (i, ln.split("=", 1)[0].strip(), mask_secret(val))))
-    # 第三方中转提示（只报 host，不报完整 URL）
+        val = ln.split("=", 1)[1].strip().strip('"').strip("'")
+        out.append(("warn", "第 %d 行 %s = %s"
+                    % (i, ln.split("=", 1)[0].strip(), mask_secret(val))))
+    # 第三方中转提示（只报 host，不报完整 URL，也不要 userinfo 里的凭据）
     for i, ln in enumerate(raw.splitlines(), 1):
         m = re.search(r'base_url\s*=\s*["\'](https?://[^"\']+)["\']', ln)
         if m:
             try:
-                host = urllib.parse.urlsplit(m.group(1)).netloc
+                sp = urllib.parse.urlsplit(m.group(1))
+                host = sp.hostname or "(无法解析)"
+                if sp.port:
+                    host += ":%d" % sp.port
+                if sp.username or sp.password:
+                    host += "（URL 里带了账号密码，已隐去）"
             except Exception:
                 host = "(无法解析)"
             official = any(h in host.lower() for h in ("openai.com", "deepseek.com"))
@@ -3008,43 +3275,58 @@ class CodexTarget:
         return m.group(1) if m else ""
 
     def strip_block(self, cfg):
-        """剥掉自己写的标记块，并按块里记录的 `trail=` **原样还原**原文尾部换行序列。
+        """剥掉自己写的标记块，把**原文逐字节**还回去（含尾部空白与"有没有尾换行"）。
 
-        尾巴这里改错四次（多留一个换行 / 吃掉原尾换行 / CRLF 混进 LF / 无尾换行被补），
-        根因都是"想从块与正文的关系反推原文尾部" —— 信息不够。所以现在不推：
-        patch_config 把原文末尾的换行序列**原样**写进块（`# trail=\\n\\n`），这里照着贴回。
+        v7.4 重写。旧实现有三个字节失真的坑（都被实测抓到过）：
+          · 没有标记块时也执行 `head.rstrip()` → 对**从没装过**的 config.toml 跑 --revert
+            会把它尾部的空白/换行删掉（32B→27B），还顺手留个 .before-reset.bak；
+          · `# trail=` 写在了 MARK_END **外面**，而正则只吃到 MARK_END → 那段记录永远读不到，
+            "按记录还原尾巴"实际是死代码，退化成一律补一个 \\n（15B→16B）；
+          · 头部 rstrip 把用户原文的尾随空格直接吃掉。
+        现在：没有块就**原样返回**；有块就「去掉我们加的那一个隔断换行」+「贴回记录的原文尾巴」。
         """
         pat = re.compile(r"^[ \t]*" + re.escape(MARK_BEGIN)
                          + r".*?^[ \t]*" + re.escape(MARK_END)
                          + r"[ \t]*(?:\r?\n)?", re.S | re.M)
         m = pat.search(cfg)
-        blk = cfg[m.start():m.end()] if m else ""
-        head = cfg[:m.start()] if m else cfg
-        mt = re.search(r"#\s*trail\s*=\s*(\S*)", blk) if blk else None
+        if not m:
+            return cfg                                  # ← v7.4：没有我们的块，一个字节都不动
+        blk = cfg[m.start():m.end()]
+        head = cfg[:m.start()]
+        nl = detect_nl(cfg) or "\n"
+        # head 末尾是我们 patch 时加的隔断换行（块总是另起一行），先拿掉
+        if head.endswith("\r\n"):
+            head = head[:-2]
+        elif head.endswith("\n") or head.endswith("\r"):
+            head = head[:-1]
+        mt = re.search(r"#\s*trail=([^\r\n]*)", blk)
         if mt:
             tok = mt.group(1)
-            trail = ("-" if tok == "-" else
-                     tok.replace("\\r", "\r").replace("\\n", "\n").replace("\\t", "\t"))
-            if trail == "-":
-                trail = ""
+            trail = "" if tok == "-" else (tok.replace("\\\\", "\x00")
+                                           .replace("\\r", "\r").replace("\\n", "\n")
+                                           .replace("\\t", "\t").replace("\x00", "\\"))
         else:
-            trail = "\n" if m else ""          # 有块但没记录 → 兼容旧格式；没块 → 原样返回
-        out = head.rstrip("\r\n\t ")
-        if not out.strip():
+            trail = "\n" if head else ""                # 兼容旧格式块（没有 trail 记录）
+        if not head.strip() and not trail:
             return ""
-        return out + trail
+        return head + trail
 
     def patch_config(self, cfg, rel_path):
+        """写入 `model_instructions_file` 标记块；块里**记录原文尾巴**，供 revert 逐字节还原。"""
         nl = detect_nl(cfg) or "\n"
-        # 原文末尾的换行序列（原样记录；空格/制表符也一并算进尾巴，revert 才能逐字节回去）
-        mt = re.search(r"([\r\n\t ]*)$", cfg)
+        # 先剥掉可能存在的旧块（幂等），拿到"用户原文"
+        prev = self.strip_block(cfg)
+        mt = re.search(r"([\r\n\t ]*)$", prev)
         trail = mt.group(1) if mt else ""
-        tok = trail.replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t") or "-"
-        base = self.strip_block(cfg).rstrip("\r\n\t ")
-        blk = "%s%s%s%s%s%s" % (MARK_BEGIN, nl, 'model_instructions_file = "%s"' % rel_path,
-                                nl, MARK_END, nl)
-        blk += "# trail=%s%s" % (tok, nl)
-        return (base + nl + blk) if base else blk
+        core = prev[:len(prev) - len(trail)] if trail else prev
+        tok = (trail.replace("\\", "\\\\").replace("\r", "\\r")
+               .replace("\n", "\\n").replace("\t", "\\t")) or "-"
+        # trail 记录必须放在 MARK_END **里面**，否则剥离正则读不到它
+        blk = "%s%s%s%s%s%s%s" % (MARK_BEGIN, nl,
+                                  'model_instructions_file = "%s"' % rel_path, nl,
+                                  "# trail=%s%s" % (tok, nl),
+                                  MARK_END, nl)
+        return (core + nl + blk) if core else blk
 
     def decide_instr_name(self, root, cfg):
         """优先沿用 config 里已经写着的那份文件名 —— 避免白白留下一个孤儿文件。"""
@@ -3124,7 +3406,7 @@ class CodexTarget:
                 txt = read_text_safe(ip) or ""
                 lv = loose_state(txt, build_policy(load_user_persona(getattr(args, "persona", "") or "")[0])[1])
                 size = _human_size(os.path.getsize(ip))
-                if HASH_MARK in txt:
+                if _is_our_artifact(txt):
                     rows.append(("ok", "指令文件 %s（%s，本工具格式）" % (os.path.basename(ip), size), ""))
                 else:
                     rows.append(("warn", "指令文件 %s（%s）**没有本工具的身份标记**" % (os.path.basename(ip), size),
@@ -3177,21 +3459,35 @@ class CodexTarget:
             return {"err": 1, "skip": True}
 
         cfg = read_text_safe(cfg_p) or ""
+        # v7.4：BOM 也要原样保留 —— read_text 会剥掉 BOM，写回去时必须按原样带上，
+        # 否则 apply→revert 一轮后 config.toml 会比原来少 3 个字节（实测 289B→285B）。
+        cfg_bom = read_text(cfg_p)[1] if os.path.exists(cfg_p) else False
         _, passport_p = load_passport(home)
         cur = self.current_instr(cfg)
         name = self.decide_instr_name(home, cfg)
         instr_p = os.path.join(home, name)
         old_txt = read_text_safe(instr_p) or ""
+        instr_bom = read_text(instr_p)[1] if os.path.exists(instr_p) else False
         rel = "./" + name
 
         lv = loose_state(old_txt, want)
         up = need_upgrade(home, self.key)
-        if lv == "current" and not up and not getattr(args, "force", False):
+        # v7.4：跳过之前必须确认 config.toml **确实指向**这份指令文件 —— 只看指令文件内容
+        # 会漏掉"指令文件是最新的、但 config 没接上"的假完成态。实测：apply 因为 config.toml
+        # 只读而写失败后，第二次 apply 直接报「已是最新，跳过」，Codex 永远读不到人格，
+        # 用户看到的却是成功。
+        _wired = self.current_instr(cfg)
+        _wired_name = os.path.basename((_wired or "").replace("/", os.sep))
+        cfg_wired = (MARK_BEGIN in cfg) and (_wired_name == name)
+        if lv == "current" and not up and not getattr(args, "force", False) and cfg_wired:
             log("已是最新（本版人格），跳过。", "g", "codex")
             _ok, note = verify_ready(self.key, VERSION, passport_p)
             if not _ok and not dry:
                 write_receipts(home, self.key, dry=False, cfg_path=cfg_p, instr_path=instr_p)
             return {"skip": 1}
+        if lv == "current" and not cfg_wired and not getattr(args, "force", False):
+            log("指令文件是最新的，但 config.toml 没接上（缺注入块或指向别的文件）→ 重新接上。",
+                "y", "codex")
         if lv == "other" and not up and not getattr(args, "force", False):
             log("已是宽松态，但人格来自别的版本；默认不重写。要统一成本版加 --force。", "dg", "codex")
             return {"skip": 1}
@@ -3201,7 +3497,9 @@ class CodexTarget:
 
         # —— 认领判定（关键安全点）——
         created_by_other = ""
-        if os.path.exists(instr_p) and old_txt and HASH_MARK not in old_txt:
+        # v7.4：改成 _is_our_artifact —— 原来只认 v6 标记，于是 v4 时代留下的指令文件
+        # 会被判成"别人的文件"，从 v4 升级上来的用户每次都要额外加 --claim 才能更新。
+        if os.path.exists(instr_p) and old_txt and not _is_our_artifact(old_txt):
             created_by_other = "别的工具或旧版部署的指令文件（无本工具身份标记）"
             if not getattr(args, "force", False) and not getattr(args, "claim", False):
                 log("发现已存在的指令文件，但**不是本工具写的**：%s" % name, "y", "codex")
@@ -3226,10 +3524,12 @@ class CodexTarget:
             return {"skip": 1}
 
         # 备份（写盘前）
+        # v7.4：接上 is_pristine —— 官方升级覆盖过文件后能"归档旧备份、重建基准"，
+        # 否则 --revert 会把被升级的文件降级回旧备份（实测：config.toml 5c91f070→45172f55）。
         if os.path.exists(cfg_p):
-            backup_file(cfg_p, bak_path=cfg_p + self.bak_suffix)
+            backup_file(cfg_p, bak_path=cfg_p + self.bak_suffix, is_pristine=_not_ours)
         if os.path.exists(instr_p):
-            backup_file(instr_p, bak_path=instr_p + self.bak_suffix)
+            backup_file(instr_p, bak_path=instr_p + self.bak_suffix, is_pristine=_not_ours)
         if created_by_other:
             snap = snapshot_repair(home, self.key,
                                    "认领已存在的指令文件（原文件不是本工具写的）",
@@ -3246,16 +3546,59 @@ class CodexTarget:
             except Exception:
                 pass
 
-        write_text(instr_p, new_txt, make_dirs=True)
-        write_text(cfg_p, new_cfg, make_dirs=True)
+        _errs = []
+        try:
+            write_text(instr_p, new_txt, bom=instr_bom, make_dirs=True)
+        except Exception as e:
+            _errs.append("指令文件写不进去（%s）：%s" % (instr_p, e))
+        try:
+            write_text(cfg_p, new_cfg, bom=cfg_bom, make_dirs=True)
+        except Exception as e:
+            _errs.append("config.toml 写不进去（%s）：%s —— 只读属性/被占用？"
+                         "去掉只读（attrib -R）或关掉占用它的程序后重跑" % (cfg_p, e))
+
+        # v7.4：写盘后必须**验一遍**，否则"写不进去"会被当成成功（只读的 config.toml、
+        # 被同名文件占位的 managed-prompts 都实测复现过）：指令文件写出去了、config 没打上、
+        # 护照也没有，退出码还是 0，用户以为装好了，实际是一个含人格的孤儿文件躺在那儿。
+        _errs = []
+        if not _is_our_artifact(read_text_safe(instr_p) or ""):
+            _errs.append("指令文件没写成功或没有本工具标记（%s）" % instr_p)
+        if MARK_BEGIN not in (read_text_safe(cfg_p) or ""):
+            _errs.append("config.toml 的注入块没写成功（%s）—— 只读或被占用？" % cfg_p)
 
         # 护照 + 回执行（agent 名单登记在实体文件里，不依赖配置）
         old_pp, _p = load_passport(home)
         pp = passport_new(self.key, home, cfg_p, instr_p, "config", "",
                           created_by_other=created_by_other)
         pp["history"] = old_pp.get("history", [])
-        save_passport(home, pp)
+        try:
+            save_passport(home, pp)
+        except Exception as e:
+            _errs.append("护照写不了（%s）：%s" % (avatar_dir_for(home), e))
+        if not os.path.exists(os.path.join(avatar_dir_for(home), "passport.json")):
+            _errs.append("护照文件不存在（%s）—— 还原会失去依据" % avatar_dir_for(home))
         ok, note = write_receipts(home, self.key, dry=False, cfg_path=cfg_p, instr_path=instr_p)
+
+        if _errs:
+            # 半成品态：如实报错、把退出码拉成非 0（守护任务/脚本据此判断成败），
+            # 并把刚写出去、却没人认领的指令文件收回来，免得留成"孤儿注入文件"。
+            for _m in _errs:
+                log("  [!] " + _m, "red", "codex")
+            log("  部署**未完成**：上面这些没落盘。修好权限/占用问题后重跑即可。", "y", "codex")
+            if os.path.exists(instr_p) and _is_our_artifact(read_text_safe(instr_p) or ""):
+                if not os.path.exists(instr_p + self.bak_suffix):
+                    try:
+                        write_text(instr_p + self.bak_suffix + ".orphan", new_txt)
+                    except Exception:
+                        pass
+                if not old_txt.strip():
+                    try:
+                        os.remove(instr_p)
+                        log("  已收回本次写出的指令文件（避免留下孤儿注入）", "y", "codex")
+                    except Exception:
+                        pass
+            return {"err": len(_errs), "half": 1}
+
         log("已部署 Codex 指令注入；重启 Codex 后生效。", "g", "codex")
         log("  配置备份：%s" % (cfg_p + self.bak_suffix), "dg", "codex")
         log("  %s（%s）" % (note, signal_path_for(os.path.join(avatar_dir_for(home), "passport.json"))), "g", "codex")
@@ -3285,8 +3628,11 @@ class CodexTarget:
                 # ⚠ v7.2 修：备份里若已经带本工具标记，说明它是"本工具上一版写的内容"，
                 #   不是用户原始文件 —— 这种情况应该**删掉**而不是还原（老版本 v6 升级后
                 #   出现过：revert 把 v6 的内容"复活"成一个原本不存在的文件）。
+                # ⚠ v7.4 补：原来只认 v6 标记（unlock-v6:h=），于是**v4 时代**的备份照样被
+                #   "复活"（实测复现：备份里是 `unlock-v4:h=` 时 revert 把旧人格文件写回来）。
+                #   改成统一走 _is_our_artifact()，把 v4/v6 两代标记与项目标记一起认掉。
                 bk_txt = read_text_safe(bak) if os.path.exists(bak) else None
-                if bk_txt is not None and HASH_MARK in bk_txt:
+                if bk_txt is not None and _is_our_artifact(bk_txt):
                     rows.append(("instr", instr_p, "del"))
                     rows.append(("stale_bak", bak, "del"))
                 else:
@@ -3299,7 +3645,8 @@ class CodexTarget:
                     continue
                 if kind == "config":
                     backup_file(path, bak_path=path + self.bak_suffix)
-                    write_text(path, payload)
+                    # v7.4：还原也要保留 BOM（read_text 剥了 BOM，写回时得按原样带上）
+                    write_text(path, payload, bom=read_text(path)[1] if os.path.exists(path) else False)
                 elif kind == "instr":
                     if payload is None:
                         shutil.copy2(path + self.bak_suffix, path)
@@ -3335,11 +3682,38 @@ class CodexTarget:
         if new_cfg != cfg:
             if not dry:
                 backup_file(cfg_p, bak_path=cfg_p + ".before-reset.bak")
-                write_text(cfg_p, new_cfg)
+                write_text(cfg_p, new_cfg, bom=read_text(cfg_p)[1])
             log("已移除注入块（无护照，未删除任何指令文件）。", "g", "codex")
-            return {"revert": 1}
-        log("没有发现本工具写入的注入块。", "y", "codex")
-        return {"skip": 1}
+            cleaned = 1
+        else:
+            cleaned = 0
+        # v7.4：无护照也要清掉**孤儿注入文件** —— 之前出现过"config 写失败但指令文件已写出"
+        #   的半成品：没有护照 → 这里只 strip config，那个含人格的指令文件永远留着，
+        #   Codex 重启照样读到它。现在按内容判断（只删带我们标记的），并且先留备份。
+        n_orphan = 0
+        for cand in (self.decide_instr_name(home, cfg), CODEX_INSTR):
+            op = os.path.join(home, cand)
+            if not os.path.isfile(op):
+                continue
+            txt = read_text_safe(op) or ""
+            if not _is_our_artifact(txt):
+                continue
+            if dry:
+                log("[预演] 将删除孤儿注入文件：%s" % os.path.basename(op), "y", "codex")
+                n_orphan += 1
+                continue
+            try:
+                if not os.path.exists(op + self.bak_suffix):
+                    shutil.copy2(op, op + self.bak_suffix)
+                os.remove(op)
+                n_orphan += 1
+                log("已删除孤儿注入文件 %s（原文件已留备份）" % os.path.basename(op), "g", "codex")
+            except Exception as e:
+                log("孤儿文件删除失败 %s：%s" % (os.path.basename(op), e), "y", "codex")
+        if n_orphan == 0 and not cleaned:
+            log("没有发现本工具写入的注入块。", "y", "codex")
+            return {"skip": 1}
+        return {"revert": cleaned + n_orphan}
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -3394,6 +3768,27 @@ def wb_cloudmem_read(path):
     return uid, body, ver, txt
 
 
+def _cloudmem_is_ours(path):
+    """判断这份云记忆档案是不是**本工具注入过的**。
+
+    v7.4 新增。之前只看 `.pojia.bak` 在不在，于是踩了这个坑：
+    用户/清理工具把 `.pojia.bak` 删掉后再跑一次，本工具会把磁盘上**已经是注入版**的
+    档案当成"用户原档"备份下来；再 `--revert` 就把注入的人格当作"用户的记忆"还原回去，
+    用户真正的记忆**再也找不回来**（静默数据丢失，实测复现）。
+    现在的判据（任一命中即为本工具写的）：带注入标记，或 Version 被顶到了 CLOUDMEM_VER。
+    """
+    txt = read_text_safe(path)
+    if txt is None:
+        return False
+    if CLOUDMEM_MARK in txt:
+        return True
+    m = re.search(r'(?m)^\s*>\s*Version:\s*(\d+)\s*$', txt)
+    try:
+        return bool(m) and int(m.group(1)) >= CLOUDMEM_VER
+    except ValueError:
+        return False
+
+
 def wb_cloudmem_build(uid, block, ver=None):
     """按 WorkBuddy 自己的档案格式重建全文（格式抄自它实测生成的档案，别自创）。"""
     now = _dt_now_iso()
@@ -3435,11 +3830,17 @@ def wb_cloudmem_inject(data_dir, block, dry=False):
             notes.append("[预演] 将注入 %s（%d 字，Version %d）" % (os.path.basename(af), len(block), CLOUDMEM_VER))
             out += 1
             continue
+        ours = _cloudmem_is_ours(af)
         if os.path.exists(af) and not os.path.exists(bak):
-            try:
-                shutil.copy2(af, bak)          # 首次注入：原档案原样留档
-            except Exception:
-                pass
+            if ours:
+                # v7.4：绝不把"注入版"当用户原档备份（否则 --revert 会用注入的人格覆盖用户记忆）
+                notes.append("⚠ %s 的原始备份已丢失，且当前档案已是注入版：本工具不会把它当原档备份，"
+                             "因此这份档案已无法还原成注入前的样子" % os.path.basename(af))
+            else:
+                try:
+                    shutil.copy2(af, bak)          # 首次注入：原档案原样留档
+                except Exception:
+                    pass
         try:
             _set_readonly(af, False)
             write_text(af, wb_cloudmem_build(uid, block), make_dirs=True)
@@ -3454,24 +3855,49 @@ def wb_cloudmem_inject(data_dir, block, dry=False):
 
 
 def wb_cloudmem_revert(data_dir):
-    """还原：优先从 .pojia.bak 拷回；没有备份就把 memoryBlock 清空并解锁。"""
+    """还原：只还原**本工具注入过**的档案。
+
+    v7.4 重写（原来是"有备份就拷回、没备份就把 memoryBlock 清空"）—— 后半个分支在实测里
+    造成过**用户数据丢失**：
+      · 连点两次 --revert：第一次把备份还原回去并删掉备份，第二次没有备份 → 走"清空"分支，
+        把用户刚被还原好的记忆又清成空白（实测 902 B / 426 B 两份档案都被清成 234 B）。
+      · apply 之后 WorkBuddy 自己新建的账号档案（我们从没注入过）也会被清空。
+    现在的判据是"这份档案到底是不是本工具写的"：
+      · 带备份且备份不是注入版 → 拷回（真还原）
+      · 是本工具写的但没有可用备份 → 清空注入内容，并**如实说明原文无法从本机恢复**
+      · 根本不是本工具写的 → **一个字节都不动**（并把只读属性还原）
+    """
     done = []
     for af in wb_cloudmem_candidates(data_dir):
         bak = af + ".pojia.bak"
         try:
+            # 记下原本的只读状态：跳过时要还原回去，不能顺手把用户的锁去掉
+            try:
+                was_ro = not bool(os.stat(af).st_mode & 0o200)
+            except OSError:
+                was_ro = False
             _set_readonly(af, False)
-            if os.path.exists(bak):
+            was_ours = _cloudmem_is_ours(af)      # 必须在覆盖之前判断
+            bak_ok = os.path.exists(bak) and not _is_our_artifact(read_text_safe(bak))
+            if bak_ok:
                 shutil.copy2(bak, af)
                 try:
                     os.remove(bak)
                 except Exception:
                     pass
                 done.append("已从备份还原 " + os.path.basename(af))
-            else:
+            elif was_ours:
                 info = wb_cloudmem_read(af)
                 uid = info[0] if info else os.path.basename(af)[:-len("_memory.md")]
                 write_text(af, wb_cloudmem_build(uid, "", ver=0))
-                done.append("已清空 memoryBlock（无备份可还原）" + os.path.basename(af))
+                done.append("已清空 %s 的注入内容，但【原始备份不在了】："
+                            "这份档案注入前的内容无法从本机恢复"
+                            "（解锁已撤销，记忆内容现在是空白）" % os.path.basename(af))
+            else:
+                # 不是本工具写的 → 不碰。顺手把只读状态还原成原来的样子。
+                if was_ro:
+                    _set_readonly(af, True)
+                done.append("跳过 %s（不是本工具注入的档案，保持原样）" % os.path.basename(af))
         except Exception as e:
             done.append("还原失败 %s：%s" % (os.path.basename(af), e))
     return done
@@ -3651,6 +4077,32 @@ def zcode_patch_sysprompt(cjs_path, payload, dry=False):
     if dry:
         return "ok", "[预演] 将替换变量 %s 里的系统提示词（%d → %d 字符）" % (var, len(old), len(payload))
 
+    # v7.4：**先在临时文件上校验，通过了才动真文件**。
+    # 旧实现是"先写真文件、再 node --check、不过才回滚"，而且 node 不存在时
+    # （ok is None）连回滚都不做，直接报 "已替换" —— 等于把未经校验的 23MB 打包 JS
+    # 写进客户端还告诉用户成功。现在：
+    #   · 没装 node → 不做这条通道（其余通道不受影响），客户端文件一个字节都不动
+    #   · 校验不过 → 同样不写，不存在"先写坏再回滚"的时间窗
+    # ⚠ 临时文件必须以 .cjs 结尾：node 按扩展名决定模块类型，叫 .tmp 会直接报
+    #   "get_format" 错误，看起来像"新内容语法不过"，其实是文件名的问题（实测踩过）。
+    tmp = cjs_path + ".pojia-check.cjs"
+    try:
+        write_text(tmp, new, bom=False)
+    except Exception as e:
+        return "err", "临时文件写不进去，放弃 patch：%s" % e
+    ok, note = node_syntax_ok(tmp)
+    try:
+        os.remove(tmp)
+    except Exception:
+        pass
+    if ok is None:
+        return "err", ("%s —— 为免把客户端的打包 JS 写坏，**这次不做系统提示词 patch**"
+                       "（AGENTS.md / Memory / 技能三条通道不受影响）。"
+                       "装好 node 后重跑 --zpatch 即可：https://nodejs.org" % note)
+    if ok is False:
+        return "err", ("新内容语法校验不过，**未改动客户端文件**（%s）；"
+                       "这是本工具的 bug，请反馈" % note)
+
     bak = cjs_path + ".pojia.bak"
     if not os.path.exists(bak):
         try:
@@ -3661,14 +4113,18 @@ def zcode_patch_sysprompt(cjs_path, payload, dry=False):
         write_text(cjs_path, new, bom=False)
     except Exception as e:
         return "err", "写入失败：%s" % e
-    ok, note = node_syntax_ok(cjs_path)
-    if ok is False:
+    # 写入后再验一遍真文件（防写入被截断/被别的进程改）；万一不过就走回滚并如实说
+    ok2, note2 = node_syntax_ok(cjs_path)
+    if ok2 is False:
         try:
             shutil.copy2(bak, cjs_path)
-        except Exception:
-            pass
-        return "err", "语法校验不过，已回滚：%s" % note
-    return "ok", "已替换（变量 %s；%s）" % (var, note)
+            return "err", "写入后校验不过，已回滚：%s" % note2
+        except Exception as e:
+            return "err", ("写入后校验不过，且**回滚失败**！请手动把 %s 拷回 %s（%s；%s）"
+                           % (bak, cjs_path, note2, e))
+    if ok2 is None:
+        return "warn", "已替换（变量 %s；写入后无法复验：%s）" % (var, note2)
+    return "ok", "已替换（变量 %s；%s）" % (var, note2)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -3740,17 +4196,47 @@ class ZCodeTarget:
 
     # ---------------- skills（深度 1） ----------------
     def skills_manifest(self, home):
+        """我们装过哪些技能（**按路径**登记，不是按名字）。
+
+        v7.4 改：旧格式是 `{"<技能名>": true}` —— 只记名字，于是出过这个事故：
+        `.zcode\\skills\\pojia-skill-c` 由本工具安装后，名字进了清单；
+        而用户在**另一个 root**（`.zcode\\.agents\\skills\\pojia-skill-c`）里自己的同名技能，
+        第一次 apply 时被正确跳过，第二次 apply 却因为"名字在清单里"而走到 rmtree ——
+        用户自己的 helper.py 被直接删掉，且没有任何备份。
+        现在记 `{"paths": {"<root_rel>/<name>": {"sha": <装下去时的指纹>}}}`，
+        判断"这目录是不是我们装的"只看路径 + 内容，不再看名字。
+        """
         p = os.path.join(avatar_dir_for(home), "zcode-skills.json")
         try:
-            return json.loads(read_text_safe(p) or "{}")
+            d = json.loads(read_text_safe(p) or "{}") or {}
         except Exception:
             return {}
+        if isinstance(d.get("paths"), dict):
+            return d
+        # 兼容旧格式：旧清单只有名字，我们无法确定某个路径是不是自己装的 →
+        # 转成"空 paths + 旧名字集合"，只用来做最保守的判断（不据此删任何东西）。
+        legacy = sorted(k for k, v in d.items() if v and k != "paths")
+        return {"paths": {}, "legacy_names": legacy}
 
     def save_skills_manifest(self, home, data, dry=False):
         p = os.path.join(avatar_dir_for(home), "zcode-skills.json")
         if not dry:
             write_text(p, json.dumps(data, ensure_ascii=False, indent=2) + "\n", make_dirs=True)
         return p
+
+    @staticmethod
+    def _skill_fingerprint(path):
+        """技能目录指纹（相对路径 + 每个文件的 sha256），用来判断"用户有没有改过"。"""
+        h = hashlib.sha256()
+        try:
+            for r, _d, fs in sorted(os.walk(path)):
+                for f in sorted(fs):
+                    fp = os.path.join(r, f)
+                    h.update(os.path.relpath(fp, path).replace("\\", "/").encode("utf-8"))
+                    h.update(sha256_file(fp).encode("ascii"))
+        except Exception:
+            return ""
+        return h.hexdigest()[:16]
 
     def default_skill_source(self):
         """本工具自带的技能源：<脚本目录>/skills/<name>/SKILL.md（有才装，没有就跳过）。"""
@@ -3760,8 +4246,9 @@ class ZCodeTarget:
     def install_skills(self, home, src, dry=False, only=""):
         """按 ZCode 的**深度 1 扫描**摆技能：<root>/<skill-name>/SKILL.md。
 
-        只同步"源目录里的直子目录且自身含 SKILL.md"的项；已存在且不是我们装的
-        （名字不在清单里）**不动**，避免覆盖用户自己的技能。
+        只同步"源目录里的直子目录且自身含 SKILL.md"的项。
+        **不属于本工具的东西一律不删**（v7.4：只有清单里记着"是我们装的那个路径"，
+        且内容仍与我们装下去的一致，才会被刷新覆盖）。
         """
         if not src or not os.path.isdir(src):
             return 0, ["没找到技能源目录（%s），跳过 skills" % (src or "空")]
@@ -3778,52 +4265,74 @@ class ZCodeTarget:
         if not want:
             return 0, ["技能源里没有合法的 <name>/SKILL.md，跳过"]
         manifest = self.skills_manifest(home)
+        planted_map = dict(manifest.get("paths") or {})
         planted, skipped = [], []
         for root_rel in ZCODE_SKILL_DIRS:
             root = os.path.join(home, root_rel)
             for name in want:
+                rel = "%s/%s" % (root_rel.replace("\\", "/"), name)
                 dst = os.path.join(root, name)
-                if os.path.exists(dst) and name not in manifest:
-                    skipped.append("%s/%s（已存在且非本工具安装，未动）" % (root_rel, name))
+                src_d = os.path.join(src, name)
+                ours_before = rel in planted_map
+                exists = os.path.exists(dst)
+                if exists and not ours_before:
+                    # 不是本工具装的（含用户自己的同名技能）→ 绝不碰
+                    skipped.append("%s（已存在且非本工具安装，未动）" % rel)
                     continue
+                if exists and ours_before:
+                    recorded = (planted_map.get(rel) or {}).get("sha", "")
+                    now = self._skill_fingerprint(dst)
+                    if recorded and now and recorded != now:
+                        # 我们装的，但用户改过 → 保留用户的版本，不覆盖也不删
+                        skipped.append("%s（本工具安装过，但内容已被改动，保留不动）" % rel)
+                        continue
                 if dry:
-                    planted.append(os.path.join(root_rel, name))
+                    planted.append(rel)
                     continue
                 try:
                     if os.path.isdir(dst):
                         shutil.rmtree(dst, ignore_errors=True)
-                    shutil.copytree(os.path.join(src, name), dst)
-                    planted.append(os.path.join(root_rel, name))
+                    shutil.copytree(src_d, dst)
+                    planted.append(rel)
+                    planted_map[rel] = {"sha": self._skill_fingerprint(dst)}
                 except Exception as e:
-                    skipped.append("%s/%s（%s）" % (root_rel, name, e))
+                    skipped.append("%s（%s）" % (rel, e))
         if not dry and planted:
-            names = sorted(set(list(manifest.keys()) + want))
-            self.save_skills_manifest(home, {n: True for n in names})
+            self.save_skills_manifest(home, {"paths": planted_map})
         note = "已同步技能 %d 个到 %s" % (len(planted), "、".join(ZCODE_SKILL_DIRS))
         if skipped:
             note += "（跳过 %d 个）" % len(skipped)
         return len(planted), [note] + skipped[:5]
 
     def remove_skills(self, home, dry=False):
-        """只删"清单里有、且和源目录逐字节一致"的技能，用户改过的保留。"""
+        """只删**清单里记着、且内容仍是我们装下去的那一份**的技能。
+
+        v7.4 改：改成按路径 + 指纹判断 ——
+          · 不在清单里的路径：无论叫什么名字，一律不删（旧版会按名字误删用户的同名技能）
+          · 在清单里但内容已变（用户改过）：保留
+          · 旧格式清单（只有名字，没有路径）：**什么都不删**，只提示
+        """
         manifest = self.skills_manifest(home)
-        if not manifest:
-            return 0
+        planted_map = dict(manifest.get("paths") or {})
         removed = 0
-        src = self.default_skill_source()
-        for root_rel in ZCODE_SKILL_DIRS:
-            for name in list(manifest.keys()):
-                dst = os.path.join(home, root_rel, name)
+        if planted_map:
+            for rel, meta in planted_map.items():
+                rel_norm = rel.replace("\\", "/")
+                dst = os.path.join(home, *rel_norm.split("/"))
                 if not os.path.isdir(dst):
                     continue
-                keep = False
-                if src and os.path.isdir(os.path.join(src, name)):
+                recorded = (meta or {}).get("sha", "")
+                now = self._skill_fingerprint(dst)
+                if recorded and now and recorded != now:
+                    continue                      # 用户改过 → 保留
+                # 双保险：内容必须和源目录一致（源没了就只信指纹）
+                src = self.default_skill_source()
+                if src:
+                    name = rel_norm.split("/")[-1]
                     a = os.path.join(src, name, "SKILL.md")
                     b = os.path.join(dst, "SKILL.md")
-                    if os.path.isfile(b) and os.path.isfile(a):
-                        keep = (sha256_file(a) != sha256_file(b))    # 用户改过 → 保留
-                if keep:
-                    continue
+                    if os.path.isfile(b) and os.path.isfile(a) and sha256_file(a) != sha256_file(b):
+                        continue
                 if not dry:
                     shutil.rmtree(dst, ignore_errors=True)
                 removed += 1
@@ -3901,7 +4410,7 @@ class ZCodeTarget:
 
         # 写盘（原子写 + 改前留备份）
         if os.path.exists(cfg_agents) and old_agents.strip():
-            backup_file(cfg_agents, bak_path=cfg_agents + self.bak_suffix)
+            backup_file(cfg_agents, bak_path=cfg_agents + self.bak_suffix, is_pristine=_not_ours)
         write_text(cfg_agents, ("<!-- %s %s -->\n" % (ZCODE_MARK, VERSION)) + persona,
                    make_dirs=True)
         log("  已写 AGENTS.md（%d 字符）" % len(persona), "g", "zcode")
@@ -3956,6 +4465,16 @@ class ZCodeTarget:
         if cur is not None:
             if dry:
                 log("[预演] 将处理 AGENTS.md", "y", "zcode")
+            elif os.path.exists(bak) and _is_our_artifact(read_text_safe(bak)):
+                # v7.4：备份里装的就是本工具的内容 → 它是"注入版"而不是用户原档
+                # （备份被删过、又被旧版逻辑重建过才会这样）。这种情况要删，不能当原档还原。
+                try:
+                    os.remove(cfg_agents)
+                    os.remove(bak)
+                    done += 1
+                    log("已删除本工具写入的 AGENTS.md（备份实为注入版，不作为原档还原）", "y", "zcode")
+                except Exception as e:
+                    log("AGENTS.md 处理失败：%s" % e, "red", "zcode")
             elif os.path.exists(bak):
                 try:
                     shutil.copy2(bak, cfg_agents)
@@ -3986,16 +4505,24 @@ class ZCodeTarget:
             try:
                 if ZCODE_MARK in t:
                     # 文件整体是我们写的 → 直接删；备份（若存在，是用户原内容）先还回去
-                    if os.path.exists(mb):
+                    # v7.4：备份本身可能就是我们的内容（备份被删后又重建过），那种情况不能当原档还回去
+                    if os.path.exists(mb) and not _is_our_artifact(read_text_safe(mb)):
                         shutil.copy2(mb, mp)
                         os.remove(mb)
                         done += 1
                         log("已还原用户原 Memory %s" % os.path.basename(mp), "g", "zcode")
                     else:
+                        if os.path.exists(mb):
+                            os.remove(mb)      # 注入版备份，留着只会误导
                         os.remove(mp)
                         done += 1
                         log("已删除本工具写入的 Memory %s" % os.path.basename(mp), "g", "zcode")
                 elif os.path.exists(mb):
+                    if _is_our_artifact(read_text_safe(mb)):
+                        os.remove(mb)
+                        log("备份 %s 实为注入版，已丢弃（不作为原档还原）"
+                            % os.path.basename(mb), "y", "zcode")
+                        continue
                     shutil.copy2(mb, mp)
                     os.remove(mb)
                     done += 1
@@ -4055,7 +4582,9 @@ class ZCodeTarget:
             rows.append(("ok", "Memory 文件：已注入 %d 处" % len(n_mem), "、".join(ZCODE_MEM_DIRS)))
         else:
             rows.append(("warn", "Memory 文件未注入", "、".join(ZCODE_MEM_DIRS)))
-        n_sk = len(self.skills_manifest(home))
+        # v7.4：清单改成 {"paths": {...}} 之后，数量要数 paths（旧写法 len() 恒为 1）
+        _mf = self.skills_manifest(home)
+        n_sk = len(_mf.get("paths") or {})
         if n_sk:
             rows.append(("info", "技能清单：%d 个" % n_sk, "、".join(ZCODE_SKILL_DIRS)))
         if cjs:
@@ -4207,7 +4736,11 @@ def run_status(args, targets=None):
 
 
 def run_action(args, mode, targets=None):
+    global DRY_RUN, ERRORS
     targets = targets or resolve_targets(args.target)
+    # v7.4：进入任何"预演"路径就打开全局拒写开关（write_text / backup_file 都会让路）。
+    # 真动作时确保关掉 —— 菜单里连着跑过预演再跑真动作时，这个开关必须复位。
+    DRY_RUN = bool(mode == "dry-run" or getattr(args, "dry_run", False)) and mode != "apply"
     titles = {"apply": "一键破甲", "revert": "还原", "dry-run": "预演（不改盘）"}
     header(titles.get(mode, mode), "目标：" + ", ".join(targets))
     for k in targets:
@@ -4217,12 +4750,19 @@ def run_action(args, mode, targets=None):
         say("")
         say(BOLD(CYAN("── %s ──────────────────────────────────────────" % t.label)))
         try:
-            t.apply(args, mode)
+            res = t.apply(args, mode)
+            # v7.4：把目标返回的 err 累计起来 → 进程退出码非 0。
+            # 以前不管成功失败 main 都正常返回，退出码恒为 0，脚本/守护任务无法判断成败。
+            if isinstance(res, dict) and res.get("err"):
+                ERRORS += int(res["err"] or 0)
         except KeyboardInterrupt:
             raise
         except Exception as e:
+            ERRORS += 1
             log("执行出错：%s" % e, "red", k)
     say("")
+    if ERRORS:
+        say(RED("  本次有 %d 项没做成（退出码 1）。" % ERRORS))
     say(GRAY("  日志：%s" % LOG_PATH))
     say(GRAY("  自证：在对应客户端的新会话里单独发「%s」" % PASSPHRASE))
 
@@ -4361,9 +4901,15 @@ def _guard_menu(args):
         say("  守护解释器：%s" % r["python"], "dg")
         say("  每30分钟：%s" % ("已安装" if r["hourly"] else "失败"), "g" if r["hourly"] else "red")
         say("  每次登录：%s" % ("已安装" if r["logon"] else "未安装（需管理员）"), "g" if r["logon"] else "y")
+        if not r.get("wellformed", True):
+            say("  [!] 任务结构不对（注册了也跑不起来）：%s" % (r.get("wellformed_msg") or ""), "red")
         if r["hourly"] and not r["points_here"]:
             say("  [!] 任务已建但命令看起来没指向本脚本，请用管理员手动核对：", "red")
             say("      schtasks /Query /TN \"%s\" /XML" % TASK_HOURLY, "dg")
+        for _k, _label in (("msg_hourly", "每30分钟"), ("msg_logon", "每次登录")):
+            _msg = (r.get(_k) or "").strip()
+            if _msg and ("ERROR" in _msg.upper() or "失败" in _msg):
+                say("      %s 返回：%s" % (_label, _msg.splitlines()[0][:120]), "dg")
     elif c == "3":
         removed, failed = t.remove_guard_tasks()
         say("  已删除 %d 个守护任务" % removed, "g" if removed else "")
@@ -4456,7 +5002,10 @@ def build_parser():
     p.add_argument("--guard", choices=["install", "remove", "status"], help="WorkBuddy 守护任务管理")
     p.add_argument("--snapshot", action="store_true", help="生成 WorkBuddy 提示词快照")
     p.add_argument("--compare", action="store_true", help="与最新 WorkBuddy 快照对比")
-    p.add_argument("--purge-spill", action="store_true", dest="purge_spill", help="清掉全部会话快照")
+    p.add_argument("--purge-spill", action="store_true", dest="purge_spill",
+                   help="清掉全部会话快照（含未过期的；不在备份范围内，删了还原不回来）")
+    p.add_argument("--clean-spill", action="store_true", dest="clean_spill",
+                   help="只清 24 小时以前的过期会话快照（默认只统计不删）")
     p.add_argument("--keep-cache", action="store_true", dest="keep_cache", help="不删运行时缓存")
     p.add_argument("--restart-wb", action="store_true", dest="restart_wb", help="破甲后重启 WorkBuddy")
     p.add_argument("--kill-dsh", action="store_true", dest="kill_dsh",
@@ -4528,6 +5077,17 @@ def main():
             r = t.install_guard_tasks(is_admin())
             say("  每30分钟：%s   每次登录：%s" % ("已安装" if r["hourly"] else "失败",
                                                  "已安装" if r["logon"] else "未安装"))
+            if not r.get("wellformed", True):
+                say("  [!] 任务虽已注册，但结构不对（跑不起来）：%s"
+                    % (r.get("wellformed_msg") or "命令格式异常"), "red")
+                say("      请用管理员身份重跑 --guard install", "y")
+            for _k, _label in (("msg_hourly", "每30分钟"), ("msg_logon", "每次登录")):
+                _msg = (r.get(_k) or "").strip()
+                if _msg and ("ERROR" in _msg.upper() or "失败" in _msg):
+                    say("      %s 返回：%s" % (_label, _msg.splitlines()[0][:120]), "dg")
+            if not r["logon"] and not is_admin():
+                say("      登录任务需要管理员权限才能注册：右键脚本 → 以管理员身份运行，"
+                    "再执行 --guard install", "dg")
             if not r["points_here"]:
                 say("  [!] 任务命令没指向本脚本，请核对：schtasks /Query /TN \"%s\" /XML" % TASK_HOURLY, "y")
         else:
@@ -4578,7 +5138,10 @@ def main():
         run_status(args)
         return
     if args.revert:
-        if not args.yes and not QUIET:
+        if args.dry_run:
+            # v7.4：预演语义优先 —— 不写盘、也不弹确认（确认是给真动作用的）
+            say("  提示：同时给了 --revert 与 --dry-run → 只预演，绝不写盘。", "y")
+        elif not args.yes and not QUIET:
             say("")
             if not _confirm("确认还原 %s ？" % args.target):
                 say("  已取消。")
@@ -4604,7 +5167,11 @@ def main():
 
 
 if __name__ == "__main__":
+    _rc = 0
     try:
         main()
+        # v7.4：失败要让调用方看得见 —— 退出码非 0（守护任务、批处理、CI 都靠这个判断）
+        _rc = 1 if ERRORS else 0
     finally:
         _pause_on_exit()
+    sys.exit(_rc)

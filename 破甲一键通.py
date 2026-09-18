@@ -1708,6 +1708,29 @@ class DshTarget:
             log("%s（%s）" % (note, signal_path_for(os.path.join(avatar_dir_for(h), "passport.json"))), "g", "dsh")
             log("  自证：新会话里单独发「%s」，应回复：%s"
                 % (PASSPHRASE, SIGNAL_REPLY % (target_label(self.key), VERSION)), "c", "dsh")
+        elif mode == "revert":
+            # v7.4：还原后要**清掉护照与回执行** —— 以前 DSH 还原完护照还在，
+            # 于是一跑 --status 就显示「护照 v7.4（本版）」，用户以为补丁还装着。
+            h = self.dsh_home()
+            manifest_save(self.key, [])
+            _pp = os.path.join(avatar_dir_for(h), "passport.json")
+            if getattr(args, "dry_run", False):
+                if os.path.exists(_pp):
+                    log("[预演] 将清理护照与回执行：%s" % avatar_dir_for(h), "y", "dsh")
+            else:
+                _removed = 0
+                for _f in ("passport.json", "selfcheck.txt"):
+                    _p2 = os.path.join(avatar_dir_for(h), _f)
+                    try:
+                        if os.path.exists(_p2):
+                            os.remove(_p2)
+                            _removed += 1
+                    except Exception:
+                        pass
+                if _removed:
+                    log("已清理护照与回执行（%d 个文件）—— 状态不会再误报" % _removed, "g", "dsh")
+                if stats["revert"] == 0 and stats["err"] == 0:
+                    log("  提示：没有文件被还原（可能本来就没打过补丁，或备份已不在）。", "dg", "dsh")
         return stats
 
     def revert_file(self, fp):

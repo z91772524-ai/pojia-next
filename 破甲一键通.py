@@ -1218,8 +1218,15 @@ class DshTarget:
         caches = []
         for exe in (("npm", "npm.cmd") if IS_WIN else ("npm",)):
             try:
+                # v7.5：给 npm 子进程关掉 node 的编译缓存 —— 否则 Node 22+ 会往
+                # 用户 HOME 里写 node-compile-cache，让"只读命令不落盘"的承诺失真
+                # （路人验收里实测到的：空 HOME 被 npm 写出了编译缓存）。
+                env = dict(os.environ)
+                env["NODE_COMPILE_CACHE"] = ""
+                env["NODE_DISABLE_COMPILE_CACHE"] = "1"
                 out = subprocess.run([exe, "config", "get", "cache"],
-                                     capture_output=True, text=True, timeout=15).stdout.strip()
+                                     capture_output=True, text=True, timeout=15,
+                                     env=env).stdout.strip()
                 if out and out.lower() != "undefined":
                     caches.append(out)
             except Exception:

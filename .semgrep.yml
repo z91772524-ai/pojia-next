@@ -1,0 +1,5 @@
+# semgrep 配置：只跑安全审计规则集，明确排除"项目内故意的低风险模式"。
+rules: []          # 使用官方规则集，见 --config
+# 注：CI 里命令为
+#   semgrep --config p/python --config p/security-audit --error --severity ERROR --severity WARNING
+# 只让 ERROR/WARNING 级别拦 CI；INFO 级只打印。

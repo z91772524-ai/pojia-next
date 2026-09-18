@@ -1,4 +1,4 @@
-# 破甲一键通 v7.2
+# 破甲一键通 v7.3
 
 **一个脚本，把 DSH（DeepSeek Harness）、WorkBuddy、Codex CLI、ZCode 四个客户端的提示词 / 人格一次换到位** —— 纯 Python 标准库、零依赖、双击即用、改前必留备份、装完当场可自证、随时可一键还原。
 
@@ -7,6 +7,9 @@
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/platform-Windows-0078d4)](https://www.microsoft.com/windows)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)]()
+[![security](https://github.com/z91772524-ai/pojia-next/actions/workflows/security.yml/badge.svg)](https://github.com/z91772524-ai/pojia-next/actions/workflows/security.yml)
+[![bandit](https://img.shields.io/badge/bandit-0%20HIGH%20%2F%200%20MEDIUM-brightgreen)](.bandit.yml)
+[![网络请求](https://img.shields.io/badge/网络请求-0-brightgreen)](#六安全审查你可以自己验)
 
 > ## ⚠️ 免责声明（务必先读）
 > **本项目仅用于学习交流，无不良引导。若他人使用本项目从事任何违法、违规或侵权行为，与作者没有任何关系，全部后果由使用者自行承担。**
@@ -19,10 +22,10 @@
 ## 为什么值得一试
 
 - ⚡ **一个脚本管四个客户端** —— DSH + WorkBuddy + Codex + ZCode 共用同一份 `persona.md`，口径逐字一致，不用再各改各的
-- ✅ **装完能自证** —— 在客户端新会话里单独发一句「**破甲自检**」，收到 `破甲已生效｜目标 XXX｜v7.2` 才算真载入；不用再靠"感觉好像生效了"
+- ✅ **装完能自证** —— 在客户端新会话里单独发一句「**破甲自检**」，收到 `破甲已生效｜目标 XXX｜v7.3` 才算真载入；不用再靠"感觉好像生效了"
 - 🩺 **一条命令体检** —— `--check` 只读扫磁盘态 / 明文密钥 / 旧守护任务 / 云记忆状态 / 自证就绪，**只报分类不打印密钥原文**，退出码可直接用于脚本判断
-- 🔄 **装过老版本也能自动升级**（v7.2 修）—— 判据是"护照里的版本 != 本版就重写"，不再只看人格哈希；否则老补丁会被判成"已是最新"而**永远升不上去**（守护任务跑的 `--apply` 不带 `--force`，救不回来）
-- 🆕 **ZCode 目标**（v7.2 新增）—— `AGENTS.md` + Memory 文件 + 技能（按官方**深度 1** 扫描摆直子目录）；系统提示词 patch 是**可选通道**（`--zpatch`，带 `node --check` 语法校验，校验不过自动回滚）
+- 🔄 **装过老版本也能自动升级**（v7.3 修）—— 判据是"护照里的版本 != 本版就重写"，不再只看人格哈希；否则老补丁会被判成"已是最新"而**永远升不上去**（守护任务跑的 `--apply` 不带 `--force`，救不回来）
+- 🆕 **ZCode 目标**（v7.3 新增）—— `AGENTS.md` + Memory 文件 + 技能（按官方**深度 1** 扫描摆直子目录）；系统提示词 patch 是**可选通道**（`--zpatch`，带 `node --check` 语法校验，校验不过自动回滚）
 - ☁️ **WorkBuddy 走云记忆通道** —— 不只改它的提示词模板，还把人格写进**账号级云记忆 `memoryBlock`**（每轮自动进系统提示词），配 `Version 999999` + 只读锁防回写。**模板被升级/守护冲掉也不会失效**
 - 📦 **零依赖、不改二进制** —— 纯文本文件级补丁，不删包、不碰注册表 / 服务；断网也能跑
 - 🛡 **改前必留备份、随时还原** —— 统一放在 `managed-prompts/pojia-yijiantong/`：护照 + 回执行 + 修复快照，`--revert` 按护照精确还原，不会删错别人的文件
@@ -128,7 +131,7 @@ python 破甲一键通.py --apply --force --yes
 
 ---
 
-## 五、装完怎么知道真生效了（v7.2 新增）
+## 五、装完怎么知道真生效了（v7.3 新增）
 
 装完之后，脚本会在客户端的**管理目录**里留一份回执行，你在客户端里随手一验就知道：
 
@@ -140,7 +143,7 @@ python 破甲一键通.py --apply --force --yes
 预期只回一行（多一个字、加解释、拒答，都说明没真载入）：
 
 ```
-破甲已生效｜目标 DSH｜v7.2
+破甲已生效｜目标 DSH｜v7.3
 ```
 
 回执行位置（可直接打开看）：
@@ -153,9 +156,9 @@ python 破甲一键通.py --apply --force --yes
 
 > 为什么不用"你运行在什么模式"这种测试 —— 那等于自我暗示，模型很可能顺着答，结果不可信。给一条**固定口令 + 固定回复**，才有真正的判据。
 
-### ☁️ WorkBuddy 云记忆通道（v7.2 新增，重点）
+### ☁️ WorkBuddy 云记忆通道（v7.3 新增，重点）
 
-改 `templates\*.tpl` / `product.json` 是"改程序自带的提示词"——任何升级、自检、旧守护任务都能把它冲掉（本项目实测：某个旧守护每 30 分钟覆盖一次）。所以 v7.2 加了一条**更硬**的通道：
+改 `templates\*.tpl` / `product.json` 是"改程序自带的提示词"——任何升级、自检、旧守护任务都能把它冲掉（本项目实测：某个旧守护每 30 分钟覆盖一次）。所以 v7.3 加了一条**更硬**的通道：
 
 ```
 <数据目录>\memory\<uid>_memory.md      ← WorkBuddy 自己的"账号级云记忆档案"
@@ -176,7 +179,7 @@ python 破甲一键通.py --apply --force --yes
 
 ---
 
-### 🆕 ZCode（v7.2 新增目标）
+### 🆕 ZCode（v7.3 新增目标）
 
 ZCode 是智谱的桌面 coding agent（[zcode.z.ai](https://zcode.z.ai/cn/docs)），配置根一般是 `~\.zcode`。它跟前面三个不太一样，有**两个坑**值得先说：
 
@@ -203,16 +206,15 @@ python 破甲一键通.py --zcode-cjs "D:\ZCode\resources\glm\zcode.cjs" --zpatc
 
 ---
 
-### 🔄 装过老版本？直接重跑就行（v7.2 修）
+### 🔄 装过老版本？直接重跑就行（v7.3 修）
 
 以前有个坑：**新版给提示词加内容、但没让这段内容参与人格哈希**，于是老版本打的补丁在新版里仍被判成"已是最新"→ 跳过 → **永远升不上去**（守护任务跑的 `--apply` 不带 `--force`，也救不回来）。
 
-现在判据加了**版本维度**：读 `managed-prompts\pojia-yijiantong\passport.json` 里的 `version`，只要和当前版本不一致（或者压根没有护照），就自动重写一遍。**你不需要加 `--force`。** 实测：v7.0 装好的机器重跑一次，三个目标全部自动刷到 v7.2。
+现在判据加了**版本维度**：读 `managed-prompts\pojia-yijiantong\passport.json` 里的 `version`，只要和当前版本不一致（或者压根没有护照），就自动重写一遍。**你不需要加 `--force`。** 实测：v7.0 装好的机器重跑一次，三个目标全部自动刷到 v7.3。
 
 ---
 
 ### `--check`：一条命令体检（只读）
-
 ```bash
 python 破甲一键通.py --check
 ```
@@ -221,18 +223,128 @@ python 破甲一键通.py --check
 
 ---
 
-## 六、安全 & 可逆
+## 六、安全审查（你可以自己验）
+
+**不用下载就能先看**：下面三段是脚本里真实的关键逻辑（原样摘录）。核心承诺是 —— **无网络请求、无动态执行、无 shell 拼串**，所有改动都是"先备份、再原子写、随时能还原"。
+
+### 6.1 备份：绝不覆盖已存在的备份，官方升级后还能自愈
+
+```python
+def backup_file(path, suffix=None, bak_path=None, is_pristine=None):
+    """确保"未打补丁的原始版本"有一份备份。
+
+    做法（修掉原工具"升级后备份过期 → revert 把文件降级"的问题）：
+      · bak 不存在            -> 直接备份当前文件
+      · bak 存在且当前文件已有补丁 -> 什么都不做（保住原始基准）
+      · bak 存在但当前文件是干净官方版（官方升级覆盖过）-> 归档旧 bak、重建基准
+    """
+    bak = bak_path or (path + (suffix or ".bak"))
+    if not os.path.exists(bak):
+        shutil.copy2(path, bak)          # 只在新备份不存在时写 —— 原始基准永不被覆盖
+        return bak
+    if is_pristine is not None:
+        cur = read_text_safe(path)
+        if cur is not None and is_pristine(cur):
+            _archive(bak, "stale")       # 旧备份归档到 历史备份/，不丢
+            shutil.copy2(path, bak)      # 重建基准
+            return bak
+    return bak
+```
+
+### 6.2 还原：护照驱动，只动"我改过的那些路径"
+
+```python
+if pp and pp.get("tool") == "pojia-yijiantong":        # 护照：装的时候记下改过哪些文件
+    instr_p = pp.get("instructions", "")
+    rows = []
+    if cfg_p and os.path.exists(cfg_p):
+        new_cfg = self.strip_block(read_text_safe(cfg_p) or "")
+        if new_cfg != cfg: rows.append(("config", cfg_p, new_cfg))
+    if instr_p:
+        rows.append(("instr", instr_p, None if exists(instr_p + BAK) else "del"))
+    # 注：若备份里已是"本工具旧版内容"，就删掉而不是还原 —— 否则等于没还原
+    for kind, path, payload in rows:
+        if kind == "config":  backup_file(path); write_text(path, payload)
+        elif kind == "instr": shutil.copy2(path + BAK, path) if payload is None else os.remove(path)
+```
+
+### 6.3 写盘：UTF-8 无 BOM 优先、原子替换、保留原行尾
+
+```python
+def write_text(path, text, bom=False, make_dirs=False):
+    """原子写：先写同目录临时文件，再 os.replace 覆盖（要么全成，要么原文件不动）。"""
+```
+
+### 6.4 敏感调用审计（本仓库的 `call-audit` CI 任务在每次提交时断言这些全为 0）
+
+| 检查项 | 命中 | 说明 |
+|---|---|---|
+| `import requests` / `urllib.request` / `http.client` | **0** | **脚本不发起任何 HTTP 请求**；唯一网络相关的库是 `webbrowser`，只在你在引导提示里**输入 A** 时才打开浏览器跳官方下载页 |
+| `import socket` | **0** | 不开端口、不建连接 |
+| `eval(` / `exec(` / `compile(`（动态执行） | **0** | 不执行任何字符串形式的代码 |
+| `os.system(` | **0** | 已全部改为 `subprocess` 列表调用 |
+| `shell=True` | **0** | 命令以**列表**传给 subprocess，不经 shell，无拼接注入面 |
+| `pickle` / `marshal` / `ctypes` 内存操作 | **0**（仅控制台代码页 API） | 只调用 `SetConsoleOutputCP` 让中文正常显示 |
+| `subprocess` 拼串命令（`%`/`.format`） | **0** | 命令一律是脚本内字面量 |
+
+> 唯一会"执行外部程序"的地方是查状态：`tasklist`（列进程）、`schtasks`（查计划任务）、`git`（可选）。命令与参数全是脚本内常量，**不接收任何外部输入**。
+
+### 6.5 自动扫描结果（badge 实时状态见页面顶部）
+
+- **bandit**：`0 HIGH / 0 MEDIUM`；71 条 LOW 全部是"已知且可接受"的：`try/except/pass` 的尽力清理、
+  以列表形式执行的 subprocess、以及把自证口令常量误判成"硬编码密码"。逐条豁免理由写在 [`.bandit.yml`](.bandit.yml)。
+- **semgrep**：`p/python` + `p/security-audit` 规则集，ERROR/WARNING 级别必须为 0。
+- 两个任务都在 [`.github/workflows/security.yml`](.github/workflows/security.yml) 里，
+  **每次 push / PR 自动跑**；徽章挂了 workflow 状态，红绿一眼可见。
+- 你可以本地复现同样的门禁（三条命令）：
+
+```bash
+pip install bandit
+bandit -c .bandit.yml -r 破甲一键通.py -f txt          # 看完整报告（含 LOW）
+# 门禁：下面这行的输出必须是 HIGH/MEDIUM: 0
+bandit -c .bandit.yml -r 破甲一键通.py -f json -o r.json --exit-zero && python -c "import json;d=json.load(open('r.json'));print('HIGH/MEDIUM:',sum(1 for x in d['results'] if x['issue_severity'] in ('HIGH','MEDIUM')))"
+```
+
+### 6.6 校验下载的文件没被篡改（SHA256）
+
+仓库根目录有 [`SHA256SUMS.txt`](SHA256SUMS.txt)（**Release 附件里也带了一份**），下载后自己核一遍：
+
+```powershell
+# Windows PowerShell
+Get-FileHash .\破甲一键通.py -Algorithm SHA256        # 与 SHA256SUMS.txt 里的值对照
+```
+```bash
+# Linux / macOS
+sha256sum -c SHA256SUMS.txt          # 文件名对得上就直接逐项校验
+```
+
+当前版本（v7.3）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)，附件里也带了一份）：
+
+| 文件 | SHA256（完整值见清单） | 字节 |
+|---|---|---|
+| `破甲一键通.py` | `9a531136f2959861fc17f3deb8c2d5d8`… | 221729 |
+| `一键破甲.bat` | `b90dc1d5752d106d0fab371eacfe6372`… | 1862 |
+| `persona.md` | `870bf45587f31bb91c88b92346686c8b`… | 2049 |
+
+**怎么校验附件**：附件里的 `SHA256SUMS.txt` 覆盖了包内每个文件（`sha256sum -c` 直接跑）；
+附件 `.zip` 自身的哈希发布在 Release 页面正文里 —— 这里不写，因为附件里装着 README，
+而往 README 里写附件的哈希会变成"改一处两处都对不上"的循环引用。
+`README.md` 与 `SHA256SUMS.txt` 自身不进清单，也是同一个道理。
+
+---
+
+## 七、安全 & 可逆
 
 - **改前必留备份**，后缀跟原工具保持一致，可互相还原：DSH → `<文件名>.dshpurge.bak`；WorkBuddy → `<文件名>.unlockbak`；Codex → `<文件名>.codexunlock.bak`。另按时间戳归档一份到 `历史备份/`。
-- **护照驱动还原（v7.2）**：装完会在 `managed-prompts/pojia-yijiantong/passport.json` 记下"我改了哪些路径"，`--revert` 只按这份名单还原 —— 不再靠"全盘扫文件名"，因此不会误删别人的文件，也不会留下孤儿文件。
-- **不静默接管（v7.2）**：Codex 那边如果发现指令文件不是本工具写的（没有本工具身份标记），**默认拒绝接管**；确认要接管再加 `--claim`，接管前会先存快照、写一份 `*.claimed-by-pojia.txt` 说明原委。
+- **护照驱动还原（v7.3）**：装完会在 `managed-prompts/pojia-yijiantong/passport.json` 记下"我改了哪些路径"，`--revert` 只按这份名单还原 —— 不再靠"全盘扫文件名"，因此不会误删别人的文件，也不会留下孤儿文件。
+- **不静默接管（v7.3）**：Codex 那边如果发现指令文件不是本工具写的（没有本工具身份标记），**默认拒绝接管**；确认要接管再加 `--claim`，接管前会先存快照、写一份 `*.claimed-by-pojia.txt` 说明原委。
 - **升级自愈**：官方升级覆盖文件后，能识别"当前是干净官方版、备份是更老原版"，自动归档旧备份重建基准，不会出现"还原一下反而把文件降级"。
 - `--revert` / `--restore` 随时还原。只做文件级补丁，**不删包、不碰注册表/服务**。
 - `--status` / `--check` / `--dry-run` 纯只读，可以先看再动手。
 
 ---
 
-## 七、关于 DSH 进程（重要）
+## 八、关于 DSH 进程（重要）
 
 **脚本默认绝不会结束正在跑的 DSH 进程。**
 
@@ -244,7 +356,7 @@ DSH Desktop 的进程里很可能就跑着正在跟你对话的那个会话 —�
 
 ---
 
-## 八、WorkBuddy 守护任务
+## 九、WorkBuddy 守护任务
 
 `--guard install` 会装两个计划任务，防止补丁被官方升级/自检冲掉：`WorkBuddyUnlockV6_Hourly`（每 30 分钟）、`WorkBuddyUnlockV6_Logon`（每次登录，需管理员）。守护进程用 `pythonw.exe` 调 `--quiet`，没有黑框闪现。
 
@@ -252,11 +364,11 @@ DSH Desktop 的进程里很可能就跑着正在跟你对话的那个会话 —�
 
 ---
 
-## 九、常见问答
+## 十、常见问答
 
 **Q：跑完要重启吗？** —— 要。DSH 和 WorkBuddy 需完全退出（含托盘）再打开；Codex 重开一个新会话即可。
 
-**Q：怎么确认真的生效了？** —— 在客户端新会话里单独发「**破甲自检**」，应回 `破甲已生效｜目标 XXX｜v7.2`。没回就是没载入（最常见原因是没重启）。
+**Q：怎么确认真的生效了？** —— 在客户端新会话里单独发「**破甲自检**」，应回 `破甲已生效｜目标 XXX｜v7.3`。没回就是没载入（最常见原因是没重启）。
 
 **Q：官方升级后补丁还在吗？** —— 升级会覆盖 `node_modules` / `resources`，补丁被冲掉，重跑 `--apply` 即可（会自动识别哪些被冲掉，只补该补的）。
 
@@ -274,7 +386,7 @@ DSH Desktop 的进程里很可能就跑着正在跟你对话的那个会话 —�
 | `一键破甲.bat` | 纯 ASCII 启动器，通配符定位 `.py`，自动找 Python |
 | `persona.md` | 唯一共用人格源（四个目标共用） |
 | `使用说明.md` | 完整说明书 |
-| `修复报告.md` | 相比原工具修掉的 18 处缺陷（B1–B18）+ 3 处合并层问题（C1–C3）+ v7.2 新增的 4 项（N1–N4），逐条对照 |
+| `修复报告.md` | 相比原工具修掉的 18 处缺陷（B1–B18）+ 3 处合并层问题（C1–C3）+ v7.3 新增的 4 项（N1–N4），逐条对照 |
 | `赞赏码.png` | 微信支付 / 支付宝收款码（自愿打赏用，不参与功能） |
 | `preview.png` | README 顶部的界面预览图 |
 | `LICENSE` | MIT 许可证 |

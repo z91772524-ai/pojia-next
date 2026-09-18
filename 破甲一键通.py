@@ -86,6 +86,10 @@ import json
 import time
 import shutil
 import string
+import shlex
+import importlib
+import datetime
+import urllib.parse
 import hashlib
 import platform
 import argparse
@@ -100,7 +104,7 @@ if sys.stderr is None:
     sys.stderr = sys.stdout
 
 IS_WIN = (os.name == "nt")
-VERSION = "7.2"
+VERSION = "7.3"
 CHECK_EXIT_CODES = []          # --check 用：收集不达标项（只影响退出码，不改状态码）
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -276,7 +280,8 @@ def _init_console():
             pass
     if IS_WIN:
         try:
-            os.system("")          # 触发一次 VT 初始化，让第一次输出就带色
+            # 触发一次 VT 初始化，让第一次输出就带色（只执行空命令，不传任何用户输入）
+            subprocess.run("cmd /c exit", capture_output=True, timeout=10)
         except Exception:
             pass
 
@@ -329,7 +334,9 @@ def clear_screen():
         except Exception:
             pass
     try:
-        os.system("cls" if IS_WIN else "clear")
+        # 清屏：Windows 用 cmd 内置 cls，其它平台用 clear（都是固定字面量，无外部输入）
+        subprocess.run(["cmd", "/c", "cls"] if IS_WIN else ["clear"],
+                       capture_output=True, timeout=15)
     except Exception:
         pass
 
@@ -390,7 +397,17 @@ def detect_nl(text):
 
 
 def sha1_short(s):
-    return hashlib.sha1(s.encode("utf-8")).hexdigest()[:12]
+    """人格版本标记用的**短哈希**（只用来判断"这份补丁是不是本版打的"）。
+
+    ⚠ 这不是密码学用途：公式 `sha1(user|POLICY|OVERLAY|False)` 刻意与上一代
+      WorkBuddy v4 逐字一致，好让老机器上已打好的补丁被认成"已是最新"，不白重写
+      600KB 的 product.json。bandit 的 B324 建议显式标注 `usedforsecurity=False`
+      —— 标了它就不再当安全问题报。
+    """
+    try:
+        return hashlib.sha1(s.encode("utf-8"), usedforsecurity=False).hexdigest()[:12]
+    except TypeError:                       # Python < 3.9 没有这个参数
+        return hashlib.sha1(s.encode("utf-8")).hexdigest()[:12]  # nosec B324 - 见上方说明
 
 
 def sha256_str(s):
@@ -547,8 +564,15 @@ def _decode_console(raw):
 
 
 def _run(cmd, timeout=60):
+    """执行一条系统命令并返回 (输出, 退出码)。
+
+    命令**只来自本脚本内的字面量**（taskkill / schtasks / git 等），不接受任何外部输入，
+    所以列表形式执行即可，不需要 shell（bandit 的 B602/B605 就是盯着这个）。
+    """
     try:
-        r = subprocess.run(cmd, shell=True, capture_output=True, timeout=timeout)
+        if isinstance(cmd, str):
+            cmd = shlex.split(cmd, posix=False)
+        r = subprocess.run(cmd, capture_output=True, timeout=timeout)
         return _decode_console((r.stdout or b"") + (r.stderr or b"")), r.returncode
     except Exception as e:
         return str(e), -1
@@ -1116,7 +1140,8 @@ class DshTarget:
             return fp + self.bak_suffix
         root = os.path.join(self.dsh_home(), "dsh-purge", "shim-backups")
         os.makedirs(root, exist_ok=True)
-        digest = hashlib.sha1(os.path.normpath(fp).encode("utf-8")).hexdigest()[:20]
+        digest = hashlib.sha1(os.path.normpath(fp).encode("utf-8"),
+                              usedforsecurity=False).hexdigest()[:20]
         return os.path.join(root, "%s.%s.bak" % (os.path.basename(fp), digest))
 
     # ---------------- 补丁函数 ----------------
@@ -1934,7 +1959,8 @@ class WorkBuddyTarget:
     @staticmethod
     def _task_exists(name):
         try:
-            r = subprocess.run('schtasks /Query /TN "%s"' % name, shell=True,
+            # 列表形式执行，不经 shell：任务名只来自本脚本内的常量，不接受外部输入
+            r = subprocess.run(["schtasks", "/Query", "/TN", name],
                                capture_output=True, timeout=60)
             return r.returncode == 0
         except Exception:
@@ -1943,7 +1969,7 @@ class WorkBuddyTarget:
     @staticmethod
     def task_command(name):
         try:
-            r = subprocess.run('schtasks /Query /TN "%s" /XML' % name, shell=True,
+            r = subprocess.run(["schtasks", "/Query", "/TN", name, "/XML"],
                                capture_output=True, timeout=60)
             raw = r.stdout or b""
             s = None
@@ -2699,7 +2725,7 @@ def passport_new(key, root, cfg_path, instr_path, mode, agents_path="", created_
 
 def _dt_now_iso():
     try:
-        return __import__("datetime").datetime.now().isoformat(timespec="seconds")
+        return datetime.datetime.now().isoformat(timespec="seconds")
     except Exception:
         return ""
 
@@ -2762,7 +2788,8 @@ def snapshot_repair(root, key, note, extra=()):
     """
     if not root:
         return ""
-    rnd = hashlib.sha1(("%s|%s|%s" % (time.time(), root, key)).encode("utf-8")).hexdigest()[:12]
+    rnd = hashlib.sha1(("%s|%s|%s" % (time.time(), root, key)).encode("utf-8"),
+                       usedforsecurity=False).hexdigest()[:12]
     d = os.path.join(avatar_dir_for(root), "history", "reference-" + rnd)
     try:
         os.makedirs(d, exist_ok=True)
@@ -2856,7 +2883,7 @@ def scan_config_hints(cfg_path, root):
         m = re.search(r'base_url\s*=\s*["\'](https?://[^"\']+)["\']', ln)
         if m:
             try:
-                host = __import__("urllib.parse", fromlist=["urlsplit"]).urlsplit(m.group(1)).netloc
+                host = urllib.parse.urlsplit(m.group(1)).netloc
             except Exception:
                 host = "(无法解析)"
             official = any(h in host.lower() for h in ("openai.com", "deepseek.com"))
@@ -4389,7 +4416,7 @@ def check_runtime():
     for mod in ("os", "re", "sys", "json", "shutil", "hashlib", "subprocess",
                 "argparse", "datetime", "unicodedata", "string", "platform"):
         try:
-            __import__(mod)
+            importlib.import_module(mod)
         except Exception as e:
             missing.append("%s (%r)" % (mod, e))
     if missing:

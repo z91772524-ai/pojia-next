@@ -1,0 +1,13 @@
+# bandit 配置：解释为什么这些告警在本项目里是"已知且可接受"的。
+# CI 里用 `--severity-level medium`，即 **HIGH/MEDIUM 必须为 0**；LOW 只报不拦。
+skips:
+  - B110   # Try/Except/Pass —— 全项目都是"尽力而为的清理"（删临时文件、改权限失败不影响主流程）
+  - B112   # Try/Except/Continue —— 同上，遍历多靶点时的单个失败跳过
+  - B105   # Hardcoded password —— 命中的是自证口令常量「破甲自检」，不是密码
+  - B404   # import subprocess —— 需要调用 schtasks/taskkill/git 查状态，必然要它
+  - B603   # subprocess without shell —— 一律**列表形式**调用，命令来自脚本内字面量
+  - B607   # partial executable path —— 依赖 PATH 里的系统命令，Windows 上属标准做法
+  - B324   # SHA1 —— 只用于"人格版本标记"与随机快照目录名，非密码学用途，
+           #        且已显式标注 usedforsecurity=False
+exclude_dirs:
+  - tests

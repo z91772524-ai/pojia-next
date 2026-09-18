@@ -1,0 +1,83 @@
+name: security
+
+# 安全扫描：每次推送 / PR 自动跑。README 上挂的徽章就是这个 workflow 的状态。
+#   · bandit   —— Python 安全静态扫描（**HIGH / MEDIUM 必须为 0**，否则 job 失败）
+#   · semgrep  —— 通用安全规则集（ERROR / WARNING 必须为 0）
+#   · 自查清单 —— 关键敏感调用必须为 0（requests / socket / eval / exec / os.system / shell=True）
+#
+# 用到的配置：仓库根目录的 .bandit.yml（逐条写明哪些告警是已知且可接受的）
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bandit:
+    name: bandit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --disable-pip-version-check bandit
+      - name: 完整报告（含 LOW，便于人工审计）
+        run: bandit -c .bandit.yml -r 破甲一键通.py -f txt || true
+      - name: 门禁：HIGH / MEDIUM 必须为 0
+        run: |
+          bandit -c .bandit.yml -r 破甲一键通.py -f json -o bandit-report.json --exit-zero
+          python -c "import json,sys; d=json.load(open('bandit-report.json',encoding='utf-8')); hi=[r for r in d.get('results',[]) if r['issue_severity'] in ('HIGH','MEDIUM')]; print('HIGH/MEDIUM:',len(hi)); [print('  line %s [%s/%s] %s' % (r['line_number'], r['test_id'], r['issue_severity'], r['issue_text'])) for r in hi]; sys.exit(1 if hi else 0)"
+
+  semgrep:
+    name: semgrep
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --disable-pip-version-check semgrep
+      - name: 门禁：ERROR / WARNING 必须为 0
+        run: |
+          semgrep --config p/python --config p/security-audit \
+                  --severity ERROR --severity WARNING --error --metrics=off \
+                  --json -o semgrep.json 破甲一键通.py || true
+          python -c "import json,sys; d=json.load(open('semgrep.json',encoding='utf-8')); bad=[r for r in d.get('results',[]) if (r.get('extra',{}).get('severity') or '').upper() in ('ERROR','WARNING')]; print('ERROR/WARNING:',len(bad)); [print('  %s %s:%s' % (r['check_id'], r['path'], r['start']['line'])) for r in bad[:40]]; sys.exit(1 if bad else 0)"
+
+  call-audit:
+    name: call-audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 敏感调用逐项断言（全部必须为 0）
+        run: |
+          python -c "
+          import re, sys
+          src = open('破甲一键通.py', encoding='utf-8').read()
+          pats = {
+              'import requests': r'(?m)^\s*import\s+requests|from\s+requests\s+import',
+              'import socket': r'(?m)^\s*import\s+socket|from\s+socket\s+import',
+              'eval(': r'\beval\s*\(',
+              'exec(': r'\bexec\s*\(',
+              'os.system(': r'os\.system\s*\(',
+              'shell=True': r'shell\s*=\s*True',
+              'urllib.request': r'urllib\.request',
+              'http.client': r'http\.client',
+              'pickle/marshal': r'\bpickle\.|\bmarshal\.',
+              '__import__(': r'__import__\s*\(',
+              'subprocess 拼串命令': r'subprocess\.run\([^\[\n]*%|subprocess\.run\([^\[\n]*\.format\(',
+          }
+          bad = []
+          for name, p in pats.items():
+              n = len(re.findall(p, src))
+              print('  %-20s %d' % (name, n))
+              if n: bad.append(name)
+          if bad:
+              print('出现不该有的调用:', bad); sys.exit(1)
+          print('全部为 0')
+          "

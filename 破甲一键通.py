@@ -670,16 +670,23 @@ def _decode_console(raw):
 
 
 def _npm_env():
-    """spawn npm/node 时用的环境：**关掉 node 的编译缓存**。
+    """spawn npm/node 时用的环境：**不让它往用户主目录写东西**。
 
-    v7.5 加：Node 22+ 默认会把编译缓存写进用户 HOME（`node-compile-cache/`）。
-    本工具在探测 npm 全局目录 / npx 缓存时会 spawn npm 两次，于是"只读命令不落盘"
-    的承诺失真 —— 路人验收实测：空 HOME 被 npm 写出了 72 个缓存文件。
-    关掉之后实测 0 个文件，探测结果不受影响。
+    v7.5 加。两处来源都是 npm/node 自己的行为，但会破坏"只读命令不落盘"的承诺
+    （路人验收实测到的）：
+      · Node 22+ 默认把编译缓存写进 HOME（`node-compile-cache/`）→ 关掉；
+      · npm 每次运行会往缓存目录写 `_logs/*-debug-0.log` → 静音 + 把缓存指到临时目录。
+    实测：改前空 HOME 被写入 72 个文件，改后 0 个，探测结果不受影响。
     """
     env = dict(os.environ)
     env["NODE_COMPILE_CACHE"] = ""
     env["NODE_DISABLE_COMPILE_CACHE"] = "1"
+    env["npm_config_loglevel"] = "silent"
+    env["npm_config_update_notifier"] = "false"
+    env["npm_config_fund"] = "false"
+    env["npm_config_audit"] = "false"
+    tmp = env.get("TEMP") or env.get("TMP") or os.path.join(os.path.expanduser("~"), ".cache")
+    env["npm_config_cache"] = os.path.join(tmp, "pojia-npm-probe")
     return env
 
 
@@ -1209,21 +1216,27 @@ class DshTarget:
                     add(os.path.join(d, "resources", "app", "node_modules", "@deepseek-ai"))
 
         # 3) npm 全局
-        for exe in (("npm", "npm.cmd") if IS_WIN else ("npm",)):
-            try:
-                r = subprocess.run([exe, "root", "-g"], capture_output=True, text=True,
-                                   timeout=15, env=_npm_env())
-                out = (r.stdout or "").strip()
-                if out:
-                    add(os.path.join(out, "@deepseek-ai"))
-            except Exception:
-                pass
+        # v7.5：**只有前面一无所获时**才去 spawn npm。两个好处：
+        #   ① 快（npm 启动在 Windows 上要 1-2 秒，而桌面端那几条路径通常一次命中）；
+        #   ② 少副作用（npm/node 每次运行都会往缓存目录写日志与编译缓存，
+        #      不该因为"看一眼状态"就动用户主目录）。
+        if not roots:
+            for exe in (("npm", "npm.cmd") if IS_WIN else ("npm",)):
+                try:
+                    r = subprocess.run([exe, "root", "-g"], capture_output=True, text=True,
+                                       timeout=15, env=_npm_env())
+                    out = (r.stdout or "").strip()
+                    if out:
+                        add(os.path.join(out, "@deepseek-ai"))
+                except Exception:
+                    pass
         for d in (os.path.join(home, ".npm-global", "lib", "node_modules"),
                   "/usr/local/lib/node_modules", "/usr/lib/node_modules",
                   os.path.join(home, "AppData", "Roaming", "npm", "node_modules")):
             add(os.path.join(d, "@deepseek-ai"))
-        # 4) npx 缓存
-        self._add_npx_candidates(add, home)
+        # 4) npx 缓存（同样只在前面一无所获时才去 spawn npm —— 见上面 3) 的说明）
+        if not roots:
+            self._add_npx_candidates(add, home)
         self._add_running_npx(add)
         # 5) 便携版
         add(os.path.join(home, ".dsh", "node_modules", "@deepseek-ai"))

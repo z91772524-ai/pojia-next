@@ -38,7 +38,7 @@ def main():
     }
     # 注意：**不要**把 Release 附件自身的哈希写进 README —— 附件里装着 README，
     # 那样改一处就两处对不上（循环引用）。附件的哈希只放 Release 正文。
-    zp = os.path.join(r"E:\DSH-Workspace\破甲next-发布素材", "pojia-next-v7.3.zip")
+    zp = os.path.join(r"E:\DSH-Workspace\破甲next-发布素材", "pojia-next-v7.5.zip")
     if "<!--HASH-ZIP-->" in open(README, encoding="utf-8").read() and os.path.exists(zp):
         print("  [警告] README 里还有附件哈希占位符，建议删掉（循环引用）")
 

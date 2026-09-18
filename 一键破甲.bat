@@ -1,6 +1,6 @@
 @echo off
 rem ==================================================================
-rem  Pojia YiJianTong v7.2  --  launcher
+rem  Pojia YiJianTong v7.5  --  launcher
 rem
 rem  This file is deliberately 100%% ASCII. A .bat that contains any
 rem  non-ASCII byte gets mangled when cmd.exe parses it under the

@@ -1,6 +1,0 @@
-model = "gpt-x"
-approval_policy = "never"
-
-[model_providers.relay]
-base_url = "https://relay.example.com/v1"
-experimental_bearer_token = "sk-abcdefghijklmnopqrstuvwxyz0123456789"

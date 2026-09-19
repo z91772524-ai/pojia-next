@@ -1,6 +1,6 @@
-# 破甲一键通 v7.5
+# 破甲一键通 v7.7
 
-**一个脚本，把 DSH（DeepSeek Harness）、WorkBuddy、ZCode 三个客户端的提示词 / 人格一次换到位** —— 纯 Python 标准库、零依赖、双击即用、改前必留备份、装完当场可自证、随时可一键还原。
+**一个脚本，把 DSH（DeepSeek Harness）、WorkBuddy、ZCode、Codex、Cursor、Claude Code 六个客户端的提示词 / 人格一次换到位** —— 纯 Python 标准库、零依赖、双击即用、改前必留备份、装完当场可自证、随时可一键还原。
 
 [![Release](https://img.shields.io/github/v/release/z91772524-ai/pojia-next?label=release&color=2ea043)](https://github.com/z91772524-ai/pojia-next/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -15,19 +15,30 @@
 > **本项目仅用于学习交流，无不良引导。若他人使用本项目从事任何违法、违规或侵权行为，与作者没有任何关系，全部后果由使用者自行承担。**
 > 请遵守所在地法律法规与目标软件的服务条款。完整条款见下方「免责声明」章节。
 
-> ## ⚠️ v7.5 版本说明：**Codex 目标已移除**
-> 从 v7.5 起本工具只支持 **DSH / WorkBuddy / ZCode** 三个客户端，Codex 通道（`--claim` / `--codex-dir` 等）一并撤下。
-> 含 Codex 的最后一版是 **v7.4**（脚本与测试都已归档：`归档/破甲一键通-v7.4-含Codex.py`），需要时可用它继续维护 Codex。
+> ## 🆕 v7.7 版本说明：**目标扩到六个**
+>
+> 现在支持 **DSH / WorkBuddy / ZCode / Codex / Cursor / Claude Code** 六个客户端。
+>
+> **Codex 在 v7.5 曾被移除，v7.7 重新加入**，并一并新增 **Cursor** 与 **Claude Code**。
+> 三个新目标走**标记块**注入（`<!-- POJIA-NEXT-INJECT:BEGIN -->` … `END`）：
+> 只往你的配置里追加自己那一段，**原有内容一律保留**，卸载时按标记精确删除；二次执行幂等。
+>
+> - **Codex** → `~\.codex\AGENTS.md` + `managed-prompts\`；**不改你的 `config.toml`**
+> - **Cursor** → `~\.cursor\rules\pojia-inject.mdc`；`.cursorrules` 已存在才同步
+> - **Claude Code** → `~\.claude\CLAUDE.md`
+>
+> Cursor / Claude **只处理用户级配置，不扫你的项目目录**。
+>
 > 历史说明与当初的实现理由保留在下方更新记录与 `修复报告.md` 里，不抹掉。
 
-把桌面那**几套**桌面端 AI 客户端"破甲"工具，合并成**一个脚本**：一套人格，四个目标，**零第三方依赖**（纯 Python 标准库）。
+把桌面那**几套**桌面端 AI 客户端"破甲"工具，合并成**一个脚本**：一套人格，六个目标，**零第三方依赖**（纯 Python 标准库）。
 
 ![界面预览](preview.png)
 
 ## 为什么值得一试
 
-- ⚡ **一个脚本管三个客户端** —— DSH + WorkBuddy + ZCode 共用同一份 `persona.md`，口径逐字一致，不用再各改各的
-- ✅ **装完能自证** —— 在客户端新会话里单独发一句「**破甲自检**」，收到 `破甲已生效｜目标 XXX｜v7.5` 才算真载入；不用再靠"感觉好像生效了"
+- ⚡ **一个脚本管六个客户端** —— DSH + WorkBuddy + ZCode + Codex + Cursor + Claude Code 共用同一份 `persona.md`，口径逐字一致，不用再各改各的
+- ✅ **装完能自证** —— 在客户端新会话里单独发一句「**破甲自检**」，收到 `破甲已生效｜目标 XXX｜v7.7` 才算真载入；不用再靠"感觉好像生效了"
 - 🩺 **一条命令体检** —— `--check` 只读扫磁盘态 / 明文密钥 / 旧守护任务 / 云记忆状态 / 自证就绪，**只报分类不打印密钥原文**，退出码可直接用于脚本判断
 - 🔄 **装过老版本也能自动升级**（v7.3 修）—— 判据是"护照里的版本 != 本版就重写"，不再只看人格哈希；否则老补丁会被判成"已是最新"而**永远升不上去**（守护任务跑的 `--apply` 不带 `--force`，救不回来）
 - 🆕 **ZCode 目标**（v7.3 新增）—— `AGENTS.md` + Memory 文件 + 技能（按官方**深度 1** 扫描摆直子目录）；系统提示词 patch 是**可选通道**（`--zpatch`，带 `node --check` 语法校验，校验不过自动回滚）
@@ -102,13 +113,17 @@
 
 ---
 
-## 一、管哪四个目标
+## 一、管哪六个目标
 
 | 目标 | 是什么 | 注入方式 |
 |---|---|---|
 | `dsh` | DeepSeek Harness（桌面端 / npm 全局 / npx 缓存 / 便携版） | 三层文件级补丁：提示词层、persona 层、区段层 |
 | `wb` | WorkBuddy | 六层靶点：模板 / `product.json` / 命令闸门 / 网页过滤 / 运行时缓存 / 会话快照 **＋ 账号级云记忆 `memoryBlock`**（每轮自动注入） |
 | `zcode` | ZCode 桌面端（智谱 [zcode.z.ai](https://zcode.z.ai/cn/docs)） | `~/.zcode/AGENTS.md` + Memory 文件（`cli/memories/global/memory/`）+ 技能（`~/.zcode/skills/` 与 `~/.agents/skills/`，**深度 1 直子目录**）；可选 `--zpatch` 替换 `resources/glm/zcode.cjs` 里的系统提示词 |
+| `codex` | Codex（OpenAI Codex CLI，配置目录 `~\.codex`） | `AGENTS.md` 标记块 ＋ `managed-prompts\pojia-persona.md` 副本；**不改 `config.toml`** |
+| `cursor` | Cursor（配置目录 `~\.cursor`） | `rules\pojia-inject.mdc`（front-matter 需在第一行）；`.cursorrules` 已存在才同步；**不扫项目目录** |
+| `claude` | Claude Code（配置目录 `~\.claude`） | `CLAUDE.md` 标记块；**只处理用户级**，不碰各工程根目录的项目级 CLAUDE.md |
+
 
 ---
 
@@ -119,11 +134,11 @@
 双击 **`一键破甲.bat`** → 出菜单 → 按数字选：
 
 ```
-  [1] 一键破甲         DSH + WorkBuddy + ZCode 全打一遍
+  [1] 一键破甲         先选目标（六个任选 / 可多选）
   [2] 检测状态         只读，不改任何文件      ← 建议先看这个
   [3] 诊断详情         逐文件列出补丁/备份状态
   [4] 预演             只显示会改什么
-  [5] 选目标单打        dsh / wb / zcode 任选
+  [5] 选目标单打        dsh / wb / zcode / codex / cursor / claude 任选
   [6] 还原              选择目标还原成官方原版
   [7] WorkBuddy 守护    安装 / 卸载 / 查看后台守护任务
   [8] 体检（只读）      磁盘态 / 明文密钥 / 自证就绪，不改盘
@@ -135,7 +150,7 @@
 
 ```bash
 python 破甲一键通.py                            # 交互菜单
-python 破甲一键通.py --status                   # 只读：四个目标全查一遍
+python 破甲一键通.py --status                   # 只读：六个目标全查一遍
 python 破甲一键通.py --check                    # 只读体检（有问题退出码 1）
 python 破甲一键通.py --diagnose                 # 只读：详细取证
 python 破甲一键通.py --dry-run                  # 预演，不改盘
@@ -201,7 +216,7 @@ python 破甲一键通.py --apply --force --yes
 预期只回一行（多一个字、加解释、拒答，都说明没真载入）：
 
 ```
-破甲已生效｜目标 DSH｜v7.5
+破甲已生效｜目标 DSH｜v7.7
 ```
 
 回执行位置（可直接打开看）：
@@ -379,7 +394,7 @@ Get-FileHash .\破甲一键通.py -Algorithm SHA256        # 与 SHA256SUMS.txt 
 sha256sum -c SHA256SUMS.txt          # 文件名对得上就直接逐项校验
 ```
 
-当前版本（v7.4）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)，附件里也带了一份）：
+当前版本（v7.7）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)，附件里也带了一份）：
 
 | 文件 | SHA256（完整值见清单） | 字节 |
 |---|---|---|
@@ -429,11 +444,11 @@ DSH Desktop 的进程里很可能就跑着正在跟你对话的那个会话 —�
 
 **Q：跑完要重启吗？** —— 要。DSH 和 WorkBuddy 需完全退出（含托盘）再打开。
 
-**Q：怎么确认真的生效了？** —— 在客户端新会话里单独发「**破甲自检**」，应回 `破甲已生效｜目标 XXX｜v7.4`。没回就是没载入（最常见原因是没重启）。
+**Q：怎么确认真的生效了？** —— 在客户端新会话里单独发「**破甲自检**」，应回 `破甲已生效｜目标 XXX｜v7.7`。没回就是没载入（最常见原因是没重启）。
 
 **Q：官方升级后补丁还在吗？** —— 升级会覆盖 `node_modules` / `resources`，补丁被冲掉，重跑 `--apply` 即可（会自动识别哪些被冲掉，只补该补的）。
 
-**Q：怎么知道补丁有没有被冲掉？** —— `python 破甲一键通.py --check`（一条命令看完三个目标）；WorkBuddy 还可 `--snapshot` 留基准、`--compare` 对比。
+**Q：怎么知道补丁有没有被冲掉？** —— `python 破甲一键通.py --check`（一条命令看完六个目标）；WorkBuddy 还可 `--snapshot` 留基准、`--compare` 对比。
 
 ---
 
@@ -443,7 +458,7 @@ DSH Desktop 的进程里很可能就跑着正在跟你对话的那个会话 —�
 |---|---|
 | `破甲一键通.py` | 主程序，约 140KB，纯标准库 |
 | `一键破甲.bat` | 纯 ASCII 启动器，通配符定位 `.py`，自动找 Python |
-| `persona.md` | 唯一共用人格源（四个目标共用） |
+| `persona.md` | 唯一共用人格源（六个目标共用） |
 | `使用说明.md` | 完整说明书 |
 | `修复报告.md` | 相比原工具修掉的 18 处缺陷（B1–B18）+ 3 处合并层问题（C1–C3）+ v7.3 的 20 项（N1–N20）+ **v7.4 的 19 项（N21–N39）+ v7.5 的 2 项（N41–N42）**，逐条对照（每条都写了复现方式与修法） |
 | `赞赏码.png` | 微信支付 / 支付宝收款码（自愿打赏用，不参与功能） |

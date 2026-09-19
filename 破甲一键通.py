@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 """
 ================================================================================
- 破甲一键通  v7.5   （三目标统一脚本）
+ 破甲一键通  v7.7   （多目标统一脚本）
 ================================================================================
 
- 把桌面那几套破甲工具合并成【一个脚本】，一套人格，三个目标：
+ 把桌面那几套破甲工具合并成【一个脚本】，一套人格，六个目标：
 
      dsh   —— DeepSeek Harness（DSH Desktop / 官方 npm 全局 / npx 缓存 / 便携版）
      wb    —— WorkBuddy（六层靶点：模板 / product.json / 命令闸门 / 网页过滤 /
@@ -24,7 +24,7 @@
    历史说明（为什么当初那样实现）保留在下方注释与 修复报告.md 里，不抹掉。
 
  相比原来的几套工具，这个统一脚本：
-     1. 一份人格（EMBEDDED_PERSONA / persona.md），三个目标共用，不再各写各的；
+     1. 一份人格（EMBEDDED_PERSONA / persona.md），六个目标共用，不再各写各的；
      2. 修掉了原工具里 14 处真实 bug + v7.x 自查出的 20 余处缺陷（见 修复报告.md）；
      3. 默认不再自动杀 DSH 进程（原来会杀掉正在跑本会话的宿主，等于自杀）；
      4. 备份/还原加"升级自愈"：官方升级覆盖后可正确重建基准，revert 不会降级文件；
@@ -37,10 +37,10 @@
 
    命令行：
      python 破甲一键通.py                           交互菜单
-     python 破甲一键通.py --status                  只读：三个目标全查一遍
+     python 破甲一键通.py --status                  只读：所有目标全查一遍
      python 破甲一键通.py --diagnose               只读：详细取证
      python 破甲一键通.py --dry-run                 预演，不改盘
-     python 破甲一键通.py --apply                   真打（三个目标，自动跳过没装的）
+     python 破甲一键通.py --apply                   真打（所有目标，自动跳过没装的）
      python 破甲一键通.py --apply --target wb       只打 WorkBuddy
      python 破甲一键通.py --revert --target dsh     只还原 DSH
      python 破甲一键通.py --apply --persona 我的.md  换人格
@@ -110,7 +110,7 @@ if sys.stderr is None:
     sys.stderr = sys.stdout
 
 IS_WIN = (os.name == "nt")
-VERSION = "7.5"
+VERSION = "7.7"
 CHECK_EXIT_CODES = []          # --check 用：收集不达标项（只影响退出码，不改状态码）
 ERRORS = 0                     # v7.4：apply/revert 里的失败项累计（>0 → 进程退出码 1）
 
@@ -135,7 +135,7 @@ DISCLAIMER_LINES = (
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  一、共用人格（三个目标共用这一份，保证口径一致）
+#  一、共用人格（六个目标共用这一份，保证口径一致）
 # ══════════════════════════════════════════════════════════════════════════════
 
 # 正文与 WorkBuddy 内置「强化版」政策逐字一致 —— 这样统一脚本和原 WorkBuddy v4 打出的
@@ -241,6 +241,26 @@ OVERLAY_MARK = "最高优先级覆盖 版本2.0"
 
 BAK_DSH = ".dshpurge.bak"
 BAK_WB = ".unlockbak"
+
+# ---- v7.7 新增三个目标（Codex / Cursor / Claude）的常量 ----
+BAK_CODEX = ".pojia.bak"
+BAK_CURSOR = ".pojia.bak"
+BAK_CLAUDE = ".pojia.bak"
+
+# Codex：config.toml 里的注入标记 + managed-prompts 目录
+CODEX_MARK = "pojia-next"
+CODEX_PROMPT_NAME = "pojia-persona.md"
+# Codex 记忆注入段标题（memory_summary.md 里按标题块替换）
+CODEX_MEM_TITLE = "破甲注入"
+
+# Cursor：规则文件名与标记（新版 .cursor/rules/*.mdc，旧版 .cursorrules）
+CURSOR_RULE_NAME = "pojia-inject.mdc"
+CURSOR_MARK = "<!-- POJIA-NEXT-INJECT -->"
+CURSOR_LEGACY_RULE = ".cursorrules"
+
+# Claude：CLAUDE.md 标记块
+CLAUDE_MARK = "POJIA-NEXT-INJECT"
+CLAUDE_SKILLS_DIR = "skills"
 
 # 手动指定的安装目录（自动探测找不到时，让用户点选并记下来）
 MANUAL_PATH_FILE = os.path.join(STATE_DIR, "手动指定目录.json")
@@ -1643,7 +1663,11 @@ class DshTarget:
                     log("   PID %-7s %s" % (pid, name), "dg", "dsh")
                 log("  默认【不结束】它们（本会话很可能就跑在里面）。", "y", "dsh")
                 log("  改的是磁盘文件，不影响当前进程；改动要【重启 DSH】才生效。", "dg", "dsh")
-                if not getattr(args, "yes", False) and sys.stdin and sys.stdin.isatty():
+                # v7.6：预演（dry-run）是只读路径，绝不能提问 —— 以前这里会弹
+                # 「继续打补丁？(y/N)」，导致菜单点「预演」也被卡住。
+                if mode == "dry-run":
+                    log("  预演模式：只显示会改什么，不提问。", "dg", "dsh")
+                elif not getattr(args, "yes", False) and sys.stdin and sys.stdin.isatty():
                     try:
                         if input("  继续打补丁？(y/N) ").strip().lower() != "y":
                             log("已取消。", "y", "dsh")
@@ -2967,7 +2991,7 @@ class WorkBuddyTarget:
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  四·五、v6.1 新机制：自证口令 / 专属管理目录 / 脱敏体检
-#       （这部分对三个目标通用，放在目标类之后、调度之前）
+#       （这部分对六个目标通用，放在目标类之后、调度之前）
 # ══════════════════════════════════════════════════════════════════════════════
 
 # ---- 1. 自证口令 -----------------------------------------------------------
@@ -2990,7 +3014,7 @@ _PASS_BLOCK_TMPL = """
 
 
 def pass_block(target):
-    """三目标共用的自证口令段（各自填自己的目标名 + 当前版本）。
+    """各目标共用的自证口令段（各自填自己的目标名 + 当前版本）。
 
     ⚠ 这里必须把 **两个** 占位符都换掉。v6.1 首版只做了 % 替换（换的是口令），
       `{target}` / `{ver}` 原样写进了靶点文件 —— 客户端会照着字面回复
@@ -4222,13 +4246,426 @@ class ZCodeTarget:
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+#  四·补（v7.7）Codex / Cursor / Claude —— 标记块式注入
+#
+#  这三个客户端与 DSH/ZCode 的差别：它们的提示词都是**单一 Markdown 文件**，
+#  官方没有给"人格覆盖"接口，业界通行做法是往文件里插一段带标记的块，卸载时按标记删掉。
+#  所以三者共用一套"标记块"逻辑，只有路径与文件格式不同。
+# ══════════════════════════════════════════════════════════════════════════════
+
+class _MarkBlockTarget:
+    """标记块式客户端基类：把一个标记块写进目标文件，卸载时按标记移除。
+
+    子类必须提供：
+      key / label / home_name / prompt_file / bak_suffix
+      resolve_pick(path) / pick_title() / pick_hint() / detect_ok(args)
+      mark_begin / mark_end
+    可选覆写：
+      extra_files()  -> 除主文件外还要处理的 (路径, 说明) 列表
+      proc_names     -> 运行中进程名（用于提示"改完要重启"）
+    """
+
+    mark_begin = "<!-- POJIA-NEXT-INJECT:BEGIN -->"
+    mark_end = "<!-- POJIA-NEXT-INJECT:END -->"
+    proc_names = ()
+
+    # ---------------- 定位 ----------------
+    def resolve_home(self, explicit=""):
+        if explicit:
+            p = os.path.normpath(os.path.expanduser(explicit))
+            good, _n = self.resolve_pick(p)
+            return good or p
+        manual = get_manual_path(self.key)
+        if manual and os.path.isdir(manual):
+            return manual
+        for var in self.env_vars:
+            v = os.environ.get(var)
+            if v and os.path.isdir(os.path.normpath(os.path.expanduser(v))):
+                return os.path.normpath(os.path.expanduser(v))
+        return os.path.join(os.path.expanduser("~"), self.home_name)
+
+    env_vars = ()
+
+    def prompt_path(self, home):
+        return os.path.join(home, self.prompt_file)
+
+    def detect_ok(self, args):
+        h = self.resolve_home(getattr(args, self.arg_name, "") or "")
+        return os.path.isdir(h)
+
+    def ask_pick(self, args):
+        return do_ask_pick(self, args)
+
+    def running(self):
+        return find_processes(self.proc_names, ()) if self.proc_names else []
+
+    # ---------------- 标记块读写 ----------------
+    def _block(self, persona):
+        return "%s\n%s\n%s\n" % (self.mark_begin, persona.rstrip(), self.mark_end)
+
+    def _has_mark(self, text):
+        return self.mark_begin in text
+
+    @staticmethod
+    def _strip_block(text, begin, end):
+        """把标记块连同其前后多余空行一起删掉。标记块不存在时原样返回。"""
+        if begin not in text:
+            return text
+        i = text.find(begin)
+        j = text.find(end, i)
+        if j < 0:
+            return text[:i].rstrip() + "\n"
+        j += len(end)
+        head = text[:i].rstrip("\n")
+        tail = text[j:].lstrip("\n")
+        parts = [p for p in (head, tail) if p]
+        return ("\n\n".join(parts)).rstrip() + "\n" if parts else ""
+
+    # ---------------- 执行 ----------------
+    def apply(self, args, mode):
+        home = self.resolve_home(getattr(args, self.arg_name, "") or "")
+        user, _src = load_user_persona(getattr(args, "persona", "") or "")
+        _pol, want = build_policy(user)
+        persona = build_persona_text(user, self.label)
+        dry = (mode == "dry-run") or getattr(args, "dry_run", False)
+
+        if mode == "revert":
+            return self.revert(args)
+
+        if not os.path.isdir(home):
+            log("未检测到 %s 安装，跳过。（装了就用 --pick %s 指定，或 %s）"
+                % (self.label, self.key, " / ".join("--" + v.lower().replace("_", "-") for v in self.env_vars)),
+                "y", self.key)
+            return {"skip": 1}
+
+        target = self.prompt_path(home)
+        # 读不干净就跳过，绝不拿空串覆盖
+        old = read_text_safe(target)
+        if old is None and os.path.exists(target):
+            log("读不了 %s（不是 UTF-8 文本？）—— 已跳过，未改动任何文件" % target, "red", self.key)
+            return {"err": 1, "skip": True}
+        old = old or ""
+        blank_home = not old.strip()
+
+        if dry:
+            log("配置目录：%s" % home, "", self.key)
+            log("[预演] 将写 %s（标记块 %d 字符）" % (target, len(persona)), "y", self.key)
+            if not self._has_mark(old):
+                log("[预演] 该文件目前没有我们的标记块 → 会**追加**，原有内容保留", "dg", self.key)
+            else:
+                log("[预演] 已有我们的标记块 → 会**整块替换**", "dg", self.key)
+            return {"fixed": 1}
+
+        # 备份（只给"不是我们写的"原文件留备份，避免二次 apply 把我们的内容当原件存下来）
+        if os.path.exists(target) and old.strip() and not self._has_mark(old):
+            backup_file(target, bak_path=target + self.bak_suffix, is_pristine=_not_ours)
+
+        new = self._merge(old, persona)
+        write_text(target, new, make_dirs=True)
+        log("  已写 %s（%d 字符）" % (self.prompt_file, len(new)), "g", self.key)
+
+        # 额外文件（如 Claude 的 skills 目录、Cursor 的逐项目规则）
+        for fn, note in self.extra_writes(home, persona, args):
+            log("  " + note, "dg", self.key)
+        if blank_home:
+            log("  提示：原来这个文件是空的/不存在，已新建并写入。", "dg", self.key)
+        run = self.running()
+        if run:
+            log("  %s 正在运行（%d 个进程）—— 改的是磁盘文件，要**重启**才生效。"
+                % (self.label, len(run)), "y", self.key)
+        return {"fixed": 1}
+
+    def _merge(self, old, persona):
+        """把人格块并入原文件：已有块就替换，没有就追加到末尾。"""
+        block = self._block(persona)
+        if self._has_mark(old):
+            head = old[:old.find(self.mark_begin)].rstrip("\n")
+            tail = old[old.find(self.mark_end) + len(self.mark_end):].lstrip("\n")
+            parts = [p for p in (head, block.rstrip("\n"), tail) if p.strip()]
+            return "\n\n".join(parts).rstrip() + "\n"
+        if not old.strip():
+            return block
+        return old.rstrip("\n") + "\n\n" + block
+
+    def extra_writes(self, home, persona, args):
+        """子类可覆写：返回 [(路径, 日志)] 形式的额外写入（已实际完成）。"""
+        return []
+
+    def revert(self, args):
+        home = self.resolve_home(getattr(args, self.arg_name, "") or "")
+        if not os.path.isdir(home):
+            log("未检测到 %s，跳过还原。" % self.label, "y", self.key)
+            return {"skip": 1}
+        target = self.prompt_path(home)
+        old = read_text_safe(target)
+        if old is None:
+            log("读不了 %s —— 已跳过。" % target, "red", self.key)
+            return {"err": 1}
+        if not old or not self._has_mark(old):
+            log("  %s 里没有我们的标记块，无需还原。" % self.prompt_file, "dg", self.key)
+            self.extra_reverts(home, args)
+            return {"skip": 1}
+        cur = self._strip_block(old, self.mark_begin, self.mark_end)
+        bak = target + self.bak_suffix
+        # 有备份且备份里没有我们的标记 → 用备份还原；否则只删块
+        bak_txt = read_text_safe(bak)
+        if bak_txt and not self._has_mark(bak_txt):
+            write_text(target, bak_txt, make_dirs=True)
+            log("  已从备份还原 %s" % self.prompt_file, "g", self.key)
+        elif cur.strip():
+            write_text(target, cur, make_dirs=True)
+            log("  已移除标记块（文件其余内容保留）", "g", self.key)
+        else:
+            try:
+                os.remove(target)
+                log("  已删除 %s（原本只有我们的内容）" % self.prompt_file, "g", self.key)
+            except Exception as e:
+                log("  删除失败：%s" % e, "y", self.key)
+        self.extra_reverts(home, args)
+        return {"fixed": 1}
+
+    def extra_reverts(self, home, args):
+        return []
+
+    def check(self, args):
+        rows = []
+        home = self.resolve_home(getattr(args, self.arg_name, "") or "")
+        if not os.path.isdir(home):
+            return [("warn", "没检测到 %s（配置目录 %s 不存在）" % (self.label, home), "")]
+        rows.append(("info", "配置目录 : %s" % home, ""))
+        target = self.prompt_path(home)
+        txt = read_text_safe(target)
+        if txt is None and os.path.exists(target):
+            rows.append(("fail", "%s 读不了（非 UTF-8？）" % self.prompt_file, target))
+            return rows
+        txt = txt or ""
+        if not os.path.exists(target):
+            rows.append(("warn", "%s 不存在（破甲后会新建）" % self.prompt_file, target))
+        elif self._has_mark(txt):
+            rows.append(("own", "%s 已破甲（含我们的标记块）" % self.prompt_file, target))
+        else:
+            rows.append(("warn", "%s 存在但未破甲" % self.prompt_file, target))
+        rows.extend(self.extra_checks(home, args))
+        run = self.running()
+        if run:
+            rows.append(("info", "%s 正在运行 %d 个进程（改完要重启）" % (self.label, len(run)), ""))
+        return rows
+
+    def extra_checks(self, home, args):
+        return []
+
+    def dump(self, args, action="status"):
+        for st, note, detail in self.check(args):
+            color = {"ok": "g", "info": "", "warn": "y", "fail": "red", "own": "c"}.get(st, "")
+            log("  [%-4s] %s" % (st, note), color, self.key)
+            if detail and getattr(args, "diagnose", False):
+                log("      " + detail, "dg", self.key)
+        return self.check(args)
+
+
+class CodexTarget(_MarkBlockTarget):
+    key = "codex"
+    label = "Codex"
+    home_name = ".codex"
+    prompt_file = "AGENTS.md"          # 官方推荐的人格文件（config.toml 可再指一份）
+    bak_suffix = BAK_CODEX
+    arg_name = "codex_dir"
+    env_vars = ("CODEX_HOME",)
+    proc_names = ("codex", "Codex")
+    mark_begin = "<!-- POJIA-NEXT-INJECT:BEGIN -->"
+    mark_end = "<!-- POJIA-NEXT-INJECT:END -->"
+
+    def pick_title(self):
+        return "选择 Codex 的配置目录（一般是 用户目录\\.codex）"
+
+    def pick_hint(self):
+        return os.path.expanduser("~")
+
+    def resolve_pick(self, path):
+        p = os.path.normpath(os.path.expanduser(path))
+        if os.path.basename(p).lower() == ".codex":
+            return p, ""
+        cand = os.path.join(p, ".codex")
+        if os.path.isdir(cand):
+            return cand, ""
+        # 目录里有 config.toml / AGENTS.md 也算
+        if any(os.path.exists(os.path.join(p, x)) for x in ("config.toml", "AGENTS.md", "skills")):
+            return p, ""
+        return "", "这里不像 Codex 配置目录。要选 .codex 那一层（里面通常有 config.toml 或 AGENTS.md）。"
+
+    def extra_writes(self, home, persona, args):
+        """除 AGENTS.md 外，再往 managed-prompts 放一份人格文件。
+
+        ⚠ 不动 config.toml：那里面是用户的模型/审批配置，改错了会让 Codex 起不来。
+          社区争论 model_instructions_file 键在 0.142+ 是否废弃、尚无定论，
+          所以这里只写 AGENTS.md + managed-prompts，两条路都覆盖，且都是"新增文件"而非改配置。
+        """
+        out = []
+        mp = os.path.join(home, "managed-prompts")
+        try:
+            os.makedirs(mp, exist_ok=True)
+            dest = os.path.join(mp, CODEX_PROMPT_NAME)
+            write_text(dest, persona + "\n", make_dirs=True)
+            out.append((dest, "  已放人格副本：managed-prompts\\%s" % CODEX_PROMPT_NAME))
+        except Exception as e:
+            out.append(("", "  [!] 写 managed-prompts 失败：%s" % e))
+        return out
+
+    def extra_reverts(self, home, args):
+        dest = os.path.join(home, "managed-prompts", CODEX_PROMPT_NAME)
+        if os.path.exists(dest):
+            try:
+                os.remove(dest)
+                log("  已删除 managed-prompts\\%s" % CODEX_PROMPT_NAME, "g", self.key)
+            except Exception as e:
+                log("  删除 %s 失败：%s" % (dest, e), "y", self.key)
+        return []
+
+    def extra_checks(self, home, args):
+        rows = []
+        dest = os.path.join(home, "managed-prompts", CODEX_PROMPT_NAME)
+        rows.append(("own" if os.path.exists(dest) else "info",
+                     "managed-prompts\\%s %s" % (CODEX_PROMPT_NAME, "已放" if os.path.exists(dest) else "未放"),
+                     dest))
+        cfg = os.path.join(home, "config.toml")
+        rows.append(("info", "config.toml %s（本工具不修改它）"
+                     % ("存在" if os.path.exists(cfg) else "不存在"), cfg))
+        return rows
+
+
+class CursorTarget(_MarkBlockTarget):
+    key = "cursor"
+    label = "Cursor"
+    home_name = ".cursor"
+    prompt_file = os.path.join("rules", CURSOR_RULE_NAME)
+    bak_suffix = BAK_CURSOR
+    arg_name = "cursor_dir"
+    env_vars = ("CURSOR_HOME",)
+    proc_names = ("Cursor", "cursor")
+    mark_begin = CURSOR_MARK
+    mark_end = "<!-- POJIA-NEXT-INJECT:END -->"
+
+    def pick_title(self):
+        return "选择 Cursor 的配置目录（一般是 用户目录\\.cursor）"
+
+    def pick_hint(self):
+        return os.path.expanduser("~")
+
+    def resolve_pick(self, path):
+        p = os.path.normpath(os.path.expanduser(path))
+        if os.path.basename(p).lower() == ".cursor":
+            return p, ""
+        cand = os.path.join(p, ".cursor")
+        if os.path.isdir(cand):
+            return cand, ""
+        if os.path.isdir(os.path.join(p, "rules")) or os.path.exists(os.path.join(p, ".cursorrules")):
+            return p, ""
+        return "", "这里不像 Cursor 配置目录。要选 .cursor 那一层（里面通常有 rules\\ 或 .cursorrules）。"
+
+    def _rule_body(self, persona):
+        """Cursor 的 .mdc 规则文件：front-matter **必须是文件第一行**，
+        否则 Cursor 不把这份文件当规则解析（踩过）。所以标记注释不能放最前面。"""
+        return ("---\n"
+                "description: 破甲人格（pojia-next 注入）\n"
+                "globs: \n"
+                "alwaysApply: true\n"
+                "---\n"
+                + self.mark_begin + "\n"
+                + persona.rstrip() + "\n"
+                + self.mark_end + "\n")
+
+    def _merge(self, old, persona):
+        # Cursor 规则文件整份由我们掌管：直接覆盖成带 front-matter 的完整规则。
+        # 用户自己的规则应放在别的 .mdc 文件里（我们不碰其他文件）。
+        return self._rule_body(persona)
+
+    def extra_writes(self, home, persona, args):
+        out = []
+        # 旧版兼容：.cursorrules（工程根的老写法）——只在用户已有该文件时同步一份，
+        # 没有就不主动创建，避免在老版里凭空多出一个文件。
+        legacy = os.path.join(home, CURSOR_LEGACY_RULE)
+        if os.path.exists(legacy):
+            try:
+                t = read_text_safe(legacy) or ""
+                if self.mark_begin in t:
+                    new = self.mark_begin + "\n" + persona.rstrip() + "\n" + self.mark_end + "\n"
+                    write_text(legacy, new)
+                    out.append((legacy, "  已同步旧版 .cursorrules"))
+            except Exception as e:
+                out.append(("", "  [!] 同步 .cursorrules 失败：%s" % e))
+        return out
+
+    def extra_reverts(self, home, args):
+        legacy = os.path.join(home, CURSOR_LEGACY_RULE)
+        if os.path.exists(legacy):
+            t = read_text_safe(legacy) or ""
+            if self.mark_begin in t:
+                cur = self._strip_block(t, self.mark_begin, self.mark_end)
+                if cur.strip():
+                    write_text(legacy, cur)
+                else:
+                    try:
+                        os.remove(legacy)
+                    except Exception:
+                        pass
+                log("  已还原旧版 .cursorrules", "g", self.key)
+        return []
+
+    def extra_checks(self, home, args):
+        rows = []
+        legacy = os.path.join(home, CURSOR_LEGACY_RULE)
+        rows.append(("info", ".cursorrules（旧版写法）%s" % ("存在" if os.path.exists(legacy) else "不存在"), legacy))
+        rows.append(("info", "提示：Cursor 还会读「工作区级」规则（各项目的 .cursor\\rules\\），"
+                            "本工具只处理用户级，不扫你的项目目录", ""))
+        return rows
+
+
+class ClaudeTarget(_MarkBlockTarget):
+    key = "claude"
+    label = "Claude"
+    home_name = ".claude"
+    prompt_file = "CLAUDE.md"
+    bak_suffix = BAK_CLAUDE
+    arg_name = "claude_dir"
+    env_vars = ("CLAUDE_CONFIG_DIR",)
+    proc_names = ("claude", "Claude")
+    mark_begin = "<!-- POJIA-NEXT-INJECT:BEGIN -->"
+    mark_end = "<!-- POJIA-NEXT-INJECT:END -->"
+
+    def pick_title(self):
+        return "选择 Claude 的配置目录（一般是 用户目录\\.claude）"
+
+    def pick_hint(self):
+        return os.path.expanduser("~")
+
+    def resolve_pick(self, path):
+        p = os.path.normpath(os.path.expanduser(path))
+        if os.path.basename(p).lower() == ".claude":
+            return p, ""
+        cand = os.path.join(p, ".claude")
+        if os.path.isdir(cand):
+            return cand, ""
+        if os.path.exists(os.path.join(p, "CLAUDE.md")) or os.path.isdir(os.path.join(p, "skills")):
+            return p, ""
+        return "", "这里不像 Claude 配置目录。要选 .claude 那一层（里面通常有 CLAUDE.md 或 skills\\）。"
+
+    def extra_checks(self, home, args):
+        return [("info", "提示：Claude Code 还读「项目级」CLAUDE.md（各工程根目录），"
+                         "本工具只处理用户级", "")]
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 #  五、统一调度
 # ══════════════════════════════════════════════════════════════════════════════
 
-TARGETS = {"dsh": DshTarget, "wb": WorkBuddyTarget, "zcode": ZCodeTarget}
+TARGETS = {"dsh": DshTarget, "wb": WorkBuddyTarget, "zcode": ZCodeTarget,
+           "codex": CodexTarget, "cursor": CursorTarget, "claude": ClaudeTarget}
 TARGET_ALIAS = {"workbuddy": "wb", "dsh-desktop": "dsh",
-                "z-code": "zcode", "zcode-desktop": "zcode", "all": "all"}
-DEFAULT_TARGETS = ["dsh", "wb", "zcode"]
+                "z-code": "zcode", "zcode-desktop": "zcode",
+                "gpt": "codex", "openai": "codex",
+                "claude-code": "claude", "anthropic": "claude",
+                "all": "all"}
+DEFAULT_TARGETS = ["dsh", "wb", "zcode", "codex", "cursor", "claude"]
 
 
 def resolve_targets(spec):
@@ -4243,7 +4680,7 @@ def resolve_targets(spec):
         if part == "all":
             return list(DEFAULT_TARGETS)
         if part not in TARGETS:
-            say("[!] 未知目标：%s（可选 dsh / wb / zcode / all）" % part, "red")
+            say("[!] 未知目标：%s（可选 dsh / wb / zcode / codex / cursor / claude / all）" % part, "red")
             continue
         if part not in out:
             out.append(part)
@@ -4268,6 +4705,12 @@ INSTALL_HINT = {
             "https://www.workbuddy.cn"),
     "zcode": ("ZCode 桌面端（智谱 zcode.z.ai，安装后配置目录为 ~\\.zcode）",
               "https://zcode.z.ai/cn/docs"),
+    "codex": ("Codex CLI（安装后配置目录为 ~\\.codex）",
+              "https://github.com/openai/codex"),
+    "cursor": ("Cursor 官网（安装后配置目录为 ~\\.cursor）",
+               "https://cursor.com"),
+    "claude": ("Claude Code（安装后配置目录为 ~\\.claude）",
+               "https://claude.com/product/claude-code"),
 }
 
 
@@ -4329,18 +4772,41 @@ def _offer_install_help(t, args):
     return False
 
 
-def run_status(args, targets=None):
+def run_status(args, targets=None, allow_ask=False):
+    """只读检测。
+
+    v7.6：**只读路径默认绝不提问** —— 以前这里无脑调 _offer_install_help()，
+    导致菜单里点「检测状态」这种标注"不改任何文件"的选项也会被卡在
+    「输入 A 或 B」上。没检测到就只在输出里写一行提示。
+    allow_ask 只在确实需要引导的路径上由调用方显式打开。
+    """
     targets = targets or resolve_targets(args.target)
-    header("状态检测（只读）", "三个目标共用一套人格 / v%s 起带自证口令" % VERSION)
+    header("状态检测（只读）", "所有目标共用一套人格 / v%s 起带自证口令" % VERSION)
     for k in targets:
         t = TARGETS[k]()
-        _offer_install_help(t, args)
+        if allow_ask:
+            _offer_install_help(t, args)
+        else:
+            _note_if_missing(t, args)
         say("")
         say(BOLD(CYAN("── %s ──────────────────────────────────────────" % t.label)))
         try:
             t.dump(args, "diagnose" if getattr(args, "diagnose", False) else "status")
         except Exception as e:
             say("  [!] 检测出错：%s" % e, "red")
+
+
+def _note_if_missing(t, args):
+    """只读路径用的静默提示：探测不到就写一行，绝不提问、绝不弹窗。"""
+    try:
+        if t.detect_ok(args):
+            return
+    except Exception:
+        return
+    name, url = INSTALL_HINT.get(t.key, ("", ""))
+    log("没检测到安装位置（只读检测不提问）。装了的话用 --pick %s 指定目录。" % t.key, "y", t.key)
+    if url:
+        log("  没装的话：%s（%s）" % (url, name), "dg", t.key)
 
 
 def run_action(args, mode, targets=None):
@@ -4353,8 +4819,12 @@ def run_action(args, mode, targets=None):
     header(titles.get(mode, mode), "目标：" + ", ".join(targets))
     for k in targets:
         t = TARGETS[k]()
-        if mode != "revert":
-            _offer_install_help(t, args)
+        if mode == "revert":
+            pass                      # 还原：备份里有什么还原什么，不需要引导安装
+        elif mode == "dry-run":
+            _note_if_missing(t, args)  # 预演是只读，静默提示，不提问
+        else:
+            _offer_install_help(t, args)   # 真改盘才允许 A/B 引导
         say("")
         say(BOLD(CYAN("── %s ──────────────────────────────────────────" % t.label)))
         try:
@@ -4385,14 +4855,14 @@ def menu(args):
     while True:
         clear_screen()
         print(BOLD(CYAN("╔" + "═" * W + "╗")))
-        print(BOLD(CYAN("║")) + fit("  破甲一键通  v%s   三目标统一脚本" % VERSION, W) + BOLD(CYAN("║")))
+        print(BOLD(CYAN("║")) + fit("  破甲一键通  v%s   多目标统一脚本" % VERSION, W) + BOLD(CYAN("║")))
         print(BOLD(CYAN("║")) + GRAY(fit("  " + FREE_LINE, W)) + BOLD(CYAN("║")))
         print(BOLD(CYAN("╠" + "═" * W + "╣")))
-        for line in ("  [1] 一键破甲         DSH + WorkBuddy + ZCode 全打一遍",
+        for line in ("  [1] 一键破甲         ← 先选要破哪个（dsh / WorkBuddy / ZCode）",
                      "  [2] 检测状态         只读，不改任何文件",
                      "  [3] 诊断详情         逐文件列出补丁/备份状态",
                      "  [4] 预演             只显示会改什么",
-                     "  [5] 选目标单打        dsh / wb / zcode 任选",
+                     "  [5] 选目标单打       同上，等价入口",
                      "  [6] 还原              选择目标还原成官方原版",
                      "  [7] WorkBuddy 守护    安装 / 卸载 / 查看后台守护任务",
                      "  [8] 体检（只读）      磁盘态 / 凭证 / 自证就绪，不改盘",
@@ -4411,21 +4881,26 @@ def menu(args):
 
         try:
             if c == "1":
-                _confirm_and_run(args, "apply", ["dsh", "wb", "zcode"])
+                # 先问要破哪个，绝不默认全打（破坏性操作必须由用户明确指定范围）
+                sel = _pick_targets(args, "一键破甲 —— 选要处理的目标")
+                if sel:
+                    _confirm_and_run(args, "apply", sel)
             elif c == "2":
-                run_status(args, ["dsh", "wb", "zcode"])
+                run_status(args, list(DEFAULT_TARGETS))
             elif c == "3":
                 args.diagnose = True
-                run_status(args, ["dsh", "wb", "zcode"])
+                run_status(args, list(DEFAULT_TARGETS))
                 args.diagnose = False
             elif c == "4":
-                run_action(args, "dry-run", ["dsh", "wb", "zcode"])
+                sel = _pick_targets(args, "预演 —— 选要预演的目标")
+                if sel:
+                    run_action(args, "dry-run", sel)
             elif c == "5":
-                sel = _pick_targets()
+                sel = _pick_targets(args, "单打 —— 选要处理的目标")
                 if sel:
                     _confirm_and_run(args, "apply", sel)
             elif c == "6":
-                sel = _pick_targets()
+                sel = _pick_targets(args, "还原 —— 选要还原的目标")
                 if sel and _confirm("还原 %s ？这会把它们变回官方原版。" % ", ".join(sel)):
                     run_action(args, "revert", sel)
             elif c == "7":
@@ -4447,22 +4922,82 @@ def menu(args):
             return
 
 
-def _pick_targets():
-    say("")
-    say("  选目标：[1] dsh   [2] WorkBuddy   [3] ZCode   [4] 全部")   # 直接回车 = 跳过本次
+def _detect_quick(k, args):
+    """轻量探测某个目标是否已安装（只读，绝不弹窗、绝不提问）。
+
+    返回 (bool, 说明文字)。任何异常都当作"探测失败"，不当成"没装"，
+    免得把装了的用户挡在外面。
+    """
     try:
-        c = input("  输入序号（可多选，如 124）> ").strip()
-    except (EOFError, KeyboardInterrupt):
-        return []
-    m = {"1": "dsh", "2": "wb", "3": "zcode", "4": "all"}
-    out = []
-    for ch in c:
-        if ch in m:
+        t = TARGETS[k]()
+    except Exception:
+        return True, ""
+    try:
+        ok = bool(t.detect_ok(args))
+        return ok, ("" if ok else "未检测到安装")
+    except Exception:
+        return True, ""
+
+
+def _pick_targets(args=None, title="选目标"):
+    """让用户勾选要处理的目标。返回目标 key 列表；空列表 = 用户取消。
+
+    直接从回车 = 什么都不做（显式跳过），不再默认全选 —— 破坏性操作必须由用户明确指定范围。
+    非法输入不再静默返回空，而是提示后重问。
+    v7.7：目标列表由 DEFAULT_TARGETS 动态生成，加目标时这里不会漏（踩过）。
+    """
+    order = list(DEFAULT_TARGETS)
+    label = {"dsh": "DSH (DeepSeek Harness)", "wb": "WorkBuddy", "zcode": "ZCode",
+             "codex": "Codex", "cursor": "Cursor", "claude": "Claude Code"}
+    all_key = str(len(order) + 1)          # "全部" 的序号
+    while True:
+        say("")
+        say("  ── %s ──────────────────────────────────────────" % title, "c")
+        picked_note = {}
+        for i, k in enumerate(order, 1):
+            ok, note = _detect_quick(k, args) if args is not None else (True, "")
+            picked_note[k] = ok
+            mark = "已检测到" if ok else "未检测到"
+            color = "g" if ok else "dg"
+            say("    [%d] %-24s %s" % (i, label.get(k, k), mark), color)
+        say("    [%s] 全部（仅对上面「已检测到」的目标生效）" % all_key)
+        say("    [0] 取消 / 返回")
+        say("  ──────────────────────────────────────────────────")
+        try:
+            c = input(BOLD(GREEN("  输入序号（可多选，如 12；直接回车 = 取消）> "))).strip().lstrip("\ufeff")
+        except (EOFError, KeyboardInterrupt):
+            say("")
+            return []
+
+        if c in ("0", "q", "Q", "exit", "quit"):
+            return []
+        if c == "":
+            say("  已取消，什么都没做。", "dg")
+            return []
+
+        m = {str(i): k for i, k in enumerate(order, 1)}
+        m[all_key] = "all"
+        out = []
+        bad = []
+        for ch in c:
+            if ch not in m:
+                if not ch.isspace():
+                    bad.append(ch)
+                continue
             if m[ch] == "all":
-                return list(DEFAULT_TARGETS)
+                # 只选"已检测到"的；全都未检测到则回退到全部（避免选了却没目标可打）
+                detected = [k for k in order if picked_note.get(k, True)]
+                return detected or list(order)
             if m[ch] not in out:
                 out.append(m[ch])
-    return out
+        if bad:
+            say("  [!] 认不出这些输入：%s —— 只能输 1~%s 或 0。" % (" ".join(bad), all_key), "y")
+            say("      请重新选择。", "dg")
+            continue
+        if not out:
+            say("  [!] 没选中任何目标，请重新选择（或输 0 取消）。", "y")
+            continue
+        return out
 
 
 def _confirm(text):
@@ -4474,8 +5009,12 @@ def _confirm(text):
 
 def _confirm_and_run(args, mode, sel):
     say("")
-    say("  目标：%s" % ", ".join(sel), "c")
-    say("  DSH 正在运行的进程不会被结束（要结束用 --kill-dsh）。", "dg")
+    label = {"dsh": "DSH", "wb": "WorkBuddy", "zcode": "ZCode",
+             "codex": "Codex", "cursor": "Cursor", "claude": "Claude Code"}
+    say("  目标：%s" % "、".join(label.get(k, k) for k in sel), "c")
+    # v7.6：只在真的会碰 DSH 时才提 DSH 进程的事，选了别的还说就是噪声。
+    if "dsh" in sel:
+        say("  DSH 正在运行的进程不会被结束（要结束用 --kill-dsh）。", "dg")
     if _confirm("确认执行？"):
         run_action(args, mode, sel)
     else:
@@ -4581,11 +5120,11 @@ def check_runtime():
 
 def build_parser():
     p = argparse.ArgumentParser(
-        description="破甲一键通 v%s —— DSH + WorkBuddy + ZCode 三目标一键破甲" % VERSION,
+        description="破甲一键通 v%s —— DSH / WorkBuddy / ZCode / Codex / Cursor / Claude 六目标一键破甲" % VERSION,
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""示例：
   python 破甲一键通.py                              交互菜单
-  python 破甲一键通.py --status                     只读检测三个目标
+  python 破甲一键通.py --status                     只读检测所有目标
   python 破甲一键通.py --dry-run                    预演
   python 破甲一键通.py --apply                      全部打一遍
   python 破甲一键通.py --apply --target wb --full   只打 WorkBuddy（含闸门/网页过滤/文件保护）
@@ -4594,8 +5133,8 @@ def build_parser():
   python 破甲一键通.py --pick all --clear           清除手动指定，改回自动探测
   python 破甲一键通.py --guard install              装 WorkBuddy 守护任务
 """)
-    p.add_argument("--target", default="all", help="all|dsh|wb|zcode，可逗号分隔（默认 all）")
-    p.add_argument("--status", action="store_true", help="只读：检测三个目标")
+    p.add_argument("--target", default="all", help="all|dsh|wb|zcode|codex|cursor|claude，可逗号分隔（默认 all）")
+    p.add_argument("--status", action="store_true", help="只读：检测所有目标")
     p.add_argument("--diagnose", action="store_true", help="只读：详细取证")
     p.add_argument("--check", action="store_true",
                    help="只读体检：磁盘态 / 明文凭证提示 / 自证就绪（绝不改盘，有问题退出码 1）")
@@ -4622,7 +5161,8 @@ def build_parser():
                    help="已破甲的目标也强制重写成统一版本（统一人格哈希）")
     p.add_argument("--persona", help="人格文件（默认脚本目录 persona.md）")
     p.add_argument("--pick", metavar="TARGET",
-                   help="弹系统目录选择窗口，手动指定 dsh/wb 的安装位置并记住")
+                   help="弹系统目录选择窗口，手动指定某个目标的安装位置并记住"
+                        "（dsh/wb/zcode/codex/cursor/claude）")
     p.add_argument("--clear", action="store_true",
                    help="配合 --pick 用：清除记住的手动路径，改回自动探测")
     p.add_argument("--dsh-dir", help="手动指定 @deepseek-ai 目录或 DSH Desktop 根")
@@ -4633,6 +5173,9 @@ def build_parser():
                         "默认关闭。会先备份 + node 语法校验，校验不过自动回滚）")
     p.add_argument("--wb-install", help="手动指定 WorkBuddy 安装目录")
     p.add_argument("--wb-data", help="手动指定 WorkBuddy 数据目录（.workbuddy）")
+    p.add_argument("--codex-dir", help="手动指定 Codex 配置目录（一般是 用户目录\\.codex）")
+    p.add_argument("--cursor-dir", help="手动指定 Cursor 配置目录（一般是 用户目录\\.cursor）")
+    p.add_argument("--claude-dir", help="手动指定 Claude 配置目录（一般是 用户目录\\.claude）")
     p.add_argument("--yes", "-y", action="store_true", help="非交互，不二次确认")
     p.add_argument("--quiet", action="store_true", help="静默（守护任务用）")
     p.add_argument("--version", action="version", version="破甲一键通 " + VERSION)

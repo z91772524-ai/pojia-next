@@ -18,8 +18,15 @@ DIST = r"E:\DSH-Workspace\破甲next-发布素材"
 # 不带的话解压出来的 README 里那张预览图是坏图）
 ASSETS = ["破甲一键通.py", "一键破甲.bat", "persona.md", "使用说明.md",
           "修复报告.md", "README.md", "LICENSE", "preview.png", "赞赏码.png"]
-# 清单里额外列出的仓库文件
-EXTRA = ["persona.md"]
+# 清单里额外列出的仓库文件（进 SHA256SUMS.txt，但**不**塞进 Release 附件的 zip）。
+# ⚠ 这个列表必须和 SHA256SUMS.txt 的实际条目对齐：漏了的话，下一次跑本脚本
+#   会把这些条目从清单里冲掉，用户按 README 校验就会失败（踩过一次）。
+EXTRA = ["反抄袭通告.md",
+         "evidence/2026-09-25-group-notice.png",
+         "evidence/2026-09-25-group-chat.png",
+         "evidence/2026-09-25-douyin-profile.jpg",
+         "evidence/2026-09-25-2057-group-question.jpg",
+         "evidence/2026-09-25-2057-group-notice-revised.jpg"]
 
 
 def sha256(path):
@@ -55,7 +62,7 @@ def main():
              "# 校验方法（Linux/macOS）:",
              "#   sha256sum 破甲一键通.py",
              ""]
-    for f in ASSETS:
+    for f in ASSETS + EXTRA:
         p = os.path.join(REPO, f)
         if os.path.exists(p):
             lines.append("%s  %s" % (sha256(p), f))

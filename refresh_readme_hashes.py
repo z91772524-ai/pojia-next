@@ -37,7 +37,9 @@ def main():
             n += 1
             print("  已刷新 %s -> %s… %d 字节" % (name, h[:32], size))
         s = new
-    io.open(readme, "w", encoding="utf-8").write(s)
+    # newline="\n" 是关键：不加的话 Windows 下会把整份 README 从 LF 写成 CRLF，
+    # 一个哈希的小改动会变成 500+ 行的换行符噪音 diff。
+    io.open(readme, "w", encoding="utf-8", newline="\n").write(s)
     print("刷新 %d 行（%d 个文件）" % (n, len(TARGETS)))
     # 自检：README 里出现的哈希必须与磁盘一致
     bad = []

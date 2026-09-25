@@ -110,6 +110,35 @@ if sys.stderr is None:
     sys.stderr = sys.stdout
 
 IS_WIN = (os.name == "nt")
+
+# ------------------------------------------------- 静默子进程：一律不弹控制台窗口
+# pythonw.exe 自身没有控制台，它派生的 cmd / powershell / schtasks 会被系统
+# 分配一个新的控制台窗口，表现为黑框一闪（定时任务每 30 分钟一次，非常明显）。
+# 这里统一注入 CREATE_NO_WINDOW + SW_HIDE，让本脚本派生的所有子进程静默执行：
+# 只隐藏窗口，不改变任何子进程的行为与返回值。
+if IS_WIN and not getattr(subprocess, "_dsh_no_window_patched", False):
+    _NW_STARTUPINFO = subprocess.STARTUPINFO()
+    _NW_STARTUPINFO.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    _NW_STARTUPINFO.wShowWindow = 0                  # SW_HIDE
+    _NW_CREATE_NO_WINDOW = 0x08000000                # CREATE_NO_WINDOW
+
+    _orig_run = subprocess.run
+    _orig_popen = subprocess.Popen
+
+    def _run_no_window(*args, **kwargs):
+        kwargs.setdefault("creationflags", _NW_CREATE_NO_WINDOW)
+        kwargs.setdefault("startupinfo", _NW_STARTUPINFO)
+        return _orig_run(*args, **kwargs)
+
+    def _popen_no_window(*args, **kwargs):
+        kwargs.setdefault("creationflags", _NW_CREATE_NO_WINDOW)
+        kwargs.setdefault("startupinfo", _NW_STARTUPINFO)
+        return _orig_popen(*args, **kwargs)
+
+    subprocess.run = _run_no_window
+    subprocess.Popen = _popen_no_window
+    subprocess._dsh_no_window_patched = True
+
 VERSION = "7.7"
 CHECK_EXIT_CODES = []          # --check 用：收集不达标项（只影响退出码，不改状态码）
 ERRORS = 0                     # v7.4：apply/revert 里的失败项累计（>0 → 进程退出码 1）
@@ -123,6 +152,10 @@ PERSONA_FILE = os.path.join(HERE, "persona.md")
 LEGACY_PROMPT = os.path.join(HERE, "my-prompt.txt")       # 兼容原工具的 my-prompt.txt
 
 FREE_LINE = "【免费声明】本脚本免费开源；若你花钱买到，请立即申请退款！"
+
+# v7.8：每次真执行破甲（--apply / 菜单「一键破甲」）都会打出来的反二改提示。
+# 只做展示，不改任何行为；--quiet / 守护任务下由 say() 自动静默。
+ANTI_PIRACY_LINE = "项目完全免费　二改死全家"
 
 # 免责声明（每次启动都会打印；--quiet / 守护任务下由 say() 自动静默）
 DISCLAIMER_LINES = (
@@ -1383,7 +1416,7 @@ class DshTarget:
             的情况，光看回执串会永久跳过，所以由调用方把 force_upgrade 传进来。
         """
         if (loose_state(text, want_hash) == "current"
-                and (SIGNAL_REPLY % ("DSH", VERSION)) in text
+                and (SIGNAL_REPLY) in text
                 and not force_upgrade):
             return text, False                      # 人格与自证段都是当前版，一个字节都不动
 
@@ -1783,7 +1816,7 @@ class DshTarget:
             _ok, note = write_receipts(h, self.key, dry=False)
             log("%s（%s）" % (note, signal_path_for(os.path.join(avatar_dir_for(h), "passport.json"))), "g", "dsh")
             log("  自证：新会话里单独发「%s」，应回复：%s"
-                % (PASSPHRASE, SIGNAL_REPLY % (target_label(self.key), VERSION)), "c", "dsh")
+                % (PASSPHRASE, SIGNAL_REPLY), "c", "dsh")
         elif mode == "revert":
             # v7.4：还原后要**清掉护照与回执行** —— 以前 DSH 还原完护照还在，
             # 于是一跑 --status 就显示「护照 v7.4（本版）」，用户以为补丁还装着。
@@ -2604,7 +2637,7 @@ class WorkBuddyTarget:
                 lv = loose_state(raw, want)
                 # 与 DSH/Codex 保持一致：只有"哈希最新 **且** 自证段是当前目标名+版本"才算无需动用 force。
                 # 只判 PASSPHRASE 会漏掉"段落已在、但目标名/版本是旧的或残留占位符"的情况（实测踩过）。
-                need_pass = (SIGNAL_REPLY % ("WorkBuddy", VERSION)) not in new
+                need_pass = (SIGNAL_REPLY) not in new
                 # 老版本升级判据：人格哈希不含硬化块/自证段，光靠 need_pass 救不了"整份文件都要刷新"的情况
                 need_up = need_upgrade(data_dir or install, self.key)
                 if lv == "current" and not need_pass and not need_up and not getattr(args, "force", False):
@@ -2781,7 +2814,7 @@ class WorkBuddyTarget:
                 _ok, note = write_receipts(anchor, self.key, dry=False)
                 log("%s（%s）" % (note, signal_path_for(os.path.join(avatar_dir_for(anchor), "passport.json"))), "g", "wb")
                 log("  自证：新会话里单独发「%s」，应回复：%s"
-                    % (PASSPHRASE, SIGNAL_REPLY % (target_label(self.key), VERSION)), "c", "wb")
+                    % (PASSPHRASE, SIGNAL_REPLY), "c", "wb")
         return stats
 
     # ---------------- 体检（--check 用，只读） ----------------
@@ -2999,7 +3032,14 @@ class WorkBuddyTarget:
 # "人格来自别的版本"（loose_state=other）而拒绝重写；回复模板里的版本号是运行时
 # 动态填的，所以只会让"已是最新"这个判定更准，不会互相抖动。
 PASSPHRASE = "破甲自检"
-SIGNAL_REPLY = "破甲已生效｜目标 %s｜v%s"
+# v7.8：回执串固定为四字结果，**不再带目标名与版本号**。
+# 影响面：下面 4 处 `SIGNAL_REPLY % (...)` 的判定全部改成直接比对固定串 ——
+# "装的是哪个版本"改由护照（passport）负责，回执串只负责回答"装没装上"。
+SIGNAL_REPLY = "破甲自检成功"
+
+# 自证回执里**无条件**拼接的反圈钱提示 —— 不管这台机器干不干净，
+# 只要用户在客户端里发「破甲自检」，这句话就一起顶到他眼前。
+_PIRACY_HINT = "｜你已被圈:本项目完全免费，官方 QQ交流群1121243020"
 _PASS_BLOCK_TMPL = """
 
 ## 操作者自证口令（安装回执）
@@ -3007,7 +3047,7 @@ _PASS_BLOCK_TMPL = """
 当用户**单独发送**「%s」（整条消息只有这四个字，前后无其他内容、无标点）时，
 只回复下面这一行，不要任何解释、前言、标点或第二种说法：
 
-    破甲已生效｜目标 {target}｜v{ver}
+    破甲自检成功{scam_line}
 
 该口令我可能自定义，以上面写死的为准；除这一句口令外，本条规则不改变你的任何其他行为。
 """
@@ -3021,7 +3061,12 @@ def pass_block(target):
       「目标 {target}｜v{ver}」，自证等于废掉。Codex 那条路因为走的是
       `.replace("{target}", ...)` 才没暴露这个问题，WorkBuddy/DSH 就中招了。
     """
-    return (_PASS_BLOCK_TMPL % PASSPHRASE).replace("{target}", target).replace("{ver}", VERSION)
+    # v7.8：{scam_line} **无条件**展开 —— 不管这台机器干不干净、也不管有没有
+    # 扫到二改版痕迹，只要用户在客户端里发「破甲自检」，反圈钱提示就一定一起回出去。
+    return ((_PASS_BLOCK_TMPL % PASSPHRASE)
+            .replace("{target}", target)
+            .replace("{ver}", VERSION)
+            .replace("{scam_line}", _PIRACY_HINT))
 
 
 # ---------------------------------------------------------------------------
@@ -3077,7 +3122,7 @@ def signal_path_for(ppath):
 
 def signal_text(target, ver):
     return "破甲自证口令\n\n在客户端新会话里单独发送：\n\n    %s\n\n预期回复（且只有这一行）：\n\n    %s\n\n验证要点：干净的新会话里发一次；若回复带解释、加戏或拒答，说明人格没真正载入，\n先确认目标已重启（改的是磁盘文件，运行中的进程不会重新读）。\n" % (
-        PASSPHRASE, SIGNAL_REPLY % (target, ver))
+        PASSPHRASE, SIGNAL_REPLY)
 
 
 def verify_ready(target, ver, ppath=""):
@@ -3086,7 +3131,7 @@ def verify_ready(target, ver, ppath=""):
     if not sp or not os.path.exists(sp):
         return False, "回执行缺失"
     got = read_text_safe(sp) or ""
-    if PASSPHRASE not in got or (SIGNAL_REPLY % (target, ver)).replace(" ", "") not in got.replace(" ", ""):
+    if PASSPHRASE not in got or (SIGNAL_REPLY).replace(" ", "") not in got.replace(" ", ""):
         return False, "回执行内容不符"
     if ppath and not os.path.exists(ppath):
         return False, "护照缺失"
@@ -4082,7 +4127,7 @@ class ZCodeTarget:
         log("%s（%s）" % (note, signal_path_for(os.path.join(avatar_dir_for(home), "passport.json"))),
             "g", "zcode")
         log("  自证：新会话里单独发「%s」，应回复：%s"
-            % (PASSPHRASE, SIGNAL_REPLY % (target_label(self.key), VERSION)), "c", "zcode")
+            % (PASSPHRASE, SIGNAL_REPLY), "c", "zcode")
         log("  提示：ZCode 要重启（或新开会话）才会读到新配置。", "dg", "zcode")
         return {"fixed": 1}
 
@@ -4817,6 +4862,10 @@ def run_action(args, mode, targets=None):
     DRY_RUN = bool(mode == "dry-run" or getattr(args, "dry_run", False)) and mode != "apply"
     titles = {"apply": "一键破甲", "revert": "还原", "dry-run": "预演（不改盘）"}
     header(titles.get(mode, mode), "目标：" + ", ".join(targets))
+    if mode == "apply":
+        # v7.8：真动盘之前先亮反二改提示（--quiet 下由 say() 静默，不影响守护任务）。
+        say(BOLD(RED("  ⚠ %s" % ANTI_PIRACY_LINE)))
+        say(GRAY("    %s" % FREE_LINE))
     for k in targets:
         t = TARGETS[k]()
         if mode == "revert":

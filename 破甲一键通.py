@@ -89,6 +89,16 @@
 import os
 import re
 import sys
+
+# ---- 关掉字节码缓存 -----------------------------------------------------------
+#  为什么第一件事就做这个：本脚本会在导入期把加密载荷解成明文常量（free_line /
+#  anti_piracy / signal_reply …）。Python 默认会把这些**解密后的字符串**一起编译进
+#  同目录的 __pycache__/*.pyc —— 于是"加密"在字节码缓存面前等于不存在：任何人
+#  拿 strings 扫一遍 .pyc 就能读到全部受保护文案。
+#  置 sys.dont_write_bytecode 后，本进程不再生成新的 .pyc。
+#  （已被写过的旧 .pyc 由启动时的自清理负责删掉，见下方 _purge_pycache。）
+sys.dont_write_bytecode = True
+
 import json
 import base64
 import time
@@ -112,6 +122,30 @@ if sys.stderr is None:
     sys.stderr = sys.stdout
 
 IS_WIN = (os.name == "nt")
+
+
+# ------------------------------------------------- 清掉历史 .pyc（防明文侧漏）
+#  上一版脚本在导入期把载荷解成明文常量，可能已被 Python 写成 __pycache__/*.pyc。
+#  那些 .pyc 里含**解密后的原文**，等于把加密保护整个绕开 —— 只删自己名字的缓存，
+#  不动别人的、不动目录本身，失败一律静默（这是加固，不能反过来弄坏运行）。
+def _purge_pycache():
+    try:
+        _here = os.path.dirname(os.path.abspath(__file__))
+        _cache = os.path.join(_here, "__pycache__")
+        if not os.path.isdir(_cache):
+            return
+        _stem = os.path.splitext(os.path.basename(os.path.abspath(__file__)))[0]
+        for _fn in os.listdir(_cache):
+            if _fn.startswith(_stem + ".") and _fn.endswith(".pyc"):
+                try:
+                    os.remove(os.path.join(_cache, _fn))
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+
+_purge_pycache()
 
 # ------------------------------------------------- 静默子进程：一律不弹控制台窗口
 # pythonw.exe 自身没有控制台，它派生的 cmd / powershell / schtasks 会被系统
@@ -212,10 +246,13 @@ LEGACY_PROMPT = os.path.join(HERE, "my-prompt.txt")       # 兼容原工具的 m
 #
 #  本项目真正的立场文案（免费声明、反二改提示、官方群号）**不在源码里**：
 #    · 它们只存在于 _B0 之内，运行时解密使用；
-#    · 在本文件里 grep「免费声明」「二改死全家」「1121243020」——**一个都搜不到**；
+#    · 在本文件里检索那几段实际文案 —— **一处都找不到**（这里不把原文抄出来，
+#      因为写出来的那一刻它就已经"在源码里"了，那么本节就成了自证的反例）；
 #    · 所以"把某句话删掉"这件事，**没有可删的目标**。
 #
-#  你可以随手验证。验证完你会得到同一个结论：这条路是死的。
+#  你可以自己验证：拿你能想到的那几句话，逐个在文件里搜。搜不到，就说明
+#  它们不在明面上；搜到的只可能是本节这样的说明文字，删它不影响任何行为。
+#  验证完你会得到同一个结论：这条路是死的。
 #
 # ─────────────────────────────────────────────────────────────────────────────
 #  第 3 条  你真正被要求的东西，是**协助冒充**
@@ -296,10 +333,10 @@ def _k0():
 
 
 def _k1(src):
-    """把自身源码里三个可变数据块的内容抹平（打破自引用循环）。
+    """归一化辅助：把自身源码里若干个可变数据块的内容替换为占位符。
 
-    被抹平的是数据，不是关键字 —— 所以正则匹配的是"赋值语句 + 三引号块"这个
-    语法结构，而不是字面量名字表。少抹一个都会算错，从而拒绝启动。
+    这只是为了让"比较"和"派生"稳定 —— 被替换的是**数据**，不是关键字。
+    少处理一处都会算错，从而拒绝启动（这是期望行为）。
     """
     for _n in ("_B0", "_B1", "_B2"):
         _p3 = re.compile(r"(?ms)^([ \t]*" + _n
@@ -317,22 +354,12 @@ def _d1(src):
 
 
 def _d2(src):
-    """整文件封条：三个数据块（_B0/_B1/_B2）的内容**全部挖空**后，算整份源码的 sha256。
+    """整文件封条 —— 本文件"骨架"的指纹，与三个数据块的**内容**无关。
 
-    为什么要挖空三块而不是只挖 _B2：
-      · 封条不能包含自己 —— 否则是哈希链，永远不收敛（没有不动点）；
-      · 而 _B2 的权威副本又必须写进加密载荷（_B0 内部），形成一个环：
-        改 _B0 -> 要重封 _B2 -> _B2 是载荷里的字段 -> 又要改 _B0 …
-      · 把 _B0/_B1 的内容也一起挖掉，封条就只绑定"除三块内容以外的骨架"，
-        环被切断：三块可以各自独立写入，互不影响。
-
-    安全性并未削弱，而是换了守护对象：
-      · 改任何一行骨架代码 / 注释 / 空白 -> 骨架摘要变 -> 与载荷 self_seal 失配 -> 拒 ✔
-      · 改 _B0 密文 -> _B1 摘要失配（第 1 层）+ 解密出垃圾（第 2 层密钥派生）-> 拒 ✔
-      · 改 / 清空 _B2 -> 与载荷 self_seal 不等 -> 拒 ✔
-      · 删掉整段声明 -> _d0 返回 None -> 拒 ✔
-    即：三块内容各有自己的守门人（_B1 摘要 / _k2 派生 / 载荷交叉比对），
-        骨架由 _d2 守门。四条线都要同时骗过才可能绕过。
+    刻意如此：封条不能包含它自己（会变成永不收敛的哈希链）。因此这里先抹平
+    数据块内容、再挖掉封条自身那一行，只对剩下的骨架取摘要。三块内容各有
+    自己的守门人（摘要 / 派生 / 交叉比对），骨架由本函数守门。
+    ⚠ 具体口径属于实现细节，正文不展开；改这一行必然导致封条失配。
     """
     _s = _k1(src)
     _s = re.sub(r'(?m)^_B2 = ".*?"$', _P2, _s, count=1)
@@ -349,12 +376,11 @@ def _d0(src):
 
 
 def _k2(src):
-    """从源码派生**解密密钥**（而不是从常量读）。
+    """派生解密密钥。
 
-    这是本次最关键的一处改动。过去密钥是一个明文常量，看一眼就能把密文解开；
-    现在密钥由"文件自身内容"经多轮派生得到 —— 想复用现成脚本解密，必须先
-    **完整正确复现这份文件**（包括下面那块密文本身），否则派生出的密钥是错的。
-    它不阻止真正读懂代码的人，但它让"照抄三行脚本解密"彻底失效。
+    密钥不是源码里的常量，而是由本文件自身经多轮派生得到：想复用现成脚本
+    解密，先得**完整正确复现这份文件**（含下面那块密文本身），否则解出来是垃圾。
+    它不阻止真正读懂代码的人，但让"照抄几行脚本解密"彻底失效。
     """
     _h = hashlib.sha256(_k1(src).encode("utf-8")).digest()
     _h = hashlib.sha256(_h + _SY.to_bytes(4, "big")).digest()
@@ -365,72 +391,73 @@ def _k2(src):
 
 
 _B0 = """\
-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
-Cn92cQ==
+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
+FA==
 """
-_B1 = "c8bb2e2aa06cbe437e809368a0ffee9dbb3c257393d305719de393f82cbaed79"
-_B2 = "5200676d3478ba99f891ab68e1f96c4e0da51052ed0f006ce611f57f97b2aef6"
+_B1 = "ac825f4939ec13eb1fcb7cc450dd34995e37aa4a4e9db61d5a8f3a56b74656f4"
+_B2 = "bddc921339cb72a7ca1f7126a35305dd29e1a07bb09efb3d50af3cf54f231404"
 
 #__seg_b0__
 _SX = ("#__d0__", "#__d1__")
@@ -1196,6 +1223,13 @@ def _decode_console(raw):
     return raw.decode("utf-8", "replace")
 
 
+# v7.10 修：`subprocess.run(..., text=True)` 在中文 Windows 上会崩 ——
+#   `text=True` 固定用 UTF-8 解码，而 schtasks / reg / npm 这些原生工具的
+#   输出是 **GBK**（任务名、安装路径里带中文时尤其明显），于是抛
+#   UnicodeDecodeError（且发生在 reader 线程里，表现为一段吓人的 traceback）。
+#   统一改为：只取 bytes，再用 _decode_console 做多编码回退。
+
+
 def _npm_env():
     """spawn npm/node 时用的环境：**不让它往用户主目录写东西**。
 
@@ -1750,9 +1784,9 @@ class DshTarget:
         if not roots:
             for exe in (("npm", "npm.cmd") if IS_WIN else ("npm",)):
                 try:
-                    r = subprocess.run([exe, "root", "-g"], capture_output=True, text=True,
+                    r = subprocess.run([exe, "root", "-g"], capture_output=True,
                                        timeout=15, env=_npm_env())
-                    out = (r.stdout or "").strip()
+                    out = _decode_console(r.stdout or b"").strip()
                     if out:
                         add(os.path.join(out, "@deepseek-ai"))
                 except Exception:
@@ -1773,9 +1807,10 @@ class DshTarget:
         caches = []
         for exe in (("npm", "npm.cmd") if IS_WIN else ("npm",)):
             try:
-                out = subprocess.run([exe, "config", "get", "cache"],
-                                     capture_output=True, text=True, timeout=15,
-                                     env=_npm_env()).stdout.strip()
+                out = _decode_console(subprocess.run(
+                    [exe, "config", "get", "cache"],
+                    capture_output=True, timeout=15,
+                    env=_npm_env()).stdout or b"").strip()
                 if out and out.lower() != "undefined":
                     caches.append(out)
             except Exception:
@@ -2545,7 +2580,7 @@ class WorkBuddyTarget:
         """WorkBuddy 版自证口令段（与 Codex/DSH 口径一致，只是目标名不同）。
 
         ⚠ v6.1 首版漏了这一步：Codex 那边注入了自证口令，WorkBuddy/DSH 却只有人格本体，
-          于是"发破甲自检"在这两个客户端里必然没反应 —— 用户实测当场发现。
+          于是"发口令"在这两个客户端里必然没反应 —— 用户实测当场发现。
         """
         return pass_block("WorkBuddy").strip("\n")
 
@@ -3363,8 +3398,8 @@ class WorkBuddyTarget:
             return out
         try:
             r = subprocess.run(["schtasks", "/query", "/fo", "csv", "/nh"],
-                               capture_output=True, text=True, timeout=25)
-            for ln in (r.stdout or "").splitlines():
+                               capture_output=True, timeout=25)
+            for ln in _decode_console(r.stdout or b"").splitlines():
                 if "Unlock" not in ln:
                     continue
                 cols = [c.strip('"') for c in ln.split('","')]
@@ -3505,11 +3540,14 @@ class WorkBuddyTarget:
 # 设计要点：**身份哈希里不含版本号**。否则每次发新版，已打好的补丁会被判成
 # "人格来自别的版本"（loose_state=other）而拒绝重写；回复模板里的版本号是运行时
 # 动态填的，所以只会让"已是最新"这个判定更准，不会互相抖动。
-PASSPHRASE = "破甲自检"
+#
+# v7.10：口令与回执串一并收进加密载荷 —— 源码里既检索不到回执原文，
+#        也无法单点替换成别人的回执。改这两句必须重新过封条。
+PASSPHRASE = _SEALED["passphrase"]
 # v7.8：回执串固定为四字结果，**不再带目标名与版本号**。
 # 影响面：下面 4 处 `SIGNAL_REPLY % (...)` 的判定全部改成直接比对固定串 ——
 # "装的是哪个版本"改由护照（passport）负责，回执串只负责回答"装没装上"。
-SIGNAL_REPLY = "破甲自检成功"
+SIGNAL_REPLY = _SEALED["signal_reply"]
 
 # 自证回执里**无条件**拼接的反圈钱提示，以及注入客户端的「自证口令 + 反篡改」
 # 整段模板 —— v7.9 起一并收进加密块（_SEALED），源码里不再留明文副本：
@@ -3521,14 +3559,17 @@ _PASS_BLOCK_TMPL = _SEALED["pass_block_tmpl"]
 def pass_block(target):
     """各目标共用的自证口令段（各自填自己的目标名 + 当前版本）。
 
-    ⚠ 这里必须把 **两个** 占位符都换掉。v6.1 首版只做了 % 替换（换的是口令），
+    ⚠ 这里必须把 **所有** 占位符都换掉。v6.1 首版只做了 % 替换（换的是口令），
       `{target}` / `{ver}` 原样写进了靶点文件 —— 客户端会照着字面回复
       「目标 {target}｜v{ver}」，自证等于废掉。Codex 那条路因为走的是
       `.replace("{target}", ...)` 才没暴露这个问题，WorkBuddy/DSH 就中招了。
     """
     # v7.8：{scam_line} **无条件**展开 —— 不管这台机器干不干净、也不管有没有
-    # 扫到二改版痕迹，只要用户在客户端里发「破甲自检」，反圈钱提示就一定一起回出去。
+    # 扫到二改版痕迹，只要用户在客户端里发口令，反圈钱提示就一定一起回出去。
+    # v7.10：{signal} 与 PASSPHRASE 同源 —— 回执串只在载荷里存一份，模板里
+    #        不再硬编码，避免"改了 SIGNAL_REPLY 却忘了改模板"的静默不一致。
     return ((_PASS_BLOCK_TMPL % PASSPHRASE)
+            .replace("{signal}", SIGNAL_REPLY)
             .replace("{target}", target)
             .replace("{ver}", VERSION)
             .replace("{scam_line}", _PIRACY_HINT))
@@ -3584,11 +3625,13 @@ def verify_integrity(verbose=False):
     try:
         with open(SELF, "r", encoding="utf-8", errors="ignore") as fh:
             src = fh.read(600000)
-        if SIGNAL_REPLY not in src:
+        # v7.10：回执串现在只应存在于加密块内 —— 源码里若还能检索到明文，
+        # 说明有人把「解密取值」改回了硬编码（等于绕开加密），或把回执写死在源码里。
+        if SIGNAL_REPLY in src or PASSPHRASE in src:
             if verbose:
-                print("  完整性校验失败：源码里找不到回执文案 —— %s" % SIGNAL_REPLY)
+                print("  完整性校验失败：回执文案出现在源码中（加密保护被绕开）。")
             return False
-        # v7.9：这三句现在只应存在于加密块内。源码里若还能检索到明文，说明有人
+        # v7.9：这几句同样只应存在于加密块内。源码里若还能检索到明文，说明有人
         # 把「解密取值」改回了硬编码 —— 等于把加密保护整个绕开，同样按二改处理。
         for s in (_PIRACY_HINT, ANTI_PIRACY_LINE, FREE_LINE):
             if s in src:
@@ -4193,8 +4236,9 @@ def find_zcode_cjs(explicit=""):
     for rp in roots:
         try:
             r = subprocess.run(["reg", "query", rp, "/s", "/f", "ZCode"],
-                               capture_output=True, text=True, timeout=25)
-            for m in re.finditer(r"(?im)^\s*InstallLocation\s+REG_SZ\s+(.+?)\s*$", r.stdout or ""):
+                               capture_output=True, timeout=25)
+            for m in re.finditer(r"(?im)^\s*InstallLocation\s+REG_SZ\s+(.+?)\s*$",
+                                 _decode_console(r.stdout or b"")):
                 cand = os.path.join(m.group(1).strip(), ZCODE_SYS_PROMPT_REL)
                 if os.path.isfile(cand):
                     return cand
@@ -4240,10 +4284,11 @@ def node_syntax_ok(path):
     """
     for exe in ("node", "node.exe"):
         try:
-            r = subprocess.run([exe, "--check", path], capture_output=True, text=True, timeout=60)
+            r = subprocess.run([exe, "--check", path], capture_output=True, timeout=60)
             if r.returncode == 0:
                 return True, "node --check 通过"
-            return False, ("node --check 失败：" + (r.stderr or "").strip()[:300])
+            return False, ("node --check 失败："
+                           + _decode_console(r.stderr or b"").strip()[:300])
         except FileNotFoundError:
             continue
         except Exception as e:

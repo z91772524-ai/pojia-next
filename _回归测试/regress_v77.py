@@ -67,49 +67,95 @@ for k, sub in (("codex", ".codex"), ("cursor", ".cursor"), ("claude", ".claude")
     txt = open(target, encoding="utf-8").read() if os.path.exists(target) else ""
     chk(f"{k} 注入后文件存在", os.path.exists(target), target)
     chk(f"{k} 含标记块", t.mark_begin in txt)
-    chk(f"{k} 含人格内容", "TEST-PERSONA-MARKER" in txt or "测试人格" in txt)
+    if k == "codex":
+        # v7.8：人格**不再写进 config.toml**，而是由 config.toml 指向一份人格文件
+        pp = t._instr_path(home)
+        ptxt = open(pp, encoding="utf-8").read() if os.path.exists(pp) else ""
+        chk("codex 人格文件含人格内容", "TEST-PERSONA-MARKER" in ptxt, pp)
+        chk("codex config.toml 指向该人格文件", t._instr_path(home) in txt)
+    else:
+        chk(f"{k} 含人格内容", "TEST-PERSONA-MARKER" in txt or "测试人格" in txt)
 
 # Claude 的路径是 CLAUDE.md
 chk("Claude 目标是 CLAUDE.md",
     mod.ClaudeTarget.prompt_file == "CLAUDE.md")
-chk("Codex 目标是 AGENTS.md",
-    mod.CodexTarget.prompt_file == "AGENTS.md")
+chk("Codex 目标是 config.toml（v7.8 起）",
+    mod.CodexTarget.prompt_file == "config.toml")
+chk("Codex 注入键是 model_instructions_file",
+    mod.CODEX_CFG_KEY == "model_instructions_file")
 chk("Cursor 规则在 rules/ 下",
     "rules" in mod.CursorTarget.prompt_file)
 
-# ---------- T4: 已有内容不被破坏 ----------
-print("\nT4  已有内容保留（幂等 + 不覆盖）")
+# ---------- T4: 已有内容不被破坏 + 键必须落在顶层 ----------
+print("\nT4  Codex：顶层注入 / 不动用户其余配置 / 幂等")
+import tomllib
 t = mod.CodexTarget()
 home = os.path.join(tmp, ".codex")
 target = t.prompt_path(home)
-open(target, "w", encoding="utf-8").write("# 用户自己的 AGENTS.md\n\nUSER-ORIGINAL-CONTENT\n")
+# 特意让末尾是 [表]，且结尾**没有换行** —— 参考实现就是在这一步翻车的
+user_cfg = ('model = "gpt-5"\napproval_policy = "never"\n\n'
+            '[shell_environment_policy.set]\nPATH = "C:\\\\bin"\nTZ = "UTC"')
+open(target, "w", encoding="utf-8", newline="").write(user_cfg)
 a = mkargs(codex_dir=home, persona=pf)
 t.apply(a, "apply")
 txt = open(target, encoding="utf-8").read()
-chk("原内容保留", "USER-ORIGINAL-CONTENT" in txt)
+chk("原内容保留", 'TZ = "UTC"' in txt and "PATH = " in txt)
 chk("标记块已加", t.mark_begin in txt)
 chk("备份已生成（只备份非我方原文件）", os.path.exists(target + t.bak_suffix))
+obj = tomllib.loads(txt)
+chk("键落在**顶层**（没被末尾的 [表] 吞掉）",
+    obj.get(mod.CODEX_CFG_KEY) == t._instr_path(home), repr(obj.get(mod.CODEX_CFG_KEY))[:60])
+chk("没混进 shell_environment_policy.set",
+    mod.CODEX_CFG_KEY not in obj.get("shell_environment_policy", {}).get("set", {}))
+chk("指向的人格文件确实存在", os.path.exists(obj.get(mod.CODEX_CFG_KEY, "")))
+chk("除标记块外逐字节未动",
+    mod._toml_strip_block(txt, t.mark_begin, t.mark_end) == user_cfg,
+    "%d vs %d" % (len(mod._toml_strip_block(txt, t.mark_begin, t.mark_end)), len(user_cfg)))
 
 # 二次 apply 幂等
 t.apply(a, "apply")
 txt2 = open(target, encoding="utf-8").read()
 chk("二次 apply 不重复插入标记块", txt2.count(t.mark_begin) == 1, f"count={txt2.count(t.mark_begin)}")
-chk("二次 apply 原内容仍唯一", txt2.count("USER-ORIGINAL-CONTENT") == 1)
+chk("二次 apply 后内容一字未变", txt2 == txt)
 
 # ---------- T5: 检测 ----------
 print("\nT5  check 状态报告")
 rows = t.check(a)
 joined = " ".join(r[1] for r in rows)
 chk("check 能报出已破甲", ("已破甲" in joined) or ("含我们的标记块" in joined), joined[:120])
+chk("check 报出注入键且目标存在", mod.CODEX_CFG_KEY in joined and "目标文件存在" in joined, joined[:160])
 
 # ---------- T6: 还原 ----------
 print("\nT6  还原")
 t.revert(a)
 txt3 = open(target, encoding="utf-8").read() if os.path.exists(target) else ""
 chk("还原后标记块消失", t.mark_begin not in txt3)
-chk("还原后用户原内容还在", "USER-ORIGINAL-CONTENT" in txt3)
-chk("还原后内容等于原始", txt3.strip() == "# 用户自己的 AGENTS.md\n\nUSER-ORIGINAL-CONTENT".strip(),
-    repr(txt3[:80]))
+chk("还原后用户原内容还在", 'TZ = "UTC"' in txt3)
+chk("还原后逐字节等于原始配置（有备份）", txt3 == user_cfg, repr(txt3[-40:]))
+chk("还原后人格文件已清掉", not os.path.exists(t._instr_path(home)))
+
+# T6b: 备份被删（用户手动清过 / 从别处拷来的配置）→ 只能靠剥离，也必须逐字节
+t.apply(a, "apply")
+try:
+    os.remove(target + t.bak_suffix)
+except OSError:
+    pass
+t.revert(a)
+txt4 = open(target, encoding="utf-8").read() if os.path.exists(target) else ""
+chk("还原后逐字节等于原始配置（无备份）", txt4 == user_cfg,
+    "%d vs %d" % (len(txt4), len(user_cfg)))
+
+# T6c: 旧方案残留（v7.7 早期写进 AGENTS.md）会被自动清掉，用户内容保留
+legacy = os.path.join(home, "AGENTS.md")
+USERAG = "# 用户自己的说明\n\n请用中文。\n"
+open(legacy, "w", encoding="utf-8", newline="").write(
+    USERAG + mod.CODEX_LEGACY_BEGIN + "\n旧人格\n" + mod.CODEX_LEGACY_END + "\n")
+t.apply(a, "apply")
+ag = open(legacy, encoding="utf-8").read()
+chk("旧方案标记块已清理", mod.CODEX_LEGACY_BEGIN not in ag and mod.CODEX_LEGACY_END not in ag)
+chk("用户自己的 AGENTS.md 内容保留", "请用中文" in ag)
+chk("旧原文有存档", os.path.exists(os.path.join(mod.avatar_dir_for(home), "legacy-AGENTS.md")))
+t.revert(a)
 
 # ---------- T7: 未安装则跳过（不报错） ----------
 print("\nT7  未检测到安装 -> 跳过而非报错")

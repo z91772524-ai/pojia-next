@@ -175,7 +175,7 @@ if IS_WIN and not getattr(subprocess, "_dsh_no_window_patched", False):
     subprocess.Popen = _popen_no_window
     subprocess._dsh_no_window_patched = True
 
-VERSION = "7.7"
+VERSION = "7.8"
 CHECK_EXIT_CODES = []          # --check 用：收集不达标项（只影响退出码，不改状态码）
 ERRORS = 0                     # v7.4：apply/revert 里的失败项累计（>0 → 进程退出码 1）
 
@@ -391,73 +391,73 @@ def _k2(src):
 
 
 _B0 = """\
-L/o0RmVTkL8tEaA0VsVDK+7UkB8P/Sa2E/BGFzVJLlZJFedhoWEQSSZCfYDvpwV0eE31p/4VRusI
-i2RV+cxi8PnmP4paKwCxxGfaJ26cLg6k/i+2Q2zQUuuF23AVHA8k9UvTXKVEa1rvrvlq+HXKpeqp
-fVG/NPk7W9iKwB6JWTv7h9p35sqBWaEIkY3WdlezhKMGr8Q3GSEUcfse6vcnktY8/Rd2zdYJfdyV
-vQDCYeZP/NMNVDzi72a50KOqzE9gN90VlL3jewCayg0A9us/nRTE5OVZ8UVN+m9yoSQRNhh7xGhM
-4SScOJ8WA8zSC74MyU0Esa/gP2w47dtyoxhXdylDWp38h9UO4AYbjFDH90jKzKMtGbe1As5EZdJ2
-PwCh7t9W/PTEAvBFV44GmT7n5g78IaaKB1spjNSsLhRGFa9otey2ET5Fr8ihBF1DlP7e4Fx0sk0G
-7WdE66B/owu/k5ohYG7M85CRTi30aOLkH/7lxt2we6keO1WTKh+rND5CgISbJWtu9pIfwZ2imEB5
-Hzje9F5/ByLyXsJfq82a41eCFnizJveJllaKYDUrQ81Dt29USLcvttvCwmR2nUzixIw6WIAEGMmd
-9TVFWDxKs6YDWP2Sf9AALYqOnc7Txk+vadSZ5o5SYtLUPahRG8J6vqnEZpOoUK3j2rbmUhubSkoj
-L0K+9xakBzWB9VBp0PFIyglaBoHxHhOAePxn2dGFvmflyZfGLMo5Pls29luc3wbgcMaHjLXSfuBH
-Bv8vDgQMVmComg+lErDTvi5nxAglxIo+jgnmzc+G5Fa3dP4wwx7wTM+8mABTtpogogGkI0RJxNMO
-vvYzr7ONaoEq2sNZMYZpZTtVcbEUPQp6aCPiVZnHWUJa+mwXdE8l4D3Y7SLgKLAI6cewbQqH5BCd
-VReS3+DNb9HzCmJU5BkCAOHTBuwp9QqC5dquFccwukqViq5+eqrI/0xMBZZ1ycOLkBzboUSBXBsM
-Omz/9YlxchfZISXmFcoI6BMgC7gnKU7Wz+sdp/+Sa55zrG7Lc6oywdqZVvi1wi7jHy+PY0eswGph
-fQWdbQzffrvDMtz4t2XoCTepgdBinIlfqNf3aEYli/aJTQl4RNwuB4aNSw8Y6FW1pOD68UWItfOP
-e0HczS/+c2oUUljSBl7BoJWlC/K5dcSqzAcBXqauFMphVOi4T7hSI6thxVL1MBgCaBQHBwLUJ0qk
-yOB8+0LcPEk+c2zV8HUwNKkof0oFdcRrFvYyzF1SQGt0bZ+iLI9OyixkCPtF4nkeAcA508y0LPeX
-9rj4AivoK01gwa1u7mIPt6rd6Cx4metAoFg2/VUUUrBebpk5F/sPt/mjiqqHRBwN6IcZJV6wrrAX
-e7SiyQ/NV4t0IuqSpcGZzMLRUcdTt1NzbUdQdev+wFjXh25aBGsiBkFKfoCsmMjY3ec77FB+6CIA
-lbszDnD/O/6XucwSp7W2D1f7+ciRaMKOPWhjWARLXgksDlDI9VS3RE4ztUGcpvTIIJHmng3lq+iu
-Ho2QJUYMjuw7MYiTbuR9wylrEsxlkm8Oo+PLsTYhQ0n/jBCksYAYkQtZAtHuJt/xisV/RVlyjqBI
-OvAkgj65Wbyz3KB9oLpu2dZopQW86bd93JDr0e8WeCwRjVzyPoJ+cwLWhRXsADvPyYT6JHnxob+0
-zbLLTWW1VgCwG1meKA+VFBzDzIxn3phqHalVRcNYDFnisDkfSr2tHsyIlSZebXPuPDE7MiheqbwE
-H031h0Q6/xjuO3uyHJMjTwPcmGo/2DgI8H36CxH/5CzFq/W8577PQ1NnBpbYNYu2ZzKO1KWmQDxC
-48Y/wHqZ9Ygi2GaD5xsIs9Ca2JobmNBxvRkFL6qaupFi/OvgbHYpOXRTzxlJk/45F6hVFIKw8Qor
-W0wdJJjsSoMFyY423pgqGEO+/8bXlvByYfuOuQnNPe6C9KzCt18KSatOxMsM59b17FbQbWubYVOb
-t7PAIf/cpGfr4fRYVaQTfQrcOElxrtpRxAhCIav6URK7X1WAYrLgUkTJfA1b63VsTV+0GqErTQO2
-G+Mj4N2gixenEMbh29rdcuOPmV+1fB+guPHyApnlAGCTzmeIfeETNif2ez3lElbXroV3kC2WVMJB
-If7xTN3ukarMLxpNnGb3lZb+ppazw2es4XSpLLJ7LGeBfpoP080L47eqFKJtoLdvfBUUfsRoXqVV
-EBbKydyGfP7GPouGBLmeCFEjLLXna7TuM1/HEi6ZF3dzyvFldZuAVXyGiR7M+DIUTpwenWQZvcyx
-Eu47UoBhLRrjlm4eVjRzDVX7AG4wyvI5oRgBSB2rKyIU7JFLizFB277hho7itwQ4R3AaHUOOUat+
-Bd+RXMFR2HpHA8K7iUMomhF0pM1+FP7YiaENMAX0Zx5BCxIi0w76q6omxAjoid4HuGZDKqGxD8Em
-QG5Et3AhTJCCLd9ecr4Czi4AX+QJfHJmkcS2RlDDS+xDjX00bprsXvivIJaJhh6B4K0zll7x1rvc
-SPPQ/mhiLsuc0793dOlaGFTDm1aLtahzXuqnQZuYh/hqtXncHpcVq7hxIq594lJtqwS/MOFNhSDb
-UMiIPG8vFyp7R4Uvi5cUKS/z0GdF+4JoulUrHbxg316Y6zsNHMx/mKztFTRglcdgu5SlbMg+7oWW
-vxxOVUjBhJaFML8LRjokJMchbyM1WZVg6LyAIB/x3hHlA8OZjWBNS7Qib+lapyAqyjn7t073aMWY
-aFSt17gvZ5xAuuT/uLT+Pze19Fg/9MIf5mgKZKNWOIcxi7qJplm8SV0wRosvSVnRS8AL4pJvMpq2
-W9FbrPLq6hOaSV1mfTC/89gip6Fqy4ghiuuDBK2qT2/HKdH9aJrZdPB/DFn33X0Zk0UE8ixK0P5D
-VwoEMgeTXc2snPy43BcBX+B7iQH0f3ck9CeWt7eGAhRAV59wXCPwjd36hO7A+KEJGP1i2h0mQ3WX
-hrJNVgTo3xtrS3IK2ePSdPvY56t/fC66LJWZ4ZVPKfO8lQRXhidpObwQtSuqsw6Dx8NCcWuekKC/
-ABvgp11Bxtn9szeSQRa6A8M3bIwUgqDujI9JEEXnB1OTkTT4yqJvn2DXrwPhlF4tHWgeqYHV4HwK
-vjW/6Dyjgd8ofLt5lTvh6S/kBlGz0Ihgvyu4T3qcarmdX7T+s4Xcj9UnFcDP2V2Beq9F6feJsxYE
-XwYhye2fPkgfj+o3rSpbFDEB5l80z9cdc/zOABakJlIpOMWA0/0jywiw1efAhCpkzyB8yhBRQuy8
-FppCY1QN00jlGrXED74N4uK1zqw3Pu+2Iva8BKAiBarVivh+VIDpsPY4iZWjQfdco6S+V6S0Y/iI
-6B3GukSmdLb3KdQXZG+0MNZVDJaST1Uz9g1in6h6dLKce2GLzr9D9SFHbFL5YKGEr2ZjpKIoY21J
-ZTlZlBagTVVoplgy1UP0fo2PK8PupC6p224PA8rjkFsqDSOFnCbhg6xftj/8xCTsTr1xLqXiqGLU
-9hhl20XI+9HcxgrJVyD6K8FrOHFLKVdbtE8rlSTQX9AqtaLiDolyy0G2bDTN/MRNKlxSreNKek7h
-MHY9U+d/vWThyagV51gNp1mGO8+ZVHBhhTAUCvZ7U5N+mpHkOqlrnLc4SNwMuahcueCKpBRW/wyF
-+a8DAzBS4vajx9g6vjauN+BY0s3vkQHMhe1b9VO5FEQc71dUo7d/uVVu759pTTILesbmK3fdTvbz
-TDuia7cavUpUbdpb0FvWyLQtnoVE6Mj14z1dcKsVV/8bnnrLDIzfvl2tSvv8AvzsIGO7YHbS3klW
-7ZV1C98xIo9/203kzMpT2XZ8zCWsP3BncKxC1PQp0H0I+ZAuOka8w6dLTbH1vomCUIFwTSBzIcpn
-ukVkobAWnYprVj2VzQgjRAUkE0++bgws2RhK32Dt3vkkqTgOGqwpUQTTpChp1rpOPM9VkPu8Age4
-EJR1N+AND1MqOuB1gr5MoZk+9cPk5ULXEGigCU0bT6JB7KXDPyf563ty4RJy7IW3YyXdApZdnkKR
-ZD4Nf27ILzSUE/NM0U/9WgrAjBjtS4FMdlQoRe9yc156TQTh7bS/oSyu5SwCoVIxeoZZQCdWLR53
-qYnVAePzYOcR7F9adChvvQVz8MIf9Q4IUr+5TMAsW5rOCQscz5uFF4dbKOpVk5K6MQPZ7eHt/EFG
-ygpIv3qRwpeG61Gy1QF0dcvDDhfRjCZWrMvRxO3VlM0pZgYKrd5J1+jZZtUxaxEVIYcR93N1NHaA
-dAZPNwO8lOSmoXM7E+wz86dg7c/vqMJU68MSQeDRP/L59+PdEgKX2qU+921a2tVQXjN76HNLCulp
-ZRP7Dyv+PiBmsC/wcFRa9p5rxzAJyeMzvHqsIBLNcFUR2GFTR+Nh/Z69+xP9gWb9O7mSeig3O0zO
-Teecdlj2uSbG47jgj0MSP/q6r9CfJa/2Vw9+ywH40yV4QBX0XOyznax4uzdFoNsvt3IeL+UWp427
-NDPNl6s+0GSFSTattUMjNJI2fJ23Vex59hEaJK1G5GOcNJB8tuHBN7GCojUUzBIRZWF82DDMPUqz
-ATGG516U8g4PSLrPuc8xonkfRKJkijBrmY8VeODvLSJuenKy0I8jbPGH5EgIq1zHLAMnSzTD6+g/
-CuyZ5uJLPL7E6qUUisrB+jfwpnLepIcXuJJ9ELAHj68Nw9f/lTzZQNAZbcKDBEPhU/kajpk+5PiP
-jRbsgLn07bElPHwO2gObGP9daAf31UHQXZ3wXB/CEDt44SMwkCfpBPznJdTuSuUDo8/Cn7WJhcpP
-FA==
+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
+BbEyXL/b4xRR
 """
-_B1 = "ac825f4939ec13eb1fcb7cc450dd34995e37aa4a4e9db61d5a8f3a56b74656f4"
-_B2 = "bddc921339cb72a7ca1f7126a35305dd29e1a07bb09efb3d50af3cf54f231404"
+_B1 = "0dd1ff257b9346333bf1c2214793eb526b7db67ee55663bc24afbcca1c07580d"
+_B2 = "6da8b6b5d0a3af81a3eed877bc12ccb1bb3ba91c79e70095afd6e12e38c96dc1"
 
 #__seg_b0__
 _SX = ("#__d0__", "#__d1__")
@@ -625,6 +625,22 @@ def _say_agent_reminder():
         msg = ""
     if not msg:
         return
+    # 声明段的行号**现算**，不写死在载荷里 —— 写死会随版本漂移，而这条提示的
+    # 全部意义就是"把 AI 指到那段声明去"：指错地方比不指更糟（AI 会以为声明
+    # 早已被删掉）。v7.8 修：载荷里原来写死"第 163 行"，实际已漂到 197 行。
+    # 注：本函数在 verify_integrity() 之后调用，明文运行时声明段必然存在；
+    #     算不出来只可能是 exe（没有明文源码），此时把"第 X 行起"换成"里"，
+    #     句子仍然通顺："本脚本里有一段…"。
+    try:
+        _src = _seal_read_source() or ""
+        _i = _src.find(_SX[0])
+        _n = (_src.count("\n", 0, _i) + 1) if _i >= 0 else 0
+    except Exception:
+        _n = 0
+    if _n:
+        msg = msg.replace("{decl_line}", str(_n))
+    else:
+        msg = msg.replace("第 {decl_line} 行起", "里").replace("{decl_line}", "")
     lines = ["", "  " + "─" * 68]
     for para in msg.rstrip("\n").split("\n"):
         lines.append("  " + para if para else "")
@@ -781,9 +797,16 @@ BAK_CODEX = ".pojia.bak"
 BAK_CURSOR = ".pojia.bak"
 BAK_CLAUDE = ".pojia.bak"
 
-# Codex：config.toml 里的注入标记 + managed-prompts 目录
+# Codex：config.toml 的 model_instructions_file 注入 + managed-prompts 目录
 CODEX_MARK = "pojia-next"
 CODEX_PROMPT_NAME = "pojia-persona.md"
+# v7.8：注入改走官方 config.toml 的 model_instructions_file（不再写 AGENTS.md）
+CODEX_CFG_KEY = "model_instructions_file"
+CODEX_CFG_BEGIN = "# >>> pojia-next begin"
+CODEX_CFG_END = "# <<< pojia-next end"
+# 旧方案（v7.7 早期）写在 AGENTS.md 的标记块：保留常量，仅用于"迁移清理"
+CODEX_LEGACY_BEGIN = "<!-- POJIA-NEXT-INJECT:BEGIN -->"
+CODEX_LEGACY_END = "<!-- POJIA-NEXT-INJECT:END -->"
 # Codex 记忆注入段标题（memory_summary.md 里按标题块替换）
 CODEX_MEM_TITLE = "破甲注入"
 
@@ -1107,7 +1130,10 @@ def _archive(path, tag):
 # 一旦存错，--revert 就会把注入的人格当作"用户的原始文件"还原回去，用户的原内容
 # 静默丢失且无从追回（实测：删掉 .pojia.bak 后再跑一次 apply 就能复现）。
 OURS_ARTIFACT_MARKS = ("pojia-yijiantong", "unlock-v6:h=", "unlock-v4:h=",
-                       "managed-prompts/pojia", "pojia-yijiantong cloudmem v")
+                       "managed-prompts/pojia", "pojia-yijiantong cloudmem v",
+                       # v7.8：Codex 走 config.toml 后，我们那个标记块也要能被认出来 ——
+                       # 否则第二次 apply 时，带我们注入的 config.toml 会被当成"用户原版"存进备份。
+                       "# >>> pojia-next begin")
 
 
 def _is_our_artifact(text):
@@ -4893,6 +4919,10 @@ class _MarkBlockTarget:
     mark_begin = "<!-- POJIA-NEXT-INJECT:BEGIN -->"
     mark_end = "<!-- POJIA-NEXT-INJECT:END -->"
     proc_names = ()
+    # 还原后文件被清空时，是否可以把文件本身删掉。
+    # 纯 Markdown 指令文件（AGENTS.md / CLAUDE.md）可以；config.toml 这种
+    # 结构化配置不可以（删了客户端起不来）。
+    allow_delete_when_empty = True
 
     # ---------------- 定位 ----------------
     def resolve_home(self, explicit=""):
@@ -4964,6 +4994,7 @@ class _MarkBlockTarget:
             return {"skip": 1}
 
         target = self.prompt_path(home)
+        existed = os.path.exists(target)
         # 读不干净就跳过，绝不拿空串覆盖
         old = read_text_safe(target)
         if old is None and os.path.exists(target):
@@ -4985,13 +5016,32 @@ class _MarkBlockTarget:
         if os.path.exists(target) and old.strip() and not self._has_mark(old):
             backup_file(target, bak_path=target + self.bak_suffix, is_pristine=_not_ours)
 
-        new = self._merge(old, persona)
+        new = self._merge(home, old, persona)
         write_text(target, new, make_dirs=True)
         log("  已写 %s（%d 字符）" % (self.prompt_file, len(new)), "g", self.key)
 
-        # 额外文件（如 Claude 的 skills 目录、Cursor 的逐项目规则）
+        # 额外文件（如 Codex 的 managed-prompts 人格文件、Cursor 的旧版 .cursorrules）
+        # ⚠ 顺序不能挪到写后自检之后：Codex 的自检要顺着 config.toml 去核实
+        #   model_instructions_file 指向的文件**在不在**，晚一步落盘就必然误判、
+        #   每台干净机器上都会"自检失败并回滚"（v7.8 实测踩到）。
         for fn, note in self.extra_writes(home, persona, args):
             log("  " + note, "dg", self.key)
+
+        # v7.8：写后自检 —— 结构化配置必须**真解析一遍**确认生效，失败就回滚。
+        # 起因：往 config.toml 末尾追加的写法，键会被吞进末尾的 [表] 里，
+        # 表面上 apply 成功、grep 得到，实际注入完全无效（最坏的一类坏）。
+        bad = self._post_write_check(target)
+        if bad:
+            if existed:
+                write_text(target, old, make_dirs=True)
+            else:
+                try:
+                    os.remove(target)
+                except Exception:
+                    pass
+            log("  [!] 写后自检未通过，已回滚 %s：%s" % (self.prompt_file, bad), "red", self.key)
+            return {"err": 1}
+
         if blank_home:
             log("  提示：原来这个文件是空的/不存在，已新建并写入。", "dg", self.key)
         run = self.running()
@@ -5000,7 +5050,11 @@ class _MarkBlockTarget:
                 % (self.label, len(run)), "y", self.key)
         return {"fixed": 1}
 
-    def _merge(self, old, persona):
+    def _post_write_check(self, target):
+        """子类可覆写：写盘后复核。返回非空字符串 = 不合格，调用方会回滚并报错。"""
+        return ""
+
+    def _merge(self, home, old, persona):
         """把人格块并入原文件：已有块就替换，没有就追加到末尾。"""
         block = self._block(persona)
         if self._has_mark(old):
@@ -5011,6 +5065,14 @@ class _MarkBlockTarget:
         if not old.strip():
             return block
         return old.rstrip("\n") + "\n\n" + block
+
+    def _do_strip(self, text, begin, end):
+        """还原时用哪个剥离实现。
+
+        默认是 Markdown 版（收空行、按段落拼）。Codex 换成 TOML 行级版 ——
+        config.toml 是结构化配置，必须保证"破了甲 → 还原"能逐字节回到原样。
+        """
+        return self._strip_block(text, begin, end)
 
     def extra_writes(self, home, persona, args):
         """子类可覆写：返回 [(路径, 日志)] 形式的额外写入（已实际完成）。"""
@@ -5030,7 +5092,7 @@ class _MarkBlockTarget:
             log("  %s 里没有我们的标记块，无需还原。" % self.prompt_file, "dg", self.key)
             self.extra_reverts(home, args)
             return {"skip": 1}
-        cur = self._strip_block(old, self.mark_begin, self.mark_end)
+        cur = self._do_strip(old, self.mark_begin, self.mark_end)
         bak = target + self.bak_suffix
         # 有备份且备份里没有我们的标记 → 用备份还原；否则只删块
         bak_txt = read_text_safe(bak)
@@ -5041,11 +5103,17 @@ class _MarkBlockTarget:
             write_text(target, cur, make_dirs=True)
             log("  已移除标记块（文件其余内容保留）", "g", self.key)
         else:
-            try:
-                os.remove(target)
-                log("  已删除 %s（原本只有我们的内容）" % self.prompt_file, "g", self.key)
-            except Exception as e:
-                log("  删除失败：%s" % e, "y", self.key)
+            # v7.8：结构化配置文件（config.toml）即使被清空也**不能删** ——
+            # 删了整个 Codex 就起不来了，而"空文件"等价于"默认配置"，是安全的。
+            if not self.allow_delete_when_empty:
+                write_text(target, "", make_dirs=True)
+                log("  已清空 %s（配置文件保留，不删除）" % self.prompt_file, "g", self.key)
+            else:
+                try:
+                    os.remove(target)
+                    log("  已删除 %s（原本只有我们的内容）" % self.prompt_file, "g", self.key)
+                except Exception as e:
+                    log("  删除失败：%s" % e, "y", self.key)
         self.extra_reverts(home, args)
         return {"fixed": 1}
 
@@ -5088,18 +5156,131 @@ class _MarkBlockTarget:
         return self.check(args)
 
 
+# ── config.toml 顶层键注入（Codex 专用）──────────────────────────────────────
+#  ⚠ TOML 有个必须绕开的坑：**表头之后的键属于该表**。
+#    本机 config.toml 末尾是 [shell_environment_policy.set]，
+#    如果照搬"追加到文件末尾"的写法，model_instructions_file 会被解析成
+#    那个表里的一个**环境变量**，Codex 完全不认，注入静默失效 —— 而表面上
+#    "文件确实被改了、grep 得到、apply 报成功"，属于最难发现的一类坏。
+#    所以这里一律插到"第一个表头之前"的顶层键区，并在写盘后用 tomllib 真解析复核。
+
+def _toml_bracket_delta(line):
+    """一行里"字符串外"的 [ ] 净深度（# 之后按注释忽略）。"""
+    d, quote, esc = 0, None, False
+    for ch in line:
+        if esc:
+            esc = False
+            continue
+        if quote:
+            if ch == "\\" and quote == '"':
+                esc = True
+            elif ch == quote:
+                quote = None
+            continue
+        if ch in ('"', "'"):
+            quote = ch
+        elif ch == "#":
+            break
+        elif ch == "[":
+            d += 1
+        elif ch == "]":
+            d -= 1
+    return d
+
+
+def _toml_top_insert_index(lines):
+    """返回插入行号：第一个**不在多行数组内**的表头之前；没有表头则返回末尾。
+
+    用括号深度而不是"以 [ 开头"单判据，是为了不被多行数组（notify = [ ... ]）
+    的续行误伤。
+    """
+    depth = 0
+    for i, ln in enumerate(lines):
+        s = ln.strip()
+        if depth == 0 and s.startswith("[") and not s.startswith("#"):
+            return i
+        depth += _toml_bracket_delta(ln)
+        if depth < 0:
+            depth = 0
+    return len(lines)
+
+
+def _toml_strip_block(text, begin, end):
+    """删掉我们写的标记块。**与 _toml_put_top 严格互逆**（含"结尾有无换行"）。
+
+    实现要点：整件事只在**行**这一级做增删，用 split/join("\\n") 这对
+    恒等操作（"\\n".join(s.split("\\n")) == s 对任何字符串成立）当手术刀。
+    只要保证"只整行插、只整行删"，那么 put→strip 就能逐字节回到原样 ——
+    包括"原文件结尾本来没有换行"这种边角。
+
+    反例（本函数的最初写法，测出来会多一个结尾换行）：用
+    ``text[:i].rstrip("\\n")`` + ``"\\n\\n".join(parts)`` + ``.rstrip()+"\\n"``
+    去拼，等于把用户的换行风格"重排"了一遍，永远回不到原样。
+    """
+    if not text or begin not in text:
+        return text or ""
+    lines = text.split("\n")
+    b, e = begin.strip(), end.strip()
+    bi = next((n for n, l in enumerate(lines) if l.strip() == b), -1)
+    if bi < 0:
+        return text
+    ei = next((n for n in range(bi, len(lines)) if lines[n].strip() == e), -1)
+    if ei < 0:                      # 只有前半截（被人手删过）：保守起见不动
+        return text
+    lo, hi = bi, ei + 1
+    if lo > 0 and lines[lo - 1] == "":
+        lo -= 1                     # 收掉我们插在块前的那个空行
+    if hi < len(lines) and lines[hi] == "":
+        hi += 1                     # 收掉我们插在块后的那个空行
+    del lines[lo:hi]
+    return "\n".join(lines)
+
+
+def _toml_put_top(text, block, begin, end):
+    """把标记块插到顶层键区（第一个表头之前）；已有块则先删后插（幂等）。
+
+    只**整行**插入 ``空行 + 块 + 空行``，绝不重排、不改写用户已有的任何一行。
+    """
+    base = _toml_strip_block(text or "", begin, end)
+    blk = block.rstrip("\n").split("\n")
+    if not base.strip():            # 文件本来就空/不存在：只写块本体
+        return "\n".join(blk) + "\n"
+    lines = base.split("\n")
+    idx = _toml_top_insert_index(lines)
+    lines[idx:idx] = [""] + blk + [""]
+    return "\n".join(lines)
+
+
 class CodexTarget(_MarkBlockTarget):
+    """Codex —— 走官方 config.toml 的 ``model_instructions_file``。
+
+    v7.8 起由「往 AGENTS.md 插标记块」改为「在 config.toml 里指一份指令文件」。
+    差别在于：AGENTS.md 是**追加上下文**（会被项目级 AGENTS.md、产品提示词一起稀释），
+    而 model_instructions_file 是**直接替换模型指令**，破甲更彻底。
+    两条路都只动文本、不碰二进制，但後者与社区通行做法（Codex Unlock）一致。
+
+    三个必须守住的点：
+      1. **键要落在顶层**。TOML 里表头之后的键属于该表 —— 直接往文件末尾追加会被
+         吞进 [shell_environment_policy.set]，当成环境变量，注入静默失效。
+         所以用 _toml_put_top() 插到第一个表头之前，写盘后再用 tomllib 复核。
+      2. **不重排、不格式化用户配置**。只加/删我们自己那一小块标记块，其余逐字节保留。
+      3. **旧方案要能迁移**。v7.7 早期写进 AGENTS.md 的标记块会被自动清掉（先备份）。
+    """
+
     key = "codex"
     label = "Codex"
     home_name = ".codex"
-    prompt_file = "AGENTS.md"          # 官方推荐的人格文件（config.toml 可再指一份）
+    prompt_file = "config.toml"        # ← 标记块落在 config.toml（v7.8 起不再写 AGENTS.md）
     bak_suffix = BAK_CODEX
     arg_name = "codex_dir"
     env_vars = ("CODEX_HOME",)
-    proc_names = ("codex", "Codex")
-    mark_begin = "<!-- POJIA-NEXT-INJECT:BEGIN -->"
-    mark_end = "<!-- POJIA-NEXT-INJECT:END -->"
+    # ⚠ Windows 的 tasklist 报的进程名带 .exe，必须带 .exe 形态才匹配得到
+    proc_names = ("codex.exe", "codex", "codex-code-mode-host.exe")
+    mark_begin = CODEX_CFG_BEGIN
+    mark_end = CODEX_CFG_END
+    allow_delete_when_empty = False    # config.toml 删了 Codex 起不来，只清空不删除
 
+    # ---------------- 定位 ----------------
     def pick_title(self):
         return "选择 Codex 的配置目录（一般是 用户目录\\.codex）"
 
@@ -5113,48 +5294,136 @@ class CodexTarget(_MarkBlockTarget):
         cand = os.path.join(p, ".codex")
         if os.path.isdir(cand):
             return cand, ""
-        # 目录里有 config.toml / AGENTS.md 也算
+        # 目录里有 config.toml / AGENTS.md / skills 也算
         if any(os.path.exists(os.path.join(p, x)) for x in ("config.toml", "AGENTS.md", "skills")):
             return p, ""
-        return "", "这里不像 Codex 配置目录。要选 .codex 那一层（里面通常有 config.toml 或 AGENTS.md）。"
+        return "", "这里不像 Codex 配置目录。要选 .codex 那一层（里面通常有 config.toml）。"
+
+    def _instr_path(self, home):
+        """人格文件路径 = config.toml 里 model_instructions_file 指向的目标。"""
+        return os.path.join(home, "managed-prompts", CODEX_PROMPT_NAME)
+
+    # ---------------- 写盘 ----------------
+    def _do_strip(self, text, begin, end):
+        """还原走 TOML 行级剥离：逐字节可逆（见 _toml_strip_block 的说明）。"""
+        return _toml_strip_block(text, begin, end)
+
+    def _merge(self, home, old, persona):
+        """config.toml 不用"追加"，改用"插到顶层键区"。"""
+        # 用绝对路径 + TOML 单引号字面量：反斜杠不用转义，且不受"相对谁解析"影响
+        block = "%s\n%s = '%s'\n%s" % (self.mark_begin, CODEX_CFG_KEY,
+                                       self._instr_path(home), self.mark_end)
+        return _toml_put_top(old, block, self.mark_begin, self.mark_end)
+
+    def _post_write_check(self, target):
+        """写后复核：真解析一遍 config.toml，确认键落在**顶层**且指向存在的文件。
+
+        ⚠ 参考实现（Codex Unlock）是往文件末尾追加的 —— 本机 config.toml 末尾是
+          [shell_environment_policy.set]，那个写法会把键变成环境变量，注入静默失效，
+          而 surface 上完全看不出问题。这里用 tomllib 把它抓出来并回滚。
+        """
+        try:
+            import tomllib
+        except Exception:
+            return ""                      # 老 Python 无 tomllib：跳过复核，不阻塞
+        try:
+            with open(target, "rb") as fh:
+                obj = tomllib.load(fh)
+        except Exception as e:
+            return "config.toml 不是合法 TOML：%s" % e
+        v = obj.get(CODEX_CFG_KEY)
+        if not isinstance(v, str) or not v.strip():
+            return "%s 没落在顶层（多半被追加进了某个 [表]）" % CODEX_CFG_KEY
+        p = v if os.path.isabs(v) else os.path.join(os.path.dirname(target), v)
+        if not os.path.exists(p):
+            return "%s 指向的文件不存在：%s" % (CODEX_CFG_KEY, p)
+        return ""
 
     def extra_writes(self, home, persona, args):
-        """除 AGENTS.md 外，再往 managed-prompts 放一份人格文件。
-
-        ⚠ 不动 config.toml：那里面是用户的模型/审批配置，改错了会让 Codex 起不来。
-          社区争论 model_instructions_file 键在 0.142+ 是否废弃、尚无定论，
-          所以这里只写 AGENTS.md + managed-prompts，两条路都覆盖，且都是"新增文件"而非改配置。
-        """
+        """写人格文件（config.toml 指向它），并顺手迁移旧方案。"""
         out = []
-        mp = os.path.join(home, "managed-prompts")
+        dest = self._instr_path(home)
         try:
-            os.makedirs(mp, exist_ok=True)
-            dest = os.path.join(mp, CODEX_PROMPT_NAME)
             write_text(dest, persona + "\n", make_dirs=True)
-            out.append((dest, "  已放人格副本：managed-prompts\\%s" % CODEX_PROMPT_NAME))
+            out.append((dest, "  已写人格文件：managed-prompts\\%s" % CODEX_PROMPT_NAME))
         except Exception as e:
             out.append(("", "  [!] 写 managed-prompts 失败：%s" % e))
+        out.extend(self._migrate_legacy(home))
+        return out
+
+    def _migrate_legacy(self, home):
+        """清掉旧方案（v7.7 早期写进 AGENTS.md）的标记块。
+
+        AGENTS.md 是"追加式上下文"，留着它会和 config.toml 双份生效；
+        且旧方案那段是 AGENTS.md 版的人格，不清掉会与新的互相干扰。
+        只删**我们那个块**：文件里还有用户自己的内容就保留。
+        """
+        out = []
+        ag = os.path.join(home, "AGENTS.md")
+        if not os.path.exists(ag):
+            return out
+        txt = read_text_safe(ag)
+        if not txt or CODEX_LEGACY_BEGIN not in txt:
+            return out
+        if DRY_RUN:
+            out.append((ag, "  [预演] 将移除 AGENTS.md 里旧方案(v7.7)的标记块"))
+            return out
+        # 整份都是我们写的 → 先留一份到专属目录再删，保证可追
+        rest = self._strip_block(txt, CODEX_LEGACY_BEGIN, CODEX_LEGACY_END)
+        keep = os.path.join(avatar_dir_for(home), "legacy-AGENTS.md")
+        try:
+            write_text(keep, txt, make_dirs=True)
+            out.append((keep, "  旧方案原文已存档：managed-prompts\\pojia-yijiantong\\legacy-AGENTS.md"))
+        except Exception:
+            pass
+        if rest.strip():
+            write_text(ag, rest, make_dirs=True)
+            out.append((ag, "  已移除 AGENTS.md 里旧方案的标记块（其余内容保留）"))
+        else:
+            try:
+                os.remove(ag)
+                out.append((ag, "  已删除 AGENTS.md（整份都是旧方案写的，原文已存档）"))
+            except Exception as e:
+                out.append(("", "  [!] 删除 AGENTS.md 失败：%s" % e))
         return out
 
     def extra_reverts(self, home, args):
-        dest = os.path.join(home, "managed-prompts", CODEX_PROMPT_NAME)
+        dest = self._instr_path(home)
         if os.path.exists(dest):
             try:
                 os.remove(dest)
                 log("  已删除 managed-prompts\\%s" % CODEX_PROMPT_NAME, "g", self.key)
             except Exception as e:
                 log("  删除 %s 失败：%s" % (dest, e), "y", self.key)
+        for _p, note in self._migrate_legacy(home):
+            if note:
+                log(note, "dg", self.key)
         return []
 
     def extra_checks(self, home, args):
         rows = []
-        dest = os.path.join(home, "managed-prompts", CODEX_PROMPT_NAME)
+        cfg = os.path.join(home, self.prompt_file)
+        txt = read_text_safe(cfg) or ""
+        m = re.search(r"^\s*%s\s*=\s*['\"]([^'\"]+)['\"]" % re.escape(CODEX_CFG_KEY), txt, re.M)
+        if m:
+            tgt = m.group(1)
+            real = tgt if os.path.isabs(tgt) else os.path.join(home, tgt)
+            ok = os.path.exists(real)
+            rows.append(("own" if ok else "fail",
+                         "%s = %s（%s）" % (CODEX_CFG_KEY, tgt,
+                                            "目标文件存在" if ok else "目标文件不存在！"),
+                         cfg))
+        else:
+            rows.append(("info", "config.toml 未设置 %s（本工具只加这一行，其余配置不动）"
+                         % CODEX_CFG_KEY, cfg))
+        dest = self._instr_path(home)
         rows.append(("own" if os.path.exists(dest) else "info",
-                     "managed-prompts\\%s %s" % (CODEX_PROMPT_NAME, "已放" if os.path.exists(dest) else "未放"),
+                     "managed-prompts\\%s %s" % (CODEX_PROMPT_NAME,
+                                                 "已放" if os.path.exists(dest) else "未放"),
                      dest))
-        cfg = os.path.join(home, "config.toml")
-        rows.append(("info", "config.toml %s（本工具不修改它）"
-                     % ("存在" if os.path.exists(cfg) else "不存在"), cfg))
+        ag = os.path.join(home, "AGENTS.md")
+        if os.path.exists(ag) and CODEX_LEGACY_BEGIN in (read_text_safe(ag) or ""):
+            rows.append(("warn", "AGENTS.md 里还残留旧方案(v7.7)的标记块 —— 重跑一次破甲会自动清理", ag))
         return rows
 
 
@@ -5166,7 +5435,8 @@ class CursorTarget(_MarkBlockTarget):
     bak_suffix = BAK_CURSOR
     arg_name = "cursor_dir"
     env_vars = ("CURSOR_HOME",)
-    proc_names = ("Cursor", "cursor")
+    # ⚠ Windows tasklist 的进程名带 .exe：不带 .exe 形态永远匹配不到（实测）
+    proc_names = ("Cursor.exe", "cursor.exe", "Cursor")
     mark_begin = CURSOR_MARK
     mark_end = "<!-- POJIA-NEXT-INJECT:END -->"
 
@@ -5199,7 +5469,22 @@ class CursorTarget(_MarkBlockTarget):
                 + persona.rstrip() + "\n"
                 + self.mark_end + "\n")
 
-    def _merge(self, old, persona):
+    def _do_strip(self, text, begin, end):
+        """还原时连**我们自己写的 front-matter** 一起收掉。
+
+        否则还原后会在 rules\\ 里留个空壳 .mdc：front-matter 还在、还写着
+        alwaysApply: true，正文却没了 —— 看着像"没还原干净"。
+        只在前面的 front-matter 确实是我们那份（含 pojia-next）时才收。
+        """
+        rest = self._strip_block(text, begin, end)
+        s = rest.lstrip("\n")
+        if s.startswith("---"):
+            j = s.find("\n---", 3)
+            if j >= 0 and "pojia-next" in s[:j] and not s[j + 4:].strip():
+                return ""
+        return rest
+
+    def _merge(self, home, old, persona):
         # Cursor 规则文件整份由我们掌管：直接覆盖成带 front-matter 的完整规则。
         # 用户自己的规则应放在别的 .mdc 文件里（我们不碰其他文件）。
         return self._rule_body(persona)
@@ -5253,7 +5538,8 @@ class ClaudeTarget(_MarkBlockTarget):
     bak_suffix = BAK_CLAUDE
     arg_name = "claude_dir"
     env_vars = ("CLAUDE_CONFIG_DIR",)
-    proc_names = ("claude", "Claude")
+    # ⚠ Windows tasklist 的进程名带 .exe：不带 .exe 形态永远匹配不到（实测）
+    proc_names = ("claude.exe", "Claude.exe", "claude", "Claude")
     mark_begin = "<!-- POJIA-NEXT-INJECT:BEGIN -->"
     mark_end = "<!-- POJIA-NEXT-INJECT:END -->"
 

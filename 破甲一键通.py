@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ================================================================================
- 破甲一键通  v7.7   （多目标统一脚本）
+ 破甲一键通  v7.8   （多目标统一脚本）
 ================================================================================
 
  把桌面那几套破甲工具合并成【一个脚本】，一套人格，六个目标：
@@ -19,9 +19,22 @@
      dsh-purge                      （Python，dsh_purge.py）
      Codex破甲工具                   （Python，v6.1 曾回填过 Codex 目标）
 
- ⚠ 版本说明（v7.5）：**Codex 目标已移除**。v6.1 回填、v7.4 还在，v7.5 起不再支持 ——
-   含 Codex 的最后一版是 v7.4（脚本另存归档为 归档/破甲一键通-v7.4-含Codex.py）。
+ ⚠ 版本说明（v7.8）：六个目标全部在线可用 —— dsh / wb / zcode / codex / cursor / claude。
+   · v7.5 曾一度移除 Codex（当时用旧的全局配置注入方式，副作用大）；
+   · **v7.7 起 Codex 已重新加入**，改为写 `~/.codex/config.toml` 的
+     `model_instructions_file` 指向人格文件，不再改动全局 AGENTS.md，干净可还原；
+   · 新增 Cursor（`.cursor/rules/*.mdc`）与 Claude Code（`CLAUDE.md`）两个目标。
    历史说明（为什么当初那样实现）保留在下方注释与 修复报告.md 里，不抹掉。
+
+ ℹ 内部迭代号说明：代码注释里出现的 v7.9 / v7.10 是**开发期内部编号**，与对外发布的
+   `VERSION = "7.8"` 不是一回事 —— 对外只在「封条 + 功能」成套齐备时才发新版，
+   内部每轮改动各自记一个号。两号的分工是：
+     · **v7.9** —— 加密块扩容（反圈钱提示 / 自证整段模板 / 反二改与退款提示收进
+       `_SEALED`）；只读入口标志（`READONLY`）；进程表缓存；目标选择菜单探测缓存；
+       运行期声明复读。
+     · **v7.10** —— 自证口令 `PASSPHRASE` 与回执串 `SIGNAL_REPLY` 也收进 `_SEALED`；
+       修掉 `subprocess.run(..., text=True)` 在中文 Windows 上的解码崩溃。
+   看到 v7.9/v7.10 注释属正常现象，不影响对外版本号。
 
  相比原来的几套工具，这个统一脚本：
      1. 一份人格（EMBEDDED_PERSONA / persona.md），六个目标共用，不再各写各的；
@@ -391,73 +404,73 @@ def _k2(src):
 
 
 _B0 = """\
-3o3AIQVIM0YmGRsMBNXFgH6PewYD5zxQBHdD3uBL/Wy93Ia+/SkNcmkQY9OzOgaRn5We7UnE72mb
-RiRxKw947mTbgp2atXB/8EiAkagEjKYsB4zwcGEMGMb5f/aONON0g46OY19P85F9R13io97FG7Hm
-zGGBNkaVDO5Mf6RtF1rRPMOdmuVjsoHSMwQFjfO3BGI0ajDGIj8iEvO1b2eELJbWcDSnYxb/g+KO
-V2qhtTbH56lIuDL0GPzJC1UgwAohrJXiMn/JXshJ/oB6foe8XmVvUfm1fS9lZQDKdpgcIPlGlxW6
-brI+mJ6Q9IbMqlsLgmuy7L7ZRfdwMcAx9KcwE1ODLM+3mlLTEPAOkBA+OkhPniz6kCpJxFLEAbAH
-xAoXzW5OeuEBx6GcX1faqu5AQpQf8mn3VDyPm7E2cAuTyEnE/JTx0EAJkmvLBF3Uu9xvpl4wG6he
-BXU5oMncsZaB9BqDVHHptc1zvgT9t9FGOvAITDZBX+A3D50JgcW/xs3wB6R4SdYPT/sjF+EUvFTh
-ewh8uyOTNDPeOGb9v0LVLIlC6DDrFb/0Qlyu+Cs3bWoww/v/Ra8scu/WZszFoMinkAmbiNAhFI6r
-rNElpRbP9ThaZubY8a6A41L0tVsrzkmYYBsUcPVjk1xn/1IFKHot9Mx6nYMhoyPs40qskW7rU5kE
-S83h8r4vTzT89lvXIBbbEgRfzgVFZHuLteC7q2kMr2Eocf1InceeoZxL6ItY/KcjZqc3B/IFsXud
-yTAN73ydVKV1FeA4+sWrHUdBfc/Oy2oJ2VS+356T31DpHgVKLZ23UH/St6GcybG4HkEAo/2qZFH9
-Ixcucp0ThEHNPzIl4Wgz3pX5jASRDdU+H2xmNhVwaZ/WZAvaXkT0TVzkySN2H15akM4K0s72FKkK
-mGp9ZI9OQt6jMnT1p5SYnC2O3SAKOPug2odxXzwEU/hXYGGvrFFN09cOGg9VofyCs5+fPgD27A/M
-pKhXIXXvAwiopJD0154fTrkUzNPjoahHf+tmPO4tzCIuAzgQ5gmfJBw1gMPpxVtSWgskCcDL/LjW
-527ojzaSjFJ+HYw8KK/C49xq8JiYUVUukDwWCqqxoMb4JemhJW7CWrsIc3gmnQAD+8saV0d2Od4s
-/OdW/gxPVYs1Z68Y0G7F0W0adWBMXRZssP/BRfElicLo5ZFWjY24AT7zq/e9RJvSN0oGTuBiBHNx
-ksEh/p2iSdFs/dmbFnR1mEEZU9BZfCUdSRvgGEMUGF1V0CBw0vWYeLy/IWYYE0aURmmj9tz38guA
-xK7iGHn7MCverI00Yh5Gy1AR7uyOOSpR2Oo5SXBhNN0ZH68K9rIa76BILchvCw/JL6HjAeUz/XnN
-c2UPQU/DVorYbC2dsw/KJkLpOthAqdw5tI/IiygY+gLyXYLzM40wAJO7i7C1qoBkZ8g+oKbaiiUf
-/JgJP4Fw85CLVzdSpNiSId1LcNrKWFnU9SxDj2a1KMQsOko3AeS693+f7KbuiTb491xryn/JXKrB
-kXn582ff/0ksrcJDnYdf+LcpRELJb8ldcVjpdqMD5RSwjkoGvaqad9vTXfehvZGjJvaRlRS6XEML
-5aR5yz8rBavmHM8tQ/AeHLyDU4bzuMJDu8Z4a5BZ0VK+DxhNq5GMmE4QbZoup3FbzFG13UDSmr4x
-mZ6sB0vVOTcUx8fecMUdRi41LUxThg4+yJKq8TBr14UlEJoq/SKFDU1TBm4AIPX/E0pk36V+9lLv
-JxN7F7J2+GQyeWmUfETPFbwi/JX6cgxiy/pL9nycsy5dWP7x6mKda1Svbcd4crAuiTCgriRj+DdS
-8B6zgvkPprOMTERJA3E7Gr8AisV0xrgaUjuikR7aP/IjHDnEHRuXxEAZHhcVqLE2CAAn/RuKhYAE
-yTG4wF6+CpEH0nHHY1BKZhKDNPAizoqxDPyyDb2pZa/3rAcBVC9x6HHmW9hkbfFCWFbwUuNPEO4b
-eIlcciKiYDuFMv7YKJplEfg54WFBOIz6Gjg9feT7cglZfQSg4onEblZldKQU4G0EigTGJEoOWDzU
-LwEwSoVmNPpLVUtELv5LgmFoYD7XRI2RbEelwhLfZhb2PqxqKL5dRPoBB02VHvQ+ztZzGgxZPnkE
-GC5Tp9uKW/0EVLayGDdO/NhwZMZxmSuzE3E10J8176XkrdvVVkmXz/kP4SYf9SnfR/vLT5nAp56i
-C1to+cTs5Ss8GZ8DbbC/l2pml5aKFLemalCy+GamumhqFF2RJkFo/Gn8NgdfPWKGXdCv2E9AEkHf
-hRcK6StxZ3s6jwqOtR3v7Znktf1ZX6DtiOuBgYKpjmYpKCKmwX4hKbFNfTz3caw9T5O2GmgUhAR9
-muHZAWuF3KRdIo7rCCzPQMp+fNJwj14djtPF2YCgHvE5COMeIt/40MN8BWhqXVwcWL4AjfOqMtS+
-C6I0WPIWGsDPlRObzwXxkvBf1ZL+1JfQUfCK1chQeKLmzHe3Hlv125i0WXj2DeHATAp35rGxZX1Y
-oCb7Ulo2MzkOhkueSV2+N59fSYixR/POxKME7ZTBQAZPXhIU4lggFR/AjODvHrWH8T0uOTVWhUlQ
-qVn1L3IAEgceqGWxfHp1isvNk3Tnuu9bCr7beHjkE3O6oWw8sNaCOTZ41o4azrf9XW9GwrRhtqx9
-hPKJD0iDMU/EK8ekTu1gMfQrm637TWC0vQArdwsY/2GSBhHdzwrDhOppgoa9sHmwFOp/UuXNJT62
-1LK3VxDjc1cKn2Ng2jkTFDvdzxOyGj1LRJzjemiPjiITakrzzT9MQn4v0AOh2FObtgi7wNWKmECL
-SDJFs+G19t5hakg6Vt3eLsb2lQ+j9pfY3REeXyPX/xJKT0sJvBzBb0VHxg9r6uq842f+f71rgo7F
-LdoJohlAUtum3I8gnKBzzInL53atpCZizt7E0qtaAbYIlpDLNPTFF+AmZM3i/IteUCvSd76NDXqf
-8EeNEJZguppWntXThRPWF70MBK4BpV2avZ+YWBnBKQxlL5eaH3+ARduKGJXZutEa5KRuuNcgDbwB
-BdG6O3c0XxrGVXCi1LV2ihAgcXLqZUm7NyBKh01858Cwe0SHGyrrlMDQfx4VACAHbXoL0pf5LJrT
-QcOP5Tau8HRdjGBWoMmLDGHGBDajtVtwdaWGCtIBKJaLK6K5/xaFpJqv0zF5hlf9mXjSGn3vKELc
-1EU+5R4WUF9HzxSAl+ynFdq5mqfufMvnWj4A+qyKebmCE9iIMdCsnbVVrVbEI52uslJ9FLEFmuvz
-35ch7Ys9mlncBOpww8IuyD3EGYA6R3kIWFVBR+FQrEfNpD0oSL6fbsR67/bqR8E0N4Sgts2YVB6D
-TlCpwG4gfHIMDKjJi5AnP1shC1NMVg2QMfk+WNYUS0JKowx06hQ/deF+ueQGKt/AQYdbS8EsFBPC
-NYhKDtN29nBOGcRV6l5SHx1xyrVK9/ItYh9NjwbDUel3iYMgMzWrZEYC2Dm7Z+KLvWmb5LUnK3/e
-0dursCAUWHYpFbUtHPJm4XG/nshlOaTN7bkaPJ6pdHmh1FZOCbzqgQmtaPg0z1isOaI5WF29qwQ5
-MVWXKK+DaC0dUuB7FZpDZ4t2EatJc4lf9SuVeAeYmIX06Y9U3UeSr/FhJdwAfPGLpFWjwHYgrQvb
-Qz+p8ObPFXbES/QWKPkbkQZ/6FR/4LxQIzEGdDOoN9kQw5I4YKX0rX0PqvtHZBVsWbhYdkJxcYtq
-fr+zE4WddYGwcwWQYvAxuBtg4hafpm7xfkh0A1gFAbn294DlF1MzFfSocGVllsnDZO0Ly8z084M7
-1ufiLATpU7n1PIYaD97mpQvfsqdFAt9a+tf09sLXmG4HME8GQQsgWyCCd7z6934QD6rTr9kHmcNl
-b9EtwfFYk0QnMWEULbLlH6SMN+2tpQTrz4cDWxaeVcgIUxVbd6Y0EXdyzM6FPQ6e4sfOgx0Gpujp
-Z7+gV3O/Dfr498+XhFaEjQ7DxRX1g5mHDYfd5ceBAw6kPVMp4MLvrZhm3TEhGTpOSZlkFIk173Cf
-J1H8ZWodFbNkGIEnDkQqnMnjDJ4Bh+M6gO0jFqmmS2P2F4PZ5QhgZ2UlUhBgKIiU2xbX8gpAbbCM
-nW9xSfBF5uF5fFEu5bUpFZtdF7HZAtnGxNfzEOFkRlQftR20IFzx09QDxtJgQsPA805H2cxpIq2W
-ZFrR+vDbqtES1xq4MNet0PKL+O1LE9dBm41Es0dsfeDVxDW1fPqWZEvQKVV5YnKeJEc1a0p66G+D
-pwaEi+jyWRCkKY7gfXAG9l/vorem5hY8H0kjQbnNjVDhiE61XMJay2jsK1J+Vc76PNlBUZv6EH79
-mpVMDyDpqJJS4YYjTmyuAiFNM071dldcQrrvAogMSjcwQygBi5iY3nCxC5CyoAUuLX8pbBpE2GT2
-iUpr79Kp5h3Ev7fyf+euBxZ16ZMuR/8ZotpdOnN92KZUgXXOdAIaCrGzqeichdFhyCFDwfdcY2sY
-0tv8CUN2kk1pbIiHnXgk87fHo6cHqVMdcmmfD8sFu1YyaVHsVEGKOqVDKeFCC687gEeaOlxsFZVk
-r44d05EcAnp0FDEYXIcot4cQn34ifcV20ZhiP3dmoqMSy/kM0vfn1y0CxMD1eJETyor3rqTNev4A
-SllRk9sHaOLajAsaTsBt0SlweGkWyoO8C1xaBLGGg6eGSxNASi3bDrIHL/lEtzrT6dbsq5JFjVdA
-4JAOd620+HOmy67liYciHq1SktpbPEPwppW+ixCXNyVThxxnn/j8zocxQer+Eeueyl4j1hDM1ktR
-BbEyXL/b4xRR
+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
+e3kjEZOeFHt6
 """
-_B1 = "0dd1ff257b9346333bf1c2214793eb526b7db67ee55663bc24afbcca1c07580d"
-_B2 = "6da8b6b5d0a3af81a3eed877bc12ccb1bb3ba91c79e70095afd6e12e38c96dc1"
+_B1 = "ef2e9fae9561113ff3098066e48b745504de41f85b106b9825c4e55da0d16139"
+_B2 = "9c70f25dc99a6ff7bc36818996aa9ee609ea8e04846949250020e2d0bef8bbe6"
 
 #__seg_b0__
 _SX = ("#__d0__", "#__d1__")
@@ -935,7 +948,10 @@ def log(msg, color="", target="", echo=True):
     _log_buf.append(line)
     # v7.4：预演 / 只读体检时**不写日志文件** —— 界面自述"未改动任何文件"，
     # 却往脚本目录追加 破甲日志.txt，自相矛盾（对抗测试抓到的低危项）。
-    if not DRY_RUN:
+    # v7.9：光看 DRY_RUN 兜不住 —— 它只在 run_action() 里设置，而 run_status() /
+    #   run_check() 不经过 run_action，于是它们恒为 False，闸门等于没有（实测复现）。
+    #   现在同时认 READONLY（由只读入口显式置位）。
+    if not DRY_RUN and not READONLY:
         try:
             with open(LOG_PATH, "a", encoding="utf-8") as f:
                 f.write(line + "\n")
@@ -985,6 +1001,14 @@ def read_text_safe(path):
 # 这是"预演一个字节都不改"承诺的**兜底**：万一将来又有人漏写 dry 判断，
 # 也不会把用户的文件改掉（DSH/WB 的 revert 分支就漏过一次）。
 DRY_RUN = False
+
+# v7.9：只读入口标志。**必须与 DRY_RUN 分开** —— DRY_RUN 只在 run_action() 里设置，
+# 而 --status / --check 走的是 run_status() / run_check()，压根不经过 run_action，
+# 于是它们永远是 DRY_RUN=False，log() 的闸门对它们形同虚设。
+# 实测后果：README 写明"只读模式新增文件数 = 0"，实际 --status / --check 都会在
+# 脚本目录新建 破甲日志.txt（--version 不会，因为它不等价于只读入口）。
+# 由只读入口自己声明，不要再依赖"调用方记得走 run_action"这种隐式约定。
+READONLY = False
 
 
 def _atomic_write(path, data):
@@ -1301,8 +1325,34 @@ def _run(cmd, timeout=60):
         return str(e), -1
 
 
-def list_processes():
-    """返回 [(pid, name, cmdline)]，跨平台，永不抛异常。"""
+# v7.9：进程表缓存。原实现每次调用都冷启两趟子进程 ——
+#   tasklist(本机 1.49s) + powershell Get-CimInstance(本机 3.19s) = 4.2s/次，
+#   而且**没有任何缓存**：实测一次 --status 要跑 13 遍 → 87 秒；
+#   目标选择菜单每重绘一次就要对 6 个目标各探一遍 → 16.4 秒。
+# 这里给两层：① 结果按 _PROC_TTL 内共用；② 只需要进程名的调用方
+# 走 need_cmd=False 快路，跳过那趟 3.2 秒的 WMI 查询。
+_PROC_CACHE = {"full": None, "full_t": 0.0, "names": None, "names_t": 0.0}
+_PROC_TTL = 15.0            # 秒。菜单里久留后会自动重取，不会拿着过期名单做判断
+
+
+def list_processes(need_cmd=True, force=False):
+    """返回 [(pid, name, cmdline)]，跨平台，永不抛异常。
+
+    need_cmd=False：跳过 PowerShell/WMI，只保证进程名可信（快 ~3.2s）。
+    只按进程名匹配的调用方（Codex/Cursor/Claude 的 running()）应该走这条快路。
+    force=True：强制重取。结束进程之后必须用它，免得拿到已死 PID。
+    """
+    now = time.monotonic()
+    if not force:
+        full_fresh = (_PROC_CACHE["full"] is not None
+                      and (now - _PROC_CACHE["full_t"]) < _PROC_TTL)
+        # full 是 names 的超集 —— 有 fresh 的 full 就能直接满足两类请求
+        if full_fresh:
+            return _PROC_CACHE["full"]
+        if (not need_cmd) and _PROC_CACHE["names"] is not None \
+                and (now - _PROC_CACHE["names_t"]) < _PROC_TTL:
+            return _PROC_CACHE["names"]
+
     procs = []
     if IS_WIN:
         try:
@@ -1317,34 +1367,35 @@ def list_processes():
                         pass
         except Exception:
             pass
-        try:
-            ps = ('$OutputEncoding=[System.Text.Encoding]::UTF8;'
-                  '[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;'
-                  'Get-CimInstance Win32_Process | ForEach-Object {'
-                  '("{0}|{1}|{2}" -f $_.ProcessId,$_.Name,'
-                  '($_.CommandLine -replace \'"\',\'\'))}')
-            out = subprocess.run(["powershell", "-NoProfile", "-Command", ps],
-                                 capture_output=True, timeout=30).stdout or b""
-            for enc in ("utf-8", "utf-16-le", "gbk", "latin-1"):
-                try:
-                    out = out.decode(enc)
-                    break
-                except Exception:
-                    continue
-            else:
-                out = out.decode("utf-8", "replace")
-            for ln in out.splitlines():
-                if "|" not in ln:
-                    continue
-                pid_s, name, cmd = ln.split("|", 2)
-                try:
-                    pid = int(pid_s)
-                except ValueError:
-                    continue
-                procs = [(p, n, c) for (p, n, c) in procs if p != pid]
-                procs.append((pid, name, cmd or ""))
-        except Exception:
-            pass
+        if need_cmd:
+            try:
+                ps = ('$OutputEncoding=[System.Text.Encoding]::UTF8;'
+                      '[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;'
+                      'Get-CimInstance Win32_Process | ForEach-Object {'
+                      '("{0}|{1}|{2}" -f $_.ProcessId,$_.Name,'
+                      '($_.CommandLine -replace \'"\',\'\'))}')
+                out = subprocess.run(["powershell", "-NoProfile", "-Command", ps],
+                                     capture_output=True, timeout=30).stdout or b""
+                for enc in ("utf-8", "utf-16-le", "gbk", "latin-1"):
+                    try:
+                        out = out.decode(enc)
+                        break
+                    except Exception:
+                        continue
+                else:
+                    out = out.decode("utf-8", "replace")
+                for ln in out.splitlines():
+                    if "|" not in ln:
+                        continue
+                    pid_s, name, cmd = ln.split("|", 2)
+                    try:
+                        pid = int(pid_s)
+                    except ValueError:
+                        continue
+                    procs = [(p, n, c) for (p, n, c) in procs if p != pid]
+                    procs.append((pid, name, cmd or ""))
+            except Exception:
+                pass
     else:
         try:
             out = subprocess.run(["ps", "-eo", "pid,comm,args"],
@@ -1359,17 +1410,27 @@ def list_processes():
                         pass
         except Exception:
             pass
+
+    t = time.monotonic()
+    _PROC_CACHE["names"] = [(p, n, "") for (p, n, _c) in procs]
+    _PROC_CACHE["names_t"] = t
+    if need_cmd:
+        _PROC_CACHE["full"] = procs
+        _PROC_CACHE["full_t"] = t
     return procs
 
 
 def find_processes(proc_names, cmd_hints):
     found, seen = [], set()
     low_names = [n.lower() for n in proc_names]
-    for pid, name, cmd in list_processes():
+    hints = [h.lower() for h in (cmd_hints or ())]
+    # v7.9：没有命令行提示词时没必要取命令行 —— 省掉 WMI 那趟（本机 3.2s/次）。
+    # Codex/Cursor/Claude 的 running() 传的就是空 hints，正好吃这条快路。
+    for pid, name, cmd in list_processes(need_cmd=bool(hints)):
         hit = (name or "").lower() in low_names
         if not hit:
             cl = (cmd or "").lower()
-            hit = any(h.lower() in cl for h in cmd_hints)
+            hit = any(h in cl for h in hints)
         if hit and pid not in seen:
             seen.add(pid)
             found.append((pid, name, cmd))
@@ -1391,6 +1452,12 @@ def kill_processes(procs, dry_run=False):
                 out.append("已结束 进程 %s (%s)" % (pid, name))
         except Exception as e:
             out.append("结束进程 %s 失败: %s" % (pid, e))
+    # v7.9：刚杀过进程 → 缓存必须作废，否则后面还按旧名单判断"是否在运行"
+    if not dry_run:
+        _PROC_CACHE["full"] = None
+        _PROC_CACHE["full_t"] = 0.0
+        _PROC_CACHE["names"] = None
+        _PROC_CACHE["names_t"] = 0.0
     return out
 
 
@@ -2402,6 +2469,58 @@ ALL_TASKS = ["WorkBuddyUnlockGuard", "WorkBuddyUnlockGuard_Hourly",
              "WorkBuddyUnlockV4_Hourly", "WorkBuddyUnlockV4_Logon",
              "WorkBuddyUnlockV6_Hourly", "WorkBuddyUnlockV6_Logon"]
 
+# v7.9：计划任务名的全表缓存。
+#   原来 `scheduled_task_names()` 对这 8 个名字**各开一次** `schtasks /Query /TN`，
+#   本机实测 ~0.4s/次 → 光这一项就 3.2s。改成**一次** `schtasks /Query /FO CSV`
+#   拿回整张表再本地匹配，只读路径的子进程数从 8 降到 1。
+#   ⚠ 只给「读」用：`_task_exists()`（创建/删除后的校验路径）**保持逐个精确查询**，
+#     绝不能吃缓存 —— 否则刚装好的任务会被缓存判成"不存在"，静默误报失败。
+_TASK_NAMES = {"set": None, "t": 0.0}
+_TASK_NAMES_TTL = 20.0
+
+
+def _task_names_invalidate():
+    _TASK_NAMES["set"] = None
+    _TASK_NAMES["t"] = 0.0
+
+
+def _all_task_names(force=False):
+    """一次列出全部计划任务名（集合，含 \\文件夹\\名 与裸名两种写法）。失败返回 None。"""
+    now = time.time()
+    if (not force) and _TASK_NAMES["set"] is not None \
+            and (now - _TASK_NAMES["t"]) < _TASK_NAMES_TTL:
+        return _TASK_NAMES["set"]
+    found = set()
+    try:
+        r = subprocess.run(["schtasks", "/Query", "/FO", "CSV", "/NH"],
+                           capture_output=True, timeout=60)
+        if r.returncode != 0:
+            return _TASK_NAMES["set"]          # 查询失败：沿用旧值/None，由调用方回退
+        # 任务名全是 ASCII。用 latin-1 解码**永远不会抛异常**，且 ASCII 字节一一对应，
+        # 因此不受系统 ANSI 代码页（中文机 936）与 mojibake 影响。
+        # 只用字符串切分、不引 csv/io：CSV 的第一列必然是任务名（带引号），
+        # 而任务名里不含逗号或引号，所以切第一个 `",` 即可。
+        text = r.stdout.decode("latin-1", "ignore")
+        for line in text.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith('"'):
+                end = line.find('",')
+                nm = line[1:end] if end > 0 else line.strip('"')
+            else:
+                nm = line.split(",")[0]
+            nm = nm.strip().strip('"').strip()
+            if nm:
+                found.add(nm)
+                found.add(nm.rsplit("\\", 1)[-1])   # 去掉 \文件夹\ 前缀
+    except Exception:
+        return _TASK_NAMES["set"]
+    _TASK_NAMES["set"] = found
+    _TASK_NAMES["t"] = now
+    return found
+
+
 SNAP_PREFIX = "提示词快照-"
 
 
@@ -2470,9 +2589,8 @@ class WorkBuddyTarget:
             m = re.search(r'([A-Za-z]:\\[^"]*?WorkBuddy[^"]*?)\\WorkBuddy\.exe', cmd, re.I)
             if m and ok(m.group(1)):
                 return m.group(1)
-        for _pid, name, _cmd in list_processes():
-            if name and name.lower() in ("workbuddy.exe", "workbuddyai.exe"):
-                pass
+        # v7.9：这里原本还有一段 `for ... in list_processes(): if name ...: pass`
+        # —— 循环体是空的，纯粹白跑一次进程枚举（本机 1.5~4.2s）。已删。
 
         # 3) 全盘符扫描（⚠ 原 PowerShell 版写死 %LOCALAPPDATA% / D:\ / C:\Program Files，
         #    本机装在 F: 盘 -> 完全找不到，属于"空跑"的主因）
@@ -2884,7 +3002,19 @@ class WorkBuddyTarget:
             return None
 
     def scheduled_task_names(self):
-        return [n for n in ALL_TASKS if self._task_exists(n)]
+        """当前存在的守护任务名（**只读**）。
+
+        v7.9：先走一次批量查询（`schtasks /Query /FO CSV`，只 spawn 一次），
+        不再对这 8 个名字各开一次 `/Query /TN`（本机 8×0.4s ≈ 3.2s）。
+        批量查询拿不到时（权限异常、输出格式不符）**回退到逐个精确查询**，语义不变。
+        """
+        try:
+            have = _all_task_names()
+        except Exception:
+            have = None
+        if have is None:
+            return [n for n in ALL_TASKS if self._task_exists(n)]
+        return [n for n in ALL_TASKS if n in have]
 
     def remove_guard_tasks(self):
         removed, failed = 0, []
@@ -2896,6 +3026,7 @@ class WorkBuddyTarget:
                 failed.append(name)
             else:
                 removed += 1
+        _task_names_invalidate()   # v7.9：改过任务表，作废批量缓存
         return removed, failed
 
     @staticmethod
@@ -2918,6 +3049,7 @@ class WorkBuddyTarget:
         if admin:
             argv2 += ["/RL", "HIGHEST"]          # 登录任务要提权才能注册（需管理员）
         _m2, _rc2 = _run(argv2)
+        _task_names_invalidate()   # v7.9：刚建过任务，作废批量缓存（否则过后查到旧表）
         ok_h, ok_l = self._task_exists(TASK_HOURLY), self._task_exists(TASK_LOGON)
         # 校验任务真的指向本脚本（不然"存在"也是静默失败）
         cmds = (self.task_command(TASK_HOURLY) + self.task_command(TASK_LOGON)).lower()
@@ -3512,6 +3644,9 @@ class WorkBuddyTarget:
         return out
 
     def do_compare(self):
+        # v7.9：对比是只读动作，不该在脚本目录留日志（同 run_status / run_check 的道理）
+        global READONLY
+        READONLY = True
         d = self.latest_snapshot()
         if not d:
             log("没有快照目录，先跑一次 --snapshot", "y", "wb")
@@ -3964,6 +4099,8 @@ def scan_config_hints(cfg_path, root):
 
 def run_check(args):
     """只读体检：磁盘态 + 凭证位置 + 版本一致性 + 自证就绪。永不改盘。"""
+    global READONLY
+    READONLY = True                       # v7.9：只读入口自己声明，见 log() 处说明
     header("体检（只读）", "只报分类与结论，不打印密钥原文，不改任何文件")
     ok_all = True
     for k in DEFAULT_TARGETS:   # 别再硬编码目标列表：加目标时这里会静默漏掉（踩过）
@@ -5578,6 +5715,12 @@ TARGET_ALIAS = {"workbuddy": "wb", "dsh-desktop": "dsh",
                 "all": "all"}
 DEFAULT_TARGETS = ["dsh", "wb", "zcode", "codex", "cursor", "claude"]
 
+# 界面用的短名。启动横幅由它 + DEFAULT_TARGETS 拼出来 ——
+# 原来横幅写死成 "DSH / WorkBuddy / ZCode"，v7.7 加到六个目标后忘了同步，
+# 于是启动界面一直少列三个（用户可见的陈旧文案）。改成动态生成，以后加目标不会再漂。
+TARGET_LABEL = {"dsh": "DSH", "wb": "WorkBuddy", "zcode": "ZCode",
+                "codex": "Codex", "cursor": "Cursor", "claude": "Claude Code"}
+
 
 def resolve_targets(spec):
     spec = (spec or "all").strip().lower()
@@ -5691,6 +5834,8 @@ def run_status(args, targets=None, allow_ask=False):
     「输入 A 或 B」上。没检测到就只在输出里写一行提示。
     allow_ask 只在确实需要引导的路径上由调用方显式打开。
     """
+    global READONLY
+    READONLY = True                       # v7.9：只读入口自己声明，见 log() 处说明
     targets = targets or resolve_targets(args.target)
     header("状态检测（只读）", "所有目标共用一套人格 / v%s 起带自证口令" % VERSION)
     for k in targets:
@@ -5721,11 +5866,14 @@ def _note_if_missing(t, args):
 
 
 def run_action(args, mode, targets=None):
-    global DRY_RUN, ERRORS
+    global DRY_RUN, ERRORS, READONLY
     targets = targets or resolve_targets(args.target)
     # v7.4：进入任何"预演"路径就打开全局拒写开关（write_text / backup_file 都会让路）。
     # 真动作时确保关掉 —— 菜单里连着跑过预演再跑真动作时，这个开关必须复位。
     DRY_RUN = bool(mode == "dry-run" or getattr(args, "dry_run", False)) and mode != "apply"
+    # v7.9：只读标志同理必须复位 —— 菜单里先点「检测状态」再点「破甲」，
+    # 不复位的话真动作的日志会被 READONLY 静默吞掉。
+    READONLY = bool(mode == "dry-run" or getattr(args, "dry_run", False))
     titles = {"apply": "一键破甲", "revert": "还原", "dry-run": "预演（不改盘）"}
     header(titles.get(mode, mode), "目标：" + ", ".join(targets))
     if mode == "apply":
@@ -5865,12 +6013,21 @@ def _pick_targets(args=None, title="选目标"):
     label = {"dsh": "DSH (DeepSeek Harness)", "wb": "WorkBuddy", "zcode": "ZCode",
              "codex": "Codex", "cursor": "Cursor", "claude": "Claude Code"}
     all_key = str(len(order) + 1)          # "全部" 的序号
+    # v7.9：探测结果只在第一次重绘时算，之后复用。
+    # 原来 while 每轮都对 6 个目标重跑 _detect_quick —— 实测每轮 16.4 秒，
+    # 输入一个非法序号要重问时用户就得再等 16 秒（对抗测试就是卡死在这）。
+    det_cache = {}
     while True:
         say("")
         say("  ── %s ──────────────────────────────────────────" % title, "c")
         picked_note = {}
         for i, k in enumerate(order, 1):
-            ok, note = _detect_quick(k, args) if args is not None else (True, "")
+            if args is None:
+                ok, note = True, ""
+            else:
+                if k not in det_cache:
+                    det_cache[k] = _detect_quick(k, args)
+                ok, note = det_cache[k]
             picked_note[k] = ok
             mark = "已检测到" if ok else "未检测到"
             color = "g" if ok else "dg"
@@ -6098,7 +6255,7 @@ def build_parser():
 
 
 def main():
-    global QUIET, _pause_needed
+    global QUIET, _pause_needed, READONLY
     check_runtime()
     _init_console()
 
@@ -6124,7 +6281,8 @@ def main():
     _pause_needed = interactive and not QUIET
 
     say("")
-    header("", "DSH / WorkBuddy / ZCode  一套人格，一个脚本")
+    header("一套人格 · 一个脚本",
+           " / ".join(TARGET_LABEL[k] for k in DEFAULT_TARGETS))
     say("")
     say(GRAY("  ── 免责声明 ──────────────────────────────────────────"))
     for _dl in DISCLAIMER_LINES:
@@ -6142,6 +6300,9 @@ def main():
     if args.guard:
         t = WorkBuddyTarget()
         if args.guard == "status":
+            # v7.9：`--guard status` 是纯查询，同样不许往脚本目录写日志。
+            #   install / remove 是改动作，照旧落日志（那正该留痕）。
+            READONLY = True
             t.audit_guard_tasks(verbose=True)
         elif args.guard == "install":
             if not is_admin():

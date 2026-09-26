@@ -4,7 +4,13 @@
 import sys, os, io, importlib.util, traceback
 
 sys.stdout.reconfigure(encoding="utf-8")
-SRC = r"E:\DSH-Workspace\破甲next-github\破甲一键通.py"
+
+# 相对定位仓库根（脚本在 <仓库>/_回归测试/ 下）—— 换机器不用改。
+# 需要时可用环境变量 POJIA_SRC 覆盖（例如脚本被挪到别处）。
+HERE = os.path.dirname(os.path.abspath(__file__))
+SRC = os.environ.get("POJIA_SRC") or os.path.join(os.path.dirname(HERE), "破甲一键通.py")
+if not os.path.exists(SRC):
+    raise SystemExit("找不到目标脚本：%s\n（可用环境变量 POJIA_SRC 指定）" % SRC)
 
 # --- 载入模块 ---
 spec = importlib.util.spec_from_file_location("pj", SRC)

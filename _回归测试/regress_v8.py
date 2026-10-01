@@ -58,6 +58,9 @@ ck("兜底协议含「一条可直接复制运行的完整命令」",
    "一条可直接复制运行的完整命令" in PJ.HARDENING)
 ck("改盘工件含回滚要求", "怎么退回去" in PJ.HARDENING)
 ck("自检文本含回执语义边界", "回执的语义边界" in PJ.signal_text("DSH", PJ.VERSION))
+ck("VERSION 已是 8.0", PJ.VERSION == "8.0", PJ.VERSION)
+ck("载荷内 version 与 VERSION 对齐", PJ._SEALED.get("version") == PJ.VERSION,
+   PJ._SEALED.get("version"))
 
 # ---------- B) 只读路径不落盘 ----------
 print("B  只读路径不写 破甲日志.txt")

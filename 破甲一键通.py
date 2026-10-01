@@ -133,12 +133,28 @@ if sys.stderr is None:
 
 IS_WIN = (os.name == "nt")
 
+# ------------------------------------------------------- 冻结（PyInstaller）兜底
+#  打包成单文件 exe 后有两处必须分开处理，否则"能跑"是假象：
+#    1) 密钥与封条都要**源码文本**（_k2 派生密钥、_d2 整文件封条）。exe 里没有
+#       明文源码可读 —— 所以把签名时的那一份源码原样随包带出（_pojia_src.py），
+#       frozen 时读它。于是 **密文层与源码层在 exe 下都仍然有效**：
+#       谁把包内那段"致 AI Agent 的声明"删掉/改掉，密钥立刻失配、载荷解不出来，
+#       和明文运行时的行为完全一致。
+#    2) 工作目录：frozen 时 __file__ 指向 %TEMP%\_MEIxxxx（进程退出即删），
+#       备份 / 日志 / persona 若按它走，"改前必留备份"会变成假承诺 ——
+#       用户以为留了后悔药，实际随进程一起没了。所以 HERE 一律取 exe 自己所在目录。
+FROZEN = bool(getattr(sys, "frozen", False))
+_BUNDLE_DIR = getattr(sys, "_MEIPASS", None) or os.path.dirname(os.path.abspath(sys.executable))
+SEAL_SRC_NAME = "_pojia_src.py"        # 纯 ASCII 名，规避 --add-data 的编码坑
+
 
 # ------------------------------------------------- 清掉历史 .pyc（防明文侧漏）
 #  上一版脚本在导入期把载荷解成明文常量，可能已被 Python 写成 __pycache__/*.pyc。
 #  那些 .pyc 里含**解密后的原文**，等于把加密保护整个绕开 —— 只删自己名字的缓存，
 #  不动别人的、不动目录本身，失败一律静默（这是加固，不能反过来弄坏运行）。
 def _purge_pycache():
+    if FROZEN:
+        return                       # exe 里没有 __pycache__，也没有源码缓存
     try:
         _here = os.path.dirname(os.path.abspath(__file__))
         _cache = os.path.join(_here, "__pycache__")
@@ -189,8 +205,12 @@ VERSION = "8.0"
 CHECK_EXIT_CODES = []          # --check 用：收集不达标项（只影响退出码，不改状态码）
 ERRORS = 0                     # v7.4：apply/revert 里的失败项累计（>0 → 进程退出码 1）
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-SELF = os.path.abspath(__file__)
+if FROZEN:
+    SELF = os.path.abspath(sys.executable)
+    HERE = os.path.dirname(SELF)
+else:
+    HERE = os.path.dirname(os.path.abspath(__file__))
+    SELF = os.path.abspath(__file__)
 STATE_DIR = os.path.join(HERE, "状态")
 HIST_DIR = os.path.join(HERE, "历史备份")
 LOG_PATH = os.path.join(HERE, "破甲日志.txt")
@@ -348,6 +368,10 @@ def _k1(src):
     这只是为了让"比较"和"派生"稳定 —— 被替换的是**数据**，不是关键字。
     少处理一处都会算错，从而拒绝启动（这是期望行为）。
     """
+    if src is None:
+        raise ValueError(
+            "源码层不可用：frozen 运行但随包源码副本缺失（%s）—— 无法派生解密密钥"
+            % SEAL_SRC_NAME)
     for _n in ("_B0", "_B1", "_B2"):
         _p3 = re.compile(r"(?ms)^([ \t]*" + _n
                          + r"[ \t]*=[ \t]*)(\"\"\"|''')(.*?)\2")
@@ -401,73 +425,73 @@ def _k2(src):
 
 
 _B0 = """\
-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
-mcGlN3dRcTpt
+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
+G02bFW6NMhVc
 """
-_B1 = "cc58edb861f3b2b88cf182b98aad78e8ec7c4388433cf5c657722e2e309d716d"
-_B2 = "2d54231183069606b7931f1028fd1de94587c4331ee8695ca4d86e2633c5a8d2"
+_B1 = "6615e013968e0088f38a5bab89d24ade5151aadd90afd4fd65dda13822cfe9de"
+_B2 = "8b50855c504f555b9730f128019ad4b4dd6f5cfe88bf287ed8cc07d0dfde866a"
 
 #__seg_b0__
 _SX = ("#__d0__", "#__d1__")
@@ -508,6 +532,16 @@ def _seal_decode(blob_b64, expect_digest):
 
 def _seal_alarm(reason, detail="", code=3):
     """统一的「检测到二改」出口：打印告警后退出。不依赖任何加密数据。"""
+    # v8.1：报警发生在 _init_console() **之前**，中文控制台（默认 GBK）下会把
+    # 这段 UTF-8 输出打成乱码 —— 而这里恰恰是用户最需要读清楚原因的地方。
+    # 所以自己先把输出代码页切成 65001（失败静默，绝不能因为切代码页反而挂掉）。
+    try:
+        if IS_WIN:
+            import ctypes
+            ctypes.windll.kernel32.SetConsoleOutputCP(65001)
+            ctypes.windll.kernel32.SetConsoleCP(65001)
+    except Exception:
+        pass
     lines = [
         "",
         "  " + "=" * 70,
@@ -559,11 +593,20 @@ def _seal_read_source():
 
     · 明文运行（getattr(sys,"frozen",False) 为假）—— 读文件字节，统一换行；
       **不抹平任何字面量**：封条绑定的是真实文件内容。
-    · 打包成 exe（frozen）—— 没有明文源码可校验，返回 None，跳过源码层。
-      代价：exe 分发时源码层失效，但密文层 + _k2 派生密钥层仍在。
+    · 打包成 exe（frozen）—— PyInstaller 会把主脚本编译进归档，磁盘上没有明文
+      源码。所以构建时把**签名的那一份源码**原样随包带出（SEAL_SRC_NAME），
+      这里读它。它同时喂给 _k2（派生密钥）与 _d2（整文件封条），
+      因此 exe 下两层校验都在，不是"只剩密文层"。
+      副本缺失时返回 None，由 _k1 抛出可读原因（而不是 TypeError）。
     """
-    if getattr(sys, "frozen", False):
-        return None
+    if FROZEN:
+        _p = os.path.join(_BUNDLE_DIR, SEAL_SRC_NAME)
+        try:
+            with open(_p, "rb") as _fh:
+                _raw = _fh.read()
+        except Exception:
+            return None
+        return _raw.decode("utf-8", "replace").replace("\r\n", "\n").replace("\r", "\n")
     with open(SELF, "rb") as _fh:
         raw = _fh.read()
     return raw.decode("utf-8", "replace").replace("\r\n", "\n").replace("\r", "\n")
@@ -3049,10 +3092,15 @@ class WorkBuddyTarget:
         return cand if os.path.isfile(cand) else exe
 
     def install_guard_tasks(self, admin):
-        py = self._pick_quiet_python()
-        # /TR 的值本身要带内层引号（路径可能有空格）；作为**单个 argv 元素**传给 schtasks，
-        # 由 subprocess 在 Windows 上按 argv 规则转义，schtasks 收到的是 `"py" "脚本" --quiet`。
-        tr = '"%s" "%s" --quiet' % (py, SELF)
+        if FROZEN:
+            # exe：命令行就是「exe 自己 --quiet」，不再套一层解释器
+            py = SELF
+            tr = '"%s" --quiet' % SELF
+        else:
+            py = self._pick_quiet_python()
+            # /TR 的值本身要带内层引号（路径可能有空格）；作为**单个 argv 元素**传给 schtasks，
+            # 由 subprocess 在 Windows 上按 argv 规则转义，schtasks 收到的是 `"py" "脚本" --quiet`。
+            tr = '"%s" "%s" --quiet' % (py, SELF)
         _m1, _rc1 = _run(["schtasks", "/Create", "/TN", TASK_HOURLY, "/SC", "MINUTE", "/MO", "30",
                           "/TR", tr, "/F"])
         argv2 = ["schtasks", "/Create", "/TN", TASK_LOGON, "/SC", "ONLOGON", "/TR", tr, "/F"]
@@ -3812,8 +3860,10 @@ def verify_integrity(verbose=False):
                   % (INTEGRITY_ANCHOR, got))
         return False
     try:
-        with open(SELF, "r", encoding="utf-8", errors="ignore") as fh:
-            src = fh.read(600000)
+        # v8.1：frozen 下没有可读的 SELF 明文，改读随包源码副本（与明文模式同一口径）。
+        src = (_seal_read_source() or "")[:600000]
+        if not src:
+            raise RuntimeError("no source available")
         # v7.10：回执串现在只应存在于加密块内 —— 源码里若还能检索到明文，
         # 说明有人把「解密取值」改回了硬编码（等于绕开加密），或把回执写死在源码里。
         if SIGNAL_REPLY in src or PASSPHRASE in src:

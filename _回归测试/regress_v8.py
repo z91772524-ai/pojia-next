@@ -109,6 +109,27 @@ for f in ("release.py", "refresh_readme_hashes.py", "fill_hashes.py",
     ck("%s 无 E:\\DSH-Workspace 硬编码" % f,
        not re.search(r"[A-Za-z]:\\\\?DSH-Workspace", txt) and "E:\\DSH-Workspace" not in txt)
 
+# ---------- E) exe（frozen）支持 ----------
+print("E  frozen/exe 支持")
+ck("存在 FROZEN 开关", hasattr(PJ, "FROZEN"))
+ck("随包源码副本名已定义", hasattr(PJ, "SEAL_SRC_NAME") and PJ.SEAL_SRC_NAME.endswith(".py"))
+ck("非冻结时 HERE = 脚本目录",
+   os.path.normcase(PJ.HERE) == os.path.normcase(ROOT), PJ.HERE)
+ck("build_exe.py 存在且带 --add-data 逻辑",
+   os.path.isfile(os.path.join(ROOT, "build_exe.py")) and
+   "--add-data" in open(os.path.join(ROOT, "build_exe.py"), encoding="utf-8").read())
+# _k1(None) 必须给可读原因，而不是 TypeError（那正是打包后一启动就崩的根因）
+try:
+    PJ._k1(None)
+    ck("_k1(None) 抛异常", False, "居然没抛")
+except ValueError as e:
+    ck("_k1(None) 抛 ValueError 且信息可读", "源码层不可用" in str(e), str(e))
+except Exception as e:
+    ck("_k1(None) 抛 ValueError 且信息可读", False, "%s: %s" % (type(e).__name__, e))
+# .gitignore 必须排除打包产物
+_gi = open(os.path.join(ROOT, ".gitignore"), encoding="utf-8").read()
+ck(".gitignore 排除 _build/ 与 dist/", "_build/" in _gi and "dist/" in _gi)
+
 print("")
 print("=" * 62)
 print("结果: %d 项通过, %d 项失败" % (len(PASS), len(FAIL)))

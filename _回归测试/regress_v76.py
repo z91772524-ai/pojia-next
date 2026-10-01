@@ -4,7 +4,7 @@
 import sys, os, io, importlib.util, traceback
 
 sys.stdout.reconfigure(encoding="utf-8")
-SRC = r"E:\DSH-Workspace\破甲next-github\破甲一键通.py"
+SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "破甲一键通.py")
 
 # --- 载入模块 ---
 spec = importlib.util.spec_from_file_location("pj", SRC)

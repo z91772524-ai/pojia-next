@@ -5,7 +5,7 @@
 import sys, os, io, json, shutil, tempfile, importlib.util, builtins
 sys.stdout.reconfigure(encoding="utf-8")
 
-SRC = r"E:\DSH-Workspace\破甲next-github\破甲一键通.py"
+SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "破甲一键通.py")
 spec = importlib.util.spec_from_file_location("pj", SRC)
 mod = importlib.util.module_from_spec(spec)
 sys.argv = ["x"]

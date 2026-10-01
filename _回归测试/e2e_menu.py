@@ -1,7 +1,7 @@
 """端到端演练：模拟菜单点 [1]，验证它会先问目标而不是直接全打。"""
-import sys, io, importlib.util, builtins
+import sys, os, io, importlib.util, builtins
 sys.stdout.reconfigure(encoding="utf-8")
-SRC = r"E:\DSH-Workspace\破甲next-github\破甲一键通.py"
+SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "破甲一键通.py")
 spec = importlib.util.spec_from_file_location("pj", SRC)
 mod = importlib.util.module_from_spec(spec)
 sys.argv = ["x"]

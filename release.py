@@ -11,8 +11,14 @@ import subprocess
 import sys
 import zipfile
 
-REPO = r"E:\DSH-Workspace\破甲next-github"
-DIST = r"E:\DSH-Workspace\破甲next-发布素材"
+# v8：不再硬编码本机路径 —— 仓库根就是本脚本所在目录，
+# 打包输出目录默认落在仓库同级，可用 --dist <目录> 覆盖。
+REPO = os.path.dirname(os.path.abspath(__file__))
+DIST = os.path.join(os.path.dirname(REPO), "pojia-next-发布素材")
+if "--dist" in sys.argv:
+    _i = sys.argv.index("--dist")
+    if _i + 1 < len(sys.argv):
+        DIST = os.path.abspath(sys.argv[_i + 1])
 
 # Release 附件里放哪些（v7.5 起把 preview.png 也带上：README 引用了它，
 # 不带的话解压出来的 README 里那张预览图是坏图）
@@ -79,6 +85,7 @@ def main():
             print("| `%s` | %s | %d |" % (f, sha256(p)[:32] + "…", os.path.getsize(p)))
 
     # 3) 打 zip（外层文件夹 + zip 里附 SHA256SUMS.txt）
+    os.makedirs(DIST, exist_ok=True)
     zip_path = os.path.join(DIST, "pojia-next-v%s.zip" % ver)
     stage = os.path.join(DIST, "_stage_%s" % ver.replace(".", ""))
     inner = os.path.join(stage, "破甲一键通-v%s" % ver)

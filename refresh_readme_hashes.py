@@ -10,7 +10,7 @@ import os
 import re
 import sys
 
-R = r"E:\DSH-Workspace\破甲next-github"
+R = os.path.dirname(os.path.abspath(__file__))     # v8：不再硬编码本机路径
 TARGETS = ("破甲一键通.py", "一键破甲.bat", "persona.md")
 
 

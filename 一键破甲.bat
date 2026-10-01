@@ -1,19 +1,33 @@
 @echo off
 rem ==================================================================
-rem  Pojia YiJianTong v7.5  --  launcher
+rem  Pojia YiJianTong -- launcher
 rem
 rem  This file is deliberately 100%% ASCII. A .bat that contains any
 rem  non-ASCII byte gets mangled when cmd.exe parses it under the
 rem  wrong code page, and the whole script falls apart.  All Chinese
 rem  text lives in the .md docs and inside the Python file.
-rem  The target .py is located by wildcard because its name is
-rem  non-ASCII as well -- never write that name into this file.
+rem
+rem  The target .py cannot be named literally here (its name is
+rem  non-ASCII), so it is located by wildcard.  Picking "the first
+rem  .py on disk" was wrong: a user who extracted the whole repo
+rem  next to it (fill_hashes.py / release.py / refresh_*) would end
+rem  up launching a helper script instead of the toolbox.  We now
+rem  take the LARGEST .py next to this launcher -- the main script is
+rem  several hundred KB, every helper is a few KB.
 rem ==================================================================
+
+setlocal enabledelayedexpansion
 
 cd /d "%~dp0"
 
 set "SCRIPT="
-for %%F in ("%~dp0*.py") do if not defined SCRIPT set "SCRIPT=%%~fF"
+set "BESTSIZE=0"
+for %%F in ("%~dp0*.py") do (
+    if %%~zF GTR !BESTSIZE! (
+        set "BESTSIZE=%%~zF"
+        set "SCRIPT=%%~fF"
+    )
+)
 
 if not defined SCRIPT (
     echo.
@@ -64,3 +78,5 @@ if not "%RC%"=="0" (
     echo   [exit code %RC%]
     pause
 )
+
+endlocal

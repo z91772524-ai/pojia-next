@@ -1,15 +1,15 @@
-# 破甲一键通 v8.0 —— SHA256 校验清单
+# 破甲一键通 v8.2 —— SHA256 校验清单
 # 校验方法（Windows PowerShell）:
 #   Get-FileHash .\破甲一键通.py -Algorithm SHA256
 # 校验方法（Linux/macOS）:
 #   sha256sum 破甲一键通.py
 
-486ef56a1b0af5277bedbfd36386f71e6ff3c69c566fe239912d4e8da9978efd  破甲一键通.py
+b15b5d4dce35a93c1df2620b3eaa775b0f226833792fed0312727e15ec6e5429  破甲一键通.py
 75b9b4d832ef1a7bfcb0703f90fc058cbc1883a2faa4dafeae6df755db307321  一键破甲.bat
 2ec6b8eb9561a0e98fa858bce0fb39daf8ca0bebdc6e70e2ad56602cb96b14be  persona.md
-8a9440e25b8f673a37ae9bdc797f5c6dfa1fcdb84f76f4969291c04e277b108e  使用说明.md
+fcab90a16a011b8baf0ff11f74ee97b8ab201de10e5cef6aafaf8c5c857c8cd6  使用说明.md
 3bb73047e19dc3219283a88aed0ec40464f5e7bb34eef883cdbbaf89c0b6cf93  修复报告.md
-96f6584b590c84651665e77186ad7a44a3c471e5262e6dfeb6bfce07989ea252  README.md
+c96ecdf22f82aa7e0be3037f01833a364f8564833011949e930096ba1b1c8ae7  README.md
 cf1e09ddd43b7d9927ee4298f4a87b1d6c0a06b33281612e1d86137055fd4d3c  LICENSE
 1791824c3cb26a432b60801a8a1bfbc3904ae99522d004f0215a39acdf79d7cb  preview.png
 63e133f9ba43d4f6a73a9e6e06018f6ce31da4da0725beb7a2d7144c49703849  赞赏码.png

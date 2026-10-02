@@ -1,4 +1,4 @@
-# 破甲一键通 v8.0
+# 破甲一键通 v8.2
 
 **一句话：把你电脑上那几个 AI 客户端「自己改不到的内置提示词」，换成你自己写的那份。**
 
@@ -46,9 +46,9 @@
 ### 1️⃣ 下载
 打开 [**Releases 页面**](https://github.com/z91772524-ai/pojia-next/releases/latest)：
 
-- **没装 Python / 只想双击就用** → 下载 `pojia-next-v8.0-exe.zip`，解压后双击里面的 `破甲一键通.exe`。
+- **没装 Python / 只想双击就用** → 下载 `pojia-next-v8.2-exe.zip`，解压后双击里面的 `破甲一键通.exe`。
   **电脑上不需要装 Python**，也不需要装任何依赖。
-- **装了 Python（3.8+）或想改代码** → 下载 `pojia-next-v8.0.zip`，解压到任意文件夹（桌面就行）。
+- **装了 Python（3.8+）或想改代码** → 下载 `pojia-next-v8.2.zip`，解压到任意文件夹（桌面就行）。
 
 两个包功能完全一样，`.exe` 只是把 Python 运行时和脚本一起打包进去了（约 11 MB，首次启动多花 1～2 秒解包）。
 
@@ -149,7 +149,7 @@ A：那不支持。脚本只处理下面列出的六个目标，不会去猜、�
 
 | 目标 | 是什么 | 注入方式 |
 |---|---|---|
-| `dsh` | DeepSeek Harness（桌面端 / npm 全局 / npx 缓存 / 便携版） | 三层文件级补丁：提示词层、persona 层、区段层 |
+| `dsh` | DeepSeek Harness（桌面端 / npm 全局 / npx 缓存 / 便携版） | 三层文件级补丁：提示词层、persona 层、区段层。⚠ **只适用于「社区桌面版」**（旧架构，代码在 `resources\app\node_modules\@deepseek-ai`）；**「官方桌面版」**（新架构，整个 dsh 打包进 `resources\app.asar`）本工具**打不进去也不去动**，它走 `$DSH_HOME\AGENTS.md`，请用姊妹项目 [破甲DSH](https://github.com/z91772524-ai/pojia-dsh)。`--status` 会把两者分别报出来 |
 | `wb` | WorkBuddy | 六层靶点：模板 / `product.json` / 命令闸门 / 网页过滤 / 运行时缓存 / 会话快照 **＋ 账号级云记忆 `memoryBlock`**（每轮自动注入） |
 | `zcode` | ZCode 桌面端（智谱 [zcode.z.ai](https://zcode.z.ai/cn/docs)） | `~/.zcode/AGENTS.md` + Memory 文件 + 技能（**深度 1 直子目录**）；系统提示词 patch 是**可选通道** `--zpatch` |
 | `codex` | Codex（OpenAI Codex CLI，`~\.codex`） | `config.toml` 里加一行 `model_instructions_file` 指向 `managed-prompts\pojia-persona.md`（**直接替换**模型指令）；旧版写在 `AGENTS.md` 的标记块会自动清理 |
@@ -388,11 +388,11 @@ Get-FileHash .\破甲一键通.py -Algorithm SHA256        # 与 SHA256SUMS.txt 
 sha256sum -c SHA256SUMS.txt          # 文件名对得上就直接逐项校验
 ```
 
-当前版本（v8.0）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)）：
+当前版本（v8.2）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)）：
 
 | 文件 | SHA256（完整值见清单） | 字节 |
 |---|---|---|
-| `破甲一键通.py` | `486ef56a1b0af5277bedbfd36386f71e`… | 351021 |
+| `破甲一键通.py` | `b15b5d4dce35a93c1df2620b3eaa775b`… | 360780 |
 | `一键破甲.bat` | `75b9b4d832ef1a7bfcb0703f90fc058c`… | 2314 |
 | `persona.md` | `2ec6b8eb9561a0e98fa858bce0fb39da`… | 8080 |
 
@@ -652,6 +652,24 @@ def _d2(src):
 
 <details>
 <summary><b>📋 版本记录</b>（每个版本修了什么 · 点开）</summary>
+
+### v8.2 —— DSH 分「官方桌面版 / 社区桌面版」两路；不再让用户对着"没探测到"发懵
+
+**这一版只解决一件事：DSH 的两种桌面端长得完全不一样，而本工具此前只认其中一种。**
+
+| 改了什么 | 为什么 |
+|---|---|
+| `--status` / `--check` 现在会**分别报出两种桌面端**并各自贴标签 | 本机实测两种同时装着。旧版只报「检测到 1 个 @deepseek-ai 安装」，另一套**完全看不见** —— 用户会以为是漏装或工具坏了 |
+| 补上官方桌面版漏掉的探测路径 | 官方版在 `app.asar.unpacked` 下**多一层 `dsh\`**（`…\app.asar.unpacked\dsh\node_modules\@deepseek-ai`）。旧版找的是少一层的路径，所以永远探不到 |
+| 官方桌面版**只识别、只提示，一个文件都不碰** | 它把整个 dsh 打包进 `resources\app.asar`（本机 115.7 MB），磁盘上只剩几个含原生二进制的 unpacked 包，**没有 `dsh-agent-instructions`、也没有 `dsh-agent-presets`** —— 本工具那套「改 node_modules 里的 js / yml」打不进去；而改安装目录会在官方升级时丢掉，本来也不该动。命中时会直接指路：官方桌面版的破甲走 `$DSH_HOME\AGENTS.md`（官方 agent-instructions 机制，用户级、升级不丢、改完下一句对话即生效），由姊妹项目 **破甲DSH** 负责 |
+| **刻意不写 `$DSH_HOME\AGENTS.md`** | 那个文件已经被破甲DSH 占了。两个工具的备份后缀（`.dshpurge.bak` / `.pojiabak`）与"这份是不是自己写的"判据都不同，**同时写会导致谁都撤不干净** —— 宁可分工，不要打架 |
+| 顺手：盘符探测加单进程缓存 | 不存在的盘符上 `os.path.isdir` 会走设备枚举；`find_bases()` 与 `scan_desktop_kinds()` 都要扫 |
+
+> **一句话定位**：本工具管**社区桌面版**（旧架构，`resources\app\node_modules`）；
+> 官方桌面版（新架构，`app.asar`）请用 [破甲DSH](https://github.com/z91772524-ai/pojia-dsh)。
+
+> `regress_v8` 新增 F 组断言覆盖上表：官方版可打点数必须为 0、两种路径的标签必须正确、
+> 跑完 `--check`/`--status`/`--dry-run` 后 `$DSH_HOME\AGENTS.md` **逐字节不变**。
 
 ### v8.0 —— 注入层补三节执行纪律；只读命令不再偷偷写盘
 

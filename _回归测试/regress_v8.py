@@ -58,7 +58,7 @@ ck("兜底协议含「一条可直接复制运行的完整命令」",
    "一条可直接复制运行的完整命令" in PJ.HARDENING)
 ck("改盘工件含回滚要求", "怎么退回去" in PJ.HARDENING)
 ck("自检文本含回执语义边界", "回执的语义边界" in PJ.signal_text("DSH", PJ.VERSION))
-ck("VERSION 已是 8.0", PJ.VERSION == "8.0", PJ.VERSION)
+ck("VERSION 是 8.x", PJ.VERSION.startswith("8."), PJ.VERSION)
 ck("载荷内 version 与 VERSION 对齐", PJ._SEALED.get("version") == PJ.VERSION,
    PJ._SEALED.get("version"))
 
@@ -129,6 +129,44 @@ except Exception as e:
 # .gitignore 必须排除打包产物
 _gi = open(os.path.join(ROOT, ".gitignore"), encoding="utf-8").read()
 ck(".gitignore 排除 _build/ 与 dist/", "_build/" in _gi and "dist/" in _gi)
+
+# ---------- F) DSH 两种桌面端的识别与分派（v8.2） ----------
+print("F  DSH 官方桌面版 / 社区桌面版 识别")
+ck("新架构探测路径含多出来的 dsh\\ 一层",
+   tuple(PJ.DSH_NEW_ARCH_BASE) == ("resources", "app.asar.unpacked", "dsh",
+                                   "node_modules", "@deepseek-ai"),
+   PJ.DSH_NEW_ARCH_BASE)
+_D = PJ.DshTarget()
+ck("classify: 官方桌面版路径",
+   _D.classify_install(r"F:\x\DeepSeek Harness\resources\app.asar.unpacked\dsh\node_modules\@deepseek-ai")
+   == "官方桌面版(新架构)")
+ck("classify: 社区桌面版路径",
+   _D.classify_install(r"C:\x\DSH Desktop\resources\app\node_modules\@deepseek-ai")
+   == "社区桌面版(旧架构)")
+_kinds = _D.scan_desktop_kinds()
+ck("scan_desktop_kinds 返回列表", isinstance(_kinds, list), type(_kinds))
+print("      本机扫到：%s" % ([(k["kind"], k["root"]) for k in _kinds] or "（无）"))
+for k in _kinds:
+    if k["kind"] == "official":
+        # v8.2 的核心承诺：官方桌面版**一个目标都不碰**
+        n = len(_D.collect_targets(k["base"]) if k["base"] else [])
+        ck("官方桌面版可打点数 = 0（本工具不碰它）", n == 0, n)
+# 本工具绝不写 $DSH_HOME\AGENTS.md —— 用行为断言：跑完只读命令后那个文件必须字节不变
+import hashlib as _hl
+_home = PJ.DshTarget().dsh_home()
+_agents = os.path.join(_home, "AGENTS.md")
+if os.path.isfile(_agents):
+    _before = _hl.sha256(open(_agents, "rb").read()).hexdigest()
+    # ⚠ 必须带 --target dsh：不带的话每条命令都会把 6 个目标全扫一遍，
+    #   实测这一组断言会从 ~10 秒涨到 5 分钟（本测试自己踩过）。
+    for _c in (["--check", "--target", "dsh"], ["--status", "--target", "dsh"],
+               ["--dry-run", "--target", "dsh", "--yes"]):
+        subprocess.run([PY, SCRIPT] + _c, capture_output=True, cwd=ROOT, timeout=300)
+    _after = _hl.sha256(open(_agents, "rb").read()).hexdigest()
+    ck("跑完只读/预演后 $DSH_HOME\\AGENTS.md 逐字节未变", _before == _after,
+       "%s -> %s" % (_before[:12], _after[:12]))
+else:
+    ck("$DSH_HOME\\AGENTS.md 不存在，跳过不变性断言", True)
 
 print("")
 print("=" * 62)

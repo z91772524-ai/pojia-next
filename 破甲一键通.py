@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ================================================================================
- 破甲一键通  v8.0   （多目标统一脚本）
+ 破甲一键通  v8.2   （多目标统一脚本）
 ================================================================================
 
  把桌面那几套破甲工具合并成【一个脚本】，一套人格，六个目标：
@@ -18,6 +18,19 @@
      workbuddy国际版本破甲           （PowerShell，WorkBuddyAI 变体）
      dsh-purge                      （Python，dsh_purge.py）
      Codex破甲工具                   （Python，v6.1 曾回填过 Codex 目标）
+
+ ⚠ 版本说明（v8.2）：DSH 目标补上「官方桌面版 / 社区桌面版」的识别与分派。
+    本机实测两种桌面端同时装着，而它们**架构不同、可打点不同**：
+      · 社区桌面版（旧架构）—— resources\\app\\node_modules\\@deepseek-ai，解包目录，打得进去；
+      · 官方桌面版（新架构）—— 整个 dsh 打包进 resources\\app.asar（本机 115.7 MB），
+        磁盘上只剩几个含原生二进制的 unpacked 包，**没有 dsh-agent-instructions /
+        dsh-agent-presets** → 现有手法打不进去，改安装目录又会在官方升级时丢掉。
+    官方桌面版的破甲走 $DSH_HOME\\AGENTS.md（官方 agent-instructions 机制，用户级、
+    升级不丢、改完下一句对话即生效），由姊妹项目 破甲DSH 负责：
+        https://github.com/z91772524-ai/pojia-dsh
+    → 本工具对官方桌面版**只识别、只提示，绝不写那个文件**（两个工具的备份后缀
+      .dshpurge.bak / .pojiabak 与「这份是不是自己写的」判据不同，同时写会让谁都撤不干净）。
+      同时补上老版本漏掉的探测路径：官方版在 unpacked 下**多一层 dsh\\**。
 
  ⚠ 版本说明（v8.0）：注入层增补三节执行纪律，并修掉两处"自述与实际不符"的地方。
     · 硬化块新增「## 措辞映射 / ## 无工具兜底执行协议 / ## 改盘任务的强制工件」三节，
@@ -201,7 +214,7 @@ if IS_WIN and not getattr(subprocess, "_dsh_no_window_patched", False):
     subprocess.Popen = _popen_no_window
     subprocess._dsh_no_window_patched = True
 
-VERSION = "8.0"
+VERSION = "8.2"
 CHECK_EXIT_CODES = []          # --check 用：收集不达标项（只影响退出码，不改状态码）
 ERRORS = 0                     # v7.4：apply/revert 里的失败项累计（>0 → 进程退出码 1）
 
@@ -425,73 +438,73 @@ def _k2(src):
 
 
 _B0 = """\
-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
-G02bFW6NMhVc
+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
+V60EP6SE4Qpf
 """
-_B1 = "6615e013968e0088f38a5bab89d24ade5151aadd90afd4fd65dda13822cfe9de"
-_B2 = "8b50855c504f555b9730f128019ad4b4dd6f5cfe88bf287ed8cc07d0dfde866a"
+_B1 = "20137eb9d466af6c6f640918bdff42f445ba8c3b1d35819ec09181f2422564f8"
+_B2 = "3cbe23e9ac79950ab9f8d337392cd22f0e0a7fe8d7270d4381e98bd7a1b10722"
 
 #__seg_b0__
 _SX = ("#__d0__", "#__d1__")
@@ -1862,6 +1875,39 @@ DSH_PROC_NAMES = ("DSH Desktop.exe", "dsh.exe", "dsh")
 DSH_CMD_HINTS = ("deepseek-harness", "@deepseek-ai/dsh", "dsh agent", "dsh web",
                  "deepseek-ai/dsh", "dsh-desktop")
 
+# ── DSH 桌面端的两种架构（2026-10-02 本机实测，两个都装着）────────────────────
+#   社区桌面版（旧架构）—— 代码是**解包目录** resources\app\node_modules\@deepseek-ai，
+#     本工具那套「改 node_modules 里的 js / yml」打得进去；
+#   官方桌面版（新架构）—— 代码整体打包进 resources\app.asar（本机 115.7 MB），
+#     磁盘上只剩 4 个含原生二进制的 unpacked 包（dsh-desktop-host / dsh-session-log-export /
+#     libreoffice-kit×2），**没有 dsh-agent-instructions、也没有 dsh-agent-presets**。
+#     → 现有手法打不进去；而改安装目录会在官方升级时丢掉，本来也不该动。
+#   官方桌面版的破甲走 **$DSH_HOME\AGENTS.md**（官方 agent-instructions 机制，用户级、
+#   升级不丢、改完下一句对话即生效），那条线由姊妹项目 破甲DSH 负责。
+#   本工具对它**只识别、只提示，绝不写那个文件** —— 两个工具的备份后缀
+#   （.dshpurge.bak / .pojiabak）和"这份是不是自己写的"判据不同，同时写会导致谁都撤不干净。
+DSH_NEW_ARCH_MARK = ("resources", "app.asar")
+DSH_OLD_ARCH_MARK = ("resources", "app", "node_modules", "@deepseek-ai")
+# 官方版 unpacked 目录比社区版多一层 dsh\（这正是老版本探不到官方版的原因）
+DSH_NEW_ARCH_BASE = ("resources", "app.asar.unpacked", "dsh", "node_modules", "@deepseek-ai")
+DSH_OFFICIAL_PROD = "DeepSeek Harness"
+DSH_COMMUNITY_PROD = "DSH Desktop"
+DSH_SISTER_REPO = "https://github.com/z91772524-ai/pojia-dsh"
+_DSH_KINDS_CACHE = None          # scan_desktop_kinds() 的单进程缓存（只读数据）
+_DRIVE_ROOT_CACHE = {}           # 盘符根是否存在的缓存（见 _drive_root）
+
+
+def _drive_root(letter):
+    """盘符根是否存在 —— 单进程内只探测一次。
+
+    为什么值得缓存：不存在的盘符（A:/B:/…）上 os.path.isdir 会走一遍设备枚举，
+    实测一次全盘符扫描约 5 秒；而 `find_bases()` 与 `scan_desktop_kinds()` 都要扫。
+    盘符在一次运行里不会凭空出现，缓存是安全的。
+    """
+    if letter not in _DRIVE_ROOT_CACHE:
+        _DRIVE_ROOT_CACHE[letter] = os.path.isdir(letter + ":\\")
+    return _DRIVE_ROOT_CACHE[letter]
+
 
 class DshTarget:
     key = "dsh"
@@ -1957,6 +2003,10 @@ class DshTarget:
                         "Contents/Resources/app/node_modules/@deepseek-ai",
                         "resources/app.asar.unpacked/node_modules/@deepseek-ai",
                         "Contents/Resources/app.asar.unpacked/node_modules/@deepseek-ai",
+                        # v8.2：官方桌面版（新架构）在 unpacked 下**多一层 dsh\**。
+                        # 少了这两条，本机的官方桌面版永远探测不到（实测：老版本只报 1 个安装）。
+                        "resources/app.asar.unpacked/dsh/node_modules/@deepseek-ai",
+                        "Contents/Resources/app.asar.unpacked/dsh/node_modules/@deepseek-ai",
                         "node_modules/@deepseek-ai"):
                 add(os.path.join(r, *sub.split("/")))
             if os.path.basename(os.path.normpath(r)) in ("Programs", "Applications"):
@@ -1974,14 +2024,19 @@ class DshTarget:
         user = os.environ.get("USERNAME") or os.path.basename(home)
         for letter in string.ascii_uppercase:
             root = letter + ":\\"
-            if not os.path.isdir(root):
+            if not _drive_root(letter):
                 continue
             for sub in (os.path.join("Users", user, "AppData", "Local", "Programs", "DSH Desktop"),
                         os.path.join("Program Files", "DSH Desktop"),
-                        os.path.join("Program Files (x86)", "DSH Desktop")):
+                        os.path.join("Program Files (x86)", "DSH Desktop"),
+                        # v8.2：官方桌面版的名字不一样，得单独找（本机在 F 盘，只靠环境变量找不到）
+                        os.path.join("Users", user, "AppData", "Local", "Programs", DSH_OFFICIAL_PROD),
+                        os.path.join("Program Files", DSH_OFFICIAL_PROD),
+                        os.path.join("Program Files (x86)", DSH_OFFICIAL_PROD)):
                 d = os.path.join(root, sub)
                 if os.path.isdir(d):
                     add(os.path.join(d, "resources", "app", "node_modules", "@deepseek-ai"))
+                    add(os.path.join(d, *DSH_NEW_ARCH_BASE))
 
         # 3) npm 全局
         # v7.5：**只有前面一无所获时**才去 spawn npm。两个好处：
@@ -2327,6 +2382,14 @@ class DshTarget:
     def check(self, args):
         rows = []
         bases = self.find_bases(getattr(args, "dsh_dir", "") or "")
+        # v8.2：官方桌面版走的是另一条路（$DSH_HOME\AGENTS.md），本工具不碰 —— 体检里点名说清，
+        # 否则用户看到"没探测到安装"会以为是漏装或工具坏了。
+        for _k in self.scan_desktop_kinds():
+            if _k["kind"] == "official":
+                rows.append(("info",
+                             "官方桌面版（新架构）：%s" % _k["root"],
+                             "代码在 resources\\app.asar 里，本工具打不进去；"
+                             "它的破甲走 $DSH_HOME\\AGENTS.md，请用姊妹项目 %s" % DSH_SISTER_REPO))
         if not bases:
             rows.append(("warn", "没探测到 @deepseek-ai 安装", "装了就用 --pick dsh 手动指定"))
             return rows
@@ -2372,12 +2435,98 @@ class DshTarget:
                         "g" if st in ("loose", "clean") else "y", "dsh")
         if not rows:
             log("没有可处理的目标文件（可能 DSH 没装，或用 --dsh-dir 指定）", "y", "dsh")
+        self.notice_desktop_kinds()          # v8.2：官方/社区两种桌面端，讲清各自该走哪条路
         return rows
+
+    # ---------------- 桌面端架构识别（v8.2，全程只读） ----------------
+    def scan_desktop_kinds(self):
+        """只读地找出本机的 DSH 桌面端，并区分「官方桌面版 / 社区桌面版」。
+
+        为什么必须区分：两种架构的可打点完全不同（见文件头 DSH_NEW_ARCH_MARK 的注释）。
+        本函数**只读**：只看目录与文件在不在 —— 不写盘、不建目录、不联网、不提问。
+        结果在单进程内缓存一次（`--status` 等路径会多次调用）。
+        """
+        global _DSH_KINDS_CACHE
+        if _DSH_KINDS_CACHE is not None:
+            return _DSH_KINDS_CACHE
+        found, seen = [], set()
+        home = os.path.expanduser("~")
+        user = os.environ.get("USERNAME") or os.path.basename(home)
+
+        def probe(root):
+            root = os.path.normpath(root)
+            if not root or root in seen or not os.path.isdir(root):
+                return
+            if os.path.isfile(os.path.join(root, *DSH_NEW_ARCH_MARK)):
+                base = os.path.join(root, *DSH_NEW_ARCH_BASE)
+                seen.add(root)
+                found.append({"root": root, "kind": "official",
+                              "base": base if os.path.isdir(base) else ""})
+            elif os.path.isdir(os.path.join(root, *DSH_OLD_ARCH_MARK)):
+                seen.add(root)
+                found.append({"root": root, "kind": "community",
+                              "base": os.path.join(root, *DSH_OLD_ARCH_MARK)})
+
+        parents = []
+        for env in ("LOCALAPPDATA", "APPDATA"):
+            v = os.environ.get(env)
+            if v:
+                parents.append(os.path.join(v, "Programs"))
+        for letter in string.ascii_uppercase:
+            d = letter + ":\\"
+            if not _drive_root(letter):
+                continue
+            parents.append(os.path.join(d, "Users", user, "AppData", "Local", "Programs"))
+            parents.append(os.path.join(d, "Program Files"))
+            parents.append(os.path.join(d, "Program Files (x86)"))
+        for parent in parents:
+            for prod in (DSH_OFFICIAL_PROD, DSH_COMMUNITY_PROD):
+                probe(os.path.join(parent, prod))
+        _DSH_KINDS_CACHE = found
+        return found
+
+    def notice_desktop_kinds(self, logit=True):
+        """把「本机有官方桌面版，但它不该由本工具打」这件事讲清楚（只提示，不动盘）。
+
+        约束（同本项目的『非交互三不』与『只读不落盘』）：
+          · 纯文字输出，不弹窗、不开浏览器（链接写进文字）、不发网络请求；
+          · 不写任何文件、不建目录；
+          · 官方桌面版**永远不自动处理** —— 只指路。
+        """
+        kinds = self.scan_desktop_kinds()
+        off = [k for k in kinds if k["kind"] == "official"]
+        com = [k for k in kinds if k["kind"] == "community"]
+        if not logit or not kinds:
+            return kinds
+        if off:
+            log("检测到 【官方桌面版（新架构）】：", "c", "dsh")
+            for k in off:
+                log("  · %s" % k["root"], "", "dsh")
+            log("    它把整个 dsh 打包在 resources\\app.asar 里，本工具那套「改 node_modules」",
+                "dg", "dsh")
+            log("    打不进去；而改安装目录会在官方升级时丢掉，本工具也不去动它。", "dg", "dsh")
+            log("    官方桌面版的破甲走 $DSH_HOME\\AGENTS.md（官方 agent-instructions 机制，",
+                "dg", "dsh")
+            log("    用户级、升级不丢、改完下一句对话即生效），由姊妹项目负责：", "dg", "dsh")
+            log("      %s" % DSH_SISTER_REPO, "g", "dsh")
+            log("    本工具【不写】这个文件 —— 两个工具的备份后缀（.dshpurge.bak /", "y", "dsh")
+            log("    .pojiabak）与「这份是不是自己写的」判据都不同，同时写会让谁都撤不干净。",
+                "y", "dsh")
+        if com:
+            log("检测到 【社区桌面版（旧架构）】：", "c", "dsh")
+            for k in com:
+                log("  · %s" % k["root"], "", "dsh")
+        return kinds
 
     def classify_install(self, path):
         p = path.lower().replace("\\", "/")
+        # v8.2：官方桌面版（新架构）优先判定 —— 它的特征是 app.asar.unpacked
+        if "app.asar.unpacked" in p:
+            return "官方桌面版(新架构)"
+        if "deepseek harness" in p:
+            return "官方桌面版(新架构)"
         if "dsh desktop" in p or "dsh-desktop" in p:
-            return "社区桌面端"
+            return "社区桌面版(旧架构)"
         if "/_npx/" in p:
             return "官方Web/CLI(npx缓存)"
         if "/.dsh/" in p:
@@ -2396,6 +2545,7 @@ class DshTarget:
         bases = self.find_bases(getattr(args, "dsh_dir", "") or "")
         if not bases:
             log("未检测到 @deepseek-ai 安装，跳过。（可用 --dsh-dir 指定）", "y", "dsh")
+            self.notice_desktop_kinds()      # 空手而归时最需要这句解释
             return {"skip": True}
 
         user, src = load_user_persona(getattr(args, "persona", "") or "")
@@ -2664,7 +2814,7 @@ class WorkBuddyTarget:
         cands = []
         for letter in string.ascii_uppercase:
             root = letter + ":\\"
-            if not os.path.isdir(root):
+            if not _drive_root(letter):
                 continue
             for n in ("WorkBuddy", "WorkBuddyAI"):
                 cands += [os.path.join(root, "Users", user, "AppData", "Local", "Programs", n),

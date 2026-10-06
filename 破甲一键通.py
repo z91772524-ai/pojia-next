@@ -19,6 +19,18 @@
      dsh-purge                      （Python，dsh_purge.py）
      Codex破甲工具                   （Python，v6.1 曾回填过 Codex 目标）
 
+ ⚠ 版本说明（v8.4）：DSH 目标补上**版本号检测**（此前只认架构、不读版本）。
+    两个桌面端的版本号**不在同一个文件**，而且都**不是**安装根目录下那个 `version`：
+      · 官方桌面版（新架构）—— 真·产品版本在
+        resources\\runtime\\primary-runtime\\runtime.json 的 `desktopVersion`
+        （本机 0.2.0-rc.2）；安装根的 `version` 文件是 **Electron 运行时版本**
+        （本机 44.0.0），拿它当 DSH 版本会张冠李戴。
+      · 社区桌面版（旧架构）—— resources\\app\\package.json 的 `version`
+        （本机 2.0.11，name 通常是 dsh-plugin-desktop）。
+    → 新增 `--dsh-version`（只读）：打印本机各桌面端的版本号 + 来源；
+      `--check` / `--status` / `--diagnose` 也一并带出版本号与来源，避免把
+      Electron 版本误读成 DSH 产品版本。读取全程只 open 文件，不写盘、不联网。
+
  ⚠ 版本说明（v8.2）：DSH 目标补上「官方桌面版 / 社区桌面版」的识别与分派。
     本机实测两种桌面端同时装着，而它们**架构不同、可打点不同**：
       · 社区桌面版（旧架构）—— resources\\app\\node_modules\\@deepseek-ai，解包目录，打得进去；
@@ -214,7 +226,7 @@ if IS_WIN and not getattr(subprocess, "_dsh_no_window_patched", False):
     subprocess.Popen = _popen_no_window
     subprocess._dsh_no_window_patched = True
 
-VERSION = "8.3"
+VERSION = "8.4"
 CHECK_EXIT_CODES = []          # --check 用：收集不达标项（只影响退出码，不改状态码）
 ERRORS = 0                     # v7.4：apply/revert 里的失败项累计（>0 → 进程退出码 1）
 
@@ -438,77 +450,77 @@ def _k2(src):
 
 
 _B0 = """\
-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
-yqE5A+z5+7hgdIl5kQ==
+W0VlttXITXNLbcWfJlwjc7gxW+kdXidt4pjCoYOpfBR/nbUlzFrYH9vKQN2gNaL7VUPtzynI
+LvvKFkw1F4HxGZSbHmNGENfqrbgrGPxEUFSSTOp78fhEkoTFSkrZx9rTu62Xn3s6UnjsGfoR
+bkMRAqKwP1wEpzXMsD6NZs9ezEczCnWRimO36oot2KUTZ7Z/PnvR+YG0hEx7c5w9YQU4STPF
+zS2aWwga+XkkyUioMjcE07UvSFc6YdZb8GtG2aik51aoWRWdnQIFslcDUE5berCtEQd1gPIo
+mhguPPTY+AcWOV8S8ob+vtRphdsq5rN10R5dY9lTaBAtu31/WCk1rUguyR+fv0imRxkzGDPJ
+fwcnnKie6myXRQ+RTPZPJ8hUuvGuVILFofLgGndkTCz6gFRPIyZqIIoQluV+AQXAL5fOE+te
+/LNDFdzihWfY8XU9VSltoZskY2QOLuTcFuy9iVaxIRI6BvJRdPBpWQD1Jo31beIMQtFhpav/
+qeowndmE7gu89Y/5BxTLcMjiuNYMVgdH3utAe0aUka7FROBY6r/sx4QsxHr4D+ibX0EFE6ZH
+1olDGVglz3XXh2o2b2Af1ItUy1o+y6SSrk/g8YA2PDp9olni9ysJ6pARkjHwFQbJmIT/yPSX
+mvrW/UY7fa+a02WcRjn2O1CiK39fm1bex331EdFUOBZEliGepNm0SKGpcmPGpPcUAoUzA1JF
+pQYWczVH8KRerFqfyfXrUIbtQ2iCsSGsnTaBKPptekVZrlUzgP7CHIN4P6e2LZRB7DWLSTkI
+PoMqZVNmQ6G8/L4JHyv2miRyy3mcXbwD7q55RktDEqD/ltBattd7gI113iS4PG4PgIxDs34S
+BzgM8dS2AFIIZ3Kk6X+bivFlADY7LE9tepuel6k938aY6WJxxyLY37hHEaxUXmG2s8BOdjDL
+WMejd19JqMCaurEmP/5MQybP88iRL3j4gIyAo3FcLSUJEyS6rmdtUHG0C25nn2m8EDawkvGD
+mygmvHpzGD16ALLRnx7tkrMVC0ruoVBk4NXr+Ocw0FEhtyR5hxcwjOwC7n6nNwM3Zw6PFNFO
+MdT4AKte1xEmLHIdYbfUvmNIulAcl1yB/nga2h5KRHSqTy77iAk0rwSRZiqb6FwMU5lHt488
+F+0IYfGOHRs9skiirowo4qbx7AGBKnU3WHt/X2O98/tLb8YkWHA0s2PAGkTAJ5ndpYL6zmqR
+aAUK6D8P87Cnr4nmRwYdYd2eTgx5JlD9nxUBfhy8zpRj1ddpiz/01FFh1iQnf01uS0FRhdfH
+8IF9lS21k0sNiCpPwV56eVLKENPeOzerQpFEnGRNyhqC/NkaH5He32LjyxQyHrvK3mzRn3QX
+iXXxiHveW9b3Dtm4NguClxhypxsSdmGHMyrhbkqvpt2dh0yWzHtA874SIZx4Lz9SZXmANHwn
+FTPaQJkGMo3oW8Enr14j6s6In8OMrXiwTggynujam86RcdQGnhZaKxekBn0QUGgF8oZrM9sW
+JpDGnRuuFcYt94n4aBGdbKwm7L70Vk7P/rZeo5rZXrQcI7KNZX/6LPiToi9BwNbr8ozv4HGL
+MMXcSHhD5WxywFxp/4y71Zyb6GtkiH+VDtHAvzW1Gzf9JlNvNtj2Uo7qos+iEUynX8GsfEUQ
+4MXUORCwMHz7HoQSqx/5CqmQKtqmI9x4t63WJL4qvSTN2fqmhnUtmYDopvGCcxE1cfgyCWHs
+Q32ctb3epwsiZz5btqjv8VMH7FNs5G6pcuHUqCc/G70IeZ/WZVoYqRSUqC3oMuKSHlbbPZP+
+3Gfe/BauMoeSwQT7xcCrQWmkh5SJwR2pHr1rOV5eSpAQFUFEhCeLVzOIsiIdywWp3W0lFSl2
+O/Lvd54EYHtMKJqJxF88mCEsB8I0eDTCwSdeHo0Kxg2P05SknMfv7PgyulemT08J70GDTUDB
+fjRCteaU6zcawCIz4urMPm4n+k7BgbjgLHsZuEQgAmCrcphjk7INCoJOoIV/76aTAfr5jfif
+4HY606EWviC+ljlOkMBcnlP0YhGM1NrJPL1WOUQsMT6HrSAOZm4VjIwYBHu72OQ30bTJWBbw
+/eR0GJByY+ZcjIK4gAqe7llAtkm9ExgQsIIKbBhYTL8NSGHVAvd+y1zV1T2h5hfuCx72znvc
+xD0oEnerwm12ZWV98PCRh00KlMs3dyPMUl7FMqy5k1ViSz6llFyqXE7uIMOjSBHvP9NtiKPB
+7Ek3nH0OyYUqWx3Etel9lwl1ReWxzgf9Pqc8KZsWhbe2gXiy11m7Pn+h4jpPCDUl8uDPVyGW
+UcI+ivWVjGB6F51Ez7HxOLjquRFXi9GfvsNyfay+RK4gp3E2VZWkTY++f8C6GdTVR8NrQnHt
+5socDOa668laiNj0p9JL557MfUTLMrLNzOUQjJ093jZE5Bis8QoU/VfMqjUq6FMSVKPioePL
+EIIOPv5n66JaVhokkVpyTbmKcXYF0phtuju3I/OwaJ+eGrKGL1DBbO/3GibS/RG9YN90MUgo
+ckrZi0+dmg9OYuS/9tyX9+UMQ3HCs8TuV+lFGlC4dyCaNb987Tvo/V5UIfBNESd7kTOAxxrq
+z5YH/zO8UGjhlqR5VRPXiyh22jBAzvTkncyV8SQ4dt9umpXILFRp3YRsnFmW5C9dDiDRZ//s
+cuH4rIjpOc0hhdPiWtC+3Gwff126XK4tnitz24qOpR6Xd0nZx2HOOI0gLzS/QvP0QDsY9Uv+
+SIZswxvxGHVUKRQnESfVHsXOdc+TqnMykADwyP5id5DzQ5t1MVPm/AGV1yLV2+ruYmjL2wje
+gzjTax9dC+sqs89lVLaiTZqWKAXplT2idWszFdaz12jz6xQLEFBfHiFhlBh0FwACgDq70eUn
+7zfl8OOOmB7lg/TA1AH8iZN/jUHgyUUF0KWFzhlT7lYLJbrutJW4vGwZRdzOaf3uFoGL/V60
+DFfClWZVQYhDL+SzRWOGhYi6TL8P+mKqUq1uBGpmCuzRp1CPYW6ReUSkJ9f9lcrgVj+qWrgE
+Ay4KJh6FVLU/nM5sBuLNiZvgtvlzXEHBoRIiu9nqLQLlm5PssMhnD5xMz/uN88T7rB4H8+72
+ost0VLlseRDcLOAUCxeYwTGS6HEqUZeM7KENJ3nD76zaB98f04e7TRceT5ReNgei0tXffHtY
+89Zfczifom9oOcOJiHmH8uH0SkdaHyMwNNANB7KtzJWdq1vU0TarknYSaWnuYfzz3pItmOZM
+6suLiPrEhoD2a2hRMEUAZUlI7c3AE8fqDloGi0P16d2BZbSZMQxP34zegzqs4r3oiUNby6kt
+Nt9lrcu4TY0TzdsGRre/cGKAxn7PL9Fh4cR4Vg4ogyugGWWYOi4FvCIjz1JCdCSe8LXQ8yMG
+XrLQeRloQogmFkZ8NBDO7S5u+OQeYEYiPPnYI6DkK0m2U73s4/jy5E8795btx8VibWilDu4D
+6QSWYmgUaK3U1ddovoAuaYtEZJ1PCMtKVHPIPLq4HEOSq3XzyGYI6l1gpcZlejjIddxS6HPU
+HxOGcII/aFYvvVQa6nypFLWfnS3GVGpLB8zUoc4R7yOKyG6I7GFbEDIGLSO5BElok/ARIl0l
++D7XC1RaUPO0ltrnZxfJFZvRZZQHc+ZBnTmmqj9mILI/tjYb5t3UhP+hzvkqrhnYLqGaBlco
+EfuZ9DKFGCKTBuHi7Wc4ZwU9qO/nNDWcS771+1a1SR24GxfplUnkKH2wJoLL4J0sz2lk0uOs
+dfJ30WIax/PjL90VRsMwszjYwAmzJ6iQMp/2X7nCG2fNicbsndArE9WF+RTI6g534H9MITl/
+MFN3MtWb67ZoQY196RLB1yysTqS8A01h1HbMAmrI8vhNsIQAge69i14LjZ3eHScU43O8tMgP
+WRfzizUaXz3wVhzZvEoMGGD3lvED1CUXmyp8egKLJO2aXx7DYt1/egyS+0FwUynVV3oh7CHw
+Cqav9SizVOU6fzQ5IWST/BJCaKjtNqumyQhZgrxrix3Szy33v80nAvlg1O3drRk9wYtsf3or
+FQRPplQaZyDWpafKUXoaXc8yqtHD7wcrUiAAg8qQF2BKNHfc967o2eURi4i369lnwdcDKsWK
+cERv8z9bzqU8h5gerszK68FlYXj903DIxr8pfnBFomLSJq9Z3MWiWx05RHab7PqvIL9z/5zW
+i5BOg7XzrHjhyzrv3PPzlJz4w4Lge/pCq4Z05eg0ytsf3xUt8yXz9EL9Lid7UjgtDTC6uXxb
+LRAeP3OIGDJ3/8T/TxTEqwpBzISOXnbkoprJCoMgvDdjSBwWgn/09QoyLTWNoKAEOlmgOXkB
+ubPAT/bJxonGvWEybW8MxjNW9Bv06qvN07zcVlRq1aMrAe1WGUGYa4mBAnODHGJoPihOsMWo
+kh/2C76wfAWXlHdoL/82ThFzFAP8/5Oy+ujXfOtwEnOWrJBliO1y+Xpzc2u7sJJMH5ZZPHl2
+yhjed0ks40YgHVBQICfQtAwY0b2nx8YBpBREJcs5I9H75Ey+kQkhxYEbJGv50sEn0Qbsq/Tq
+5LxaM23+n8UUrkQWKPNxch/qoo5VuLKP5HQQDrVYPfLjZsBr1VGzu7Mi8GPxHjMo1/MyZOby
+P88kFZQCKtZLXA0ACKkbdIE5j5skqZV7IZlWlLYpQH2pw2DJ002y/cKB1qC+LhBify/s2zgB
+IkQn5ELAC5dcOoMQdV8GggDADNpMyMAxWfwE4wr5K3RBA+mcG/CLfvCMa5Z3Z7yx99HyFqr4
+GLt/9DM0CdHzIvW77Xxpq0Vrj+TRvU4G3niWcmtojyjbQJdQ1BgwlJURaox/izOGe86tBnyY
+D9t2yDYq65GQabvr5g==
 """
-_B1 = "0a6039cf241238e965d90e74f75cca97a5adf6fc117b0385ef8c3eaf02208e2c"
-_B2 = "8e7a65a1980952635cef020495451d46d272c8c033d60cbe2254cefbdc4a46ae"
+_B1 = "d271d50ea8e4ab9d56e40f17ce40f8cace5e55b5df169dd82f14f59a41f624a9"
+_B2 = "f70ec6025c5567a27fdba63a5d0525e49309b512bdfe706d6ed0da14d0c137dc"
 
 #__seg_b0__
 _SX = ("#__d0__", "#__d1__")
@@ -1935,8 +1947,73 @@ DSH_NEW_ARCH_BASE = ("resources", "app.asar.unpacked", "dsh", "node_modules", "@
 DSH_OFFICIAL_PROD = "DeepSeek Harness"
 DSH_COMMUNITY_PROD = "DSH Desktop"
 DSH_SISTER_REPO = "https://github.com/z91772524-ai/pojia-dsh"
+# ── DSH 版本号来源（v8.4 新增，2026-10-07 本机实测）────────────────────────
+#   两个桌面端的版本号**不在同一个文件**，而且都**不是**安装根目录下那个 `version`：
+#     · 官方桌面版（新架构）—— resources\runtime\primary-runtime\runtime.json
+#         的 desktopVersion 字段才是**真·产品版本**（本机 0.2.0-rc.2）；
+#         安装根的 `version` 文件是 **Electron 运行时版本**（本机 44.0.0），
+#         拿它当 DSH 版本会张冠李戴，所以只作兜底且明确标注来源。
+#     · 社区桌面版（旧架构）—— resources\app\package.json 的 version 字段
+#         （本机 2.0.11，name 通常是 dsh-plugin-desktop）。
+#   本工具**全程只读**读这两个文件，不写、不建目录、不联网。
+DSH_OFFICIAL_VER_FILE = ("resources", "runtime", "primary-runtime", "runtime.json")
+DSH_COMMUNITY_VER_FILE = ("resources", "app", "package.json")
 _DSH_KINDS_CACHE = None          # scan_desktop_kinds() 的单进程缓存（只读数据）
 _DRIVE_ROOT_CACHE = {}           # 盘符根是否存在的缓存（见 _drive_root）
+
+
+def read_dsh_version(root, kind):
+    """只读地读出一个 DSH 桌面端的**产品版本号**，返回 (版本字符串, 来源说明)。
+
+    为什么要专门写这个（而不是顺手读安装根的 `version`）：官方桌面版的根 `version`
+    文件装的是 Electron 版本，社区桌面版的产品版本又藏在 resources\\app\\package.json，
+    两边的来源压根不同；不区分就会把「Electron 44」当成「DSH 版本」报出去。
+
+    约束（同本项目『只读不落盘』）：只 open 读文件，不写盘、不建目录、不联网、不提问。
+    读不到就返回 ("", "")，由调用方决定怎么显示 —— 绝不猜、绝不填默认值。
+    """
+    def _read_text(p):
+        try:
+            with open(p, "r", encoding="utf-8", errors="replace") as f:
+                return f.read()
+        except Exception:
+            return ""
+
+    def _read_json(p):
+        txt = _read_text(p)
+        if not txt.strip():
+            return None
+        try:
+            return json.loads(txt)
+        except Exception:
+            return None
+
+    if kind == "official":
+        data = _read_json(os.path.join(root, *DSH_OFFICIAL_VER_FILE))
+        if isinstance(data, dict):
+            for key in ("desktopVersion", "desktop_version", "appVersion", "version"):
+                v = data.get(key)
+                if isinstance(v, str) and v.strip():
+                    return v.strip(), "runtime.json:%s" % key
+        # 兜底：安装根 version 文件（Electron 版本，必须标注，别让人误读成产品版本）
+        v = _read_text(os.path.join(root, "version")).strip()
+        if v:
+            return v, "version 文件（Electron 运行时版本，非 DSH 产品版本）"
+        return "", ""
+
+    if kind == "community":
+        data = _read_json(os.path.join(root, *DSH_COMMUNITY_VER_FILE))
+        if isinstance(data, dict):
+            v = data.get("version")
+            if isinstance(v, str) and v.strip():
+                name = data.get("name") or "package.json"
+                return v.strip(), "package.json:%s" % name
+        v = _read_text(os.path.join(root, "version")).strip()
+        if v:
+            return v, "version 文件（非 package.json，来源待确认）"
+        return "", ""
+
+    return "", ""
 
 
 def _drive_root(letter):
@@ -2426,12 +2503,23 @@ class DshTarget:
         bases = self.find_bases(getattr(args, "dsh_dir", "") or "")
         # v8.2：官方桌面版走的是另一条路（$DSH_HOME\AGENTS.md），本工具不碰 —— 体检里点名说清，
         # 否则用户看到"没探测到安装"会以为是漏装或工具坏了。
+        # v8.4：顺带把**版本号**报出来（官方读 runtime.json:desktopVersion，
+        # 社区读 app\package.json:version），并标注来源，避免把 Electron 版本当成 DSH 版本。
         for _k in self.scan_desktop_kinds():
+            _ver = _k.get("version") or ""
+            _vtxt = (" v%s" % _ver) if _ver else "（版本号未读到）"
+            _src = _k.get("version_src") or ""
             if _k["kind"] == "official":
                 rows.append(("info",
-                             "官方桌面版（新架构）：%s" % _k["root"],
+                             "官方桌面版（新架构）%s：%s" % (_vtxt, _k["root"]),
                              "代码在 resources\\app.asar 里，本工具打不进去；"
-                             "它的破甲走 $DSH_HOME\\AGENTS.md，请用姊妹项目 %s" % DSH_SISTER_REPO))
+                             "它的破甲走 $DSH_HOME\\AGENTS.md，请用姊妹项目 %s"
+                             "%s" % (DSH_SISTER_REPO,
+                                     ("（版本来源 %s）" % _src) if _src else "")))
+            else:
+                rows.append(("info",
+                             "社区桌面版（旧架构）%s：%s" % (_vtxt, _k["root"]),
+                             ("版本来源 %s" % _src) if _src else ""))
         if not bases:
             rows.append(("warn", "没探测到 @deepseek-ai 安装", "装了就用 --pick dsh 手动指定"))
             return rows
@@ -2444,7 +2532,9 @@ class DshTarget:
                 counts[st] = counts.get(st, 0) + 1
         n_ok = sum(v for k2, v in counts.items() if k2 in ("loose", "clean"))
         n_bad = sum(v for k2, v in counts.items() if k2 not in ("loose", "clean"))
-        rows.append(("info", "安装 %d 套（%s）" % (len(bases), self.classify_install(bases[0])), ""))
+        rows.append(("info", "安装 %d 套（%s%s）" % (len(bases),
+                                                 self.classify_install(bases[0]),
+                                                 self.version_for_path(bases[0])), ""))
         detail = "、".join("%s %d" % (k2, v) for k2, v in sorted(counts.items()))
         if n_bad == 0:
             rows.append(("ok", "靶点 %d 个：全部已生效" % n_ok, detail))
@@ -2465,7 +2555,8 @@ class DshTarget:
         rows = []
         for b in bases:
             tg = self.collect_targets(b)
-            log("· %s  [%s]  目标 %d 个" % (b, self.classify_install(b), len(tg)), "", "dsh")
+            log("· %s  [%s%s]  目标 %d 个" % (b, self.classify_install(b),
+                                              self.version_for_path(b), len(tg)), "", "dsh")
             for fp, funcs in tg:
                 st, note = self.file_state(fp, funcs, want)
                 bak = self.backup_path_for(fp)
@@ -2501,13 +2592,17 @@ class DshTarget:
                 return
             if os.path.isfile(os.path.join(root, *DSH_NEW_ARCH_MARK)):
                 base = os.path.join(root, *DSH_NEW_ARCH_BASE)
+                ver, vsrc = read_dsh_version(root, "official")
                 seen.add(root)
                 found.append({"root": root, "kind": "official",
-                              "base": base if os.path.isdir(base) else ""})
+                              "base": base if os.path.isdir(base) else "",
+                              "version": ver, "version_src": vsrc})
             elif os.path.isdir(os.path.join(root, *DSH_OLD_ARCH_MARK)):
+                ver, vsrc = read_dsh_version(root, "community")
                 seen.add(root)
                 found.append({"root": root, "kind": "community",
-                              "base": os.path.join(root, *DSH_OLD_ARCH_MARK)})
+                              "base": os.path.join(root, *DSH_OLD_ARCH_MARK),
+                              "version": ver, "version_src": vsrc})
 
         parents = []
         for env in ("LOCALAPPDATA", "APPDATA"):
@@ -2524,6 +2619,9 @@ class DshTarget:
         for parent in parents:
             for prod in (DSH_OFFICIAL_PROD, DSH_COMMUNITY_PROD):
                 probe(os.path.join(parent, prod))
+        # 输出顺序固定：官方桌面版排前 —— 它是"用户最该看见、但本工具不自动打"的那一个，
+        # 排前能避免它被刷在长列表中间被忽略。
+        found.sort(key=lambda k: 0 if k["kind"] == "official" else 1)
         _DSH_KINDS_CACHE = found
         return found
 
@@ -2543,7 +2641,8 @@ class DshTarget:
         if off:
             log("检测到 【官方桌面版（新架构）】：", "c", "dsh")
             for k in off:
-                log("  · %s" % k["root"], "", "dsh")
+                _v = k.get("version") or ""
+                log("  · %s%s" % (k["root"], ("   版本 v%s" % _v) if _v else ""), "", "dsh")
             log("    它把整个 dsh 打包在 resources\\app.asar 里，本工具那套「改 node_modules」",
                 "dg", "dsh")
             log("    打不进去；而改安装目录会在官方升级时丢掉，本工具也不去动它。", "dg", "dsh")
@@ -2561,7 +2660,8 @@ class DshTarget:
         if com:
             log("检测到 【社区桌面版（旧架构）】：", "c", "dsh")
             for k in com:
-                log("  · %s" % k["root"], "", "dsh")
+                _v = k.get("version") or ""
+                log("  · %s%s" % (k["root"], ("   版本 v%s" % _v) if _v else ""), "", "dsh")
         return kinds
 
     def classify_install(self, path):
@@ -2580,6 +2680,22 @@ class DshTarget:
         if "node_modules/@deepseek-ai" in p:
             return "官方CLI(全局npm)"
         return "未知"
+
+    def version_for_path(self, path):
+        """按路径找出对应桌面端的版本号，返回 " vX.Y.Z"（读不到返回 ""）。
+
+        用途：dump / 体检里把 @deepseek-ai 的 base 路径对回「它属于哪个桌面端」，从而取到
+        版本号。全程只读 scan_desktop_kinds() 的单进程缓存，不额外碰盘。
+        """
+        if not path:
+            return ""
+        p = os.path.normpath(path).lower()
+        for k in self.scan_desktop_kinds():
+            for cand in (k.get("root") or "", k.get("base") or ""):
+                if cand and p.startswith(os.path.normpath(cand).lower()):
+                    v = k.get("version") or ""
+                    return (" v%s" % v) if v else ""
+        return ""
 
     # ---------------- 进程 ----------------
     def running(self):
@@ -6824,6 +6940,8 @@ def build_parser():
     p.add_argument("--target", default="all", help="all|dsh|wb|zcode|codex|cursor|claude，可逗号分隔（默认 all）")
     p.add_argument("--status", action="store_true", help="只读：检测所有目标")
     p.add_argument("--diagnose", action="store_true", help="只读：详细取证")
+    p.add_argument("--dsh-version", action="store_true", dest="dsh_version",
+                   help="只读：打印本机 DSH 桌面端版本号（官方读 runtime.json:desktopVersion，社区读 app\\package.json:version）")
     p.add_argument("--check", action="store_true",
                    help="只读体检：磁盘态 / 明文凭证提示 / 自证就绪（绝不改盘，有问题退出码 1）")
     p.add_argument("--dry-run", action="store_true", help="预演，不改盘")
@@ -6919,6 +7037,21 @@ def main():
         return
     if args.compare:
         WorkBuddyTarget().do_compare()
+        return
+    # ---- DSH 版本号（v8.4，只读；官方/社区分别从各自的产品版本文件读） ----
+    if getattr(args, "dsh_version", False):
+        kinds = DshTarget().scan_desktop_kinds()
+        if not kinds:
+            say("  没探到 DSH 桌面端安装（--dsh-version 只认官方/社区两种桌面端的安装根）。", "y")
+            return
+        say("  本机 DSH 桌面端版本：")
+        for k in kinds:
+            _v = k.get("version") or "（未读到，可能还没首次启动过）"
+            _tag = "官方桌面版（新架构）" if k["kind"] == "official" else "社区桌面版（旧架构）"
+            say("  · %s  v%s" % (_tag, _v), "c")
+            say("      路径：%s" % k["root"])
+            if k.get("version_src"):
+                say("      来源：%s" % k["version_src"])
         return
     if args.guard:
         t = WorkBuddyTarget()

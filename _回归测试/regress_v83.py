@@ -99,7 +99,8 @@ finally:
 
 # ---------- F) 载荷与版本 ----------
 print("F  版本与载荷对齐")
-ck("VERSION 是 8.3", PJ.VERSION == "8.3", PJ.VERSION)
+ck("VERSION 是合法的 X.Y（不锁死具体版本，避免每次升版都要改测试）",
+   bool(re.match(r"^\d+\.\d+$", PJ.VERSION)), PJ.VERSION)
 ck("载荷内 version 与 VERSION 对齐", PJ._SEALED.get("version") == PJ.VERSION,
    PJ._SEALED.get("version"))
 ck("封条自检通过", PJ._seal_verify_source() is True)
@@ -113,7 +114,7 @@ ck("SIGNAL_REPLY 不在源码前 600k", PJ.SIGNAL_REPLY not in src[:600000])
 print("H  启动封条全链路")
 r = subprocess.run([PY, SCRIPT, "--version"], capture_output=True, timeout=120)
 out = (r.stdout or b"").decode("utf-8", "replace")
-ck("--version 正常输出且含 8.3", "8.3" in out and "二改" not in out, out[:200])
+ck("--version 正常输出且含版本号", PJ.VERSION in out and "二改" not in out, out[:200])
 ck("退出码 0（校验未拦截）", r.returncode == 0, r.returncode)
 
 # ---------- I) 小白教程 ----------

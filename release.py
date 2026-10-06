@@ -23,7 +23,7 @@ if "--dist" in sys.argv:
 # Release 附件里放哪些（v7.5 起把 preview.png 也带上：README 引用了它，
 # 不带的话解压出来的 README 里那张预览图是坏图）
 ASSETS = ["破甲一键通.py", "一键破甲.bat", "persona.md", "使用说明.md",
-          "修复报告.md", "README.md", "小白教程.md", "LICENSE",
+          "修复报告.md", "README.md", "小白教程.md", "更新日志.md", "LICENSE",
           "preview.png", "赞赏码.png"]
 # 清单里额外列出的仓库文件（进 SHA256SUMS.txt，但**不**塞进 Release 附件的 zip）。
 # ⚠ 这个列表必须和 SHA256SUMS.txt 的实际条目对齐：漏了的话，下一次跑本脚本

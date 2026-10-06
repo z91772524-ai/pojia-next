@@ -111,10 +111,16 @@ def main():
         zpath = os.path.join(DIST, "pojia-next-v%s-exe.zip" % ver.split()[-1])
         with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
             z.write(exe, os.path.join("破甲一键通-v%s" % ver.split()[-1], NAME + ".exe"))
-            for extra in ("persona.md", "使用说明.md", "README.md", "LICENSE"):
+            # 随 exe 一起给的东西：说明书、教程、更新日志、许可。
+            # exe 用户是"不装 Python 的小白"，缺《小白教程》和《更新日志》最吃亏 ——
+            # 前者不知道先按哪个键，后者不知道这版比上版多了什么（v8.3 补）。
+            for extra in ("persona.md", "使用说明.md", "小白教程.md", "更新日志.md",
+                          "README.md", "LICENSE"):
                 p = os.path.join(REPO, extra)
                 if os.path.isfile(p):
                     z.write(p, os.path.join("破甲一键通-v%s" % ver.split()[-1], extra))
+                else:
+                    print("  [!] 缺少 %s，未打进 exe 包" % extra)
         print("已打包：%s（%.1f MB）" % (zpath, os.path.getsize(zpath) / 1048576))
     return 0
 

@@ -96,7 +96,9 @@ jobs:
           # ── GUI：零网络例外 = 环境补全下载器 + 本地端口探测 ────────────
           # 例外 1：urllib.request 只允许出现在 _env_download（环境补全页的
           #         用户主动下载，URL 全部为脚本内字面量的官方/镜像源）——
-          #         出现次数必须恰好等于 1 处 import；
+          #         import 必须恰好 1 处，且每一处引用都落在该函数体内；
+          #         函数体内「import + urlopen 调用」= 2 处字符串属正常写法，
+          #         不能用「全文恰好 1 处」这种粗计数一刀切；
           # 例外 2：socket 只允许出现在 _port_busy（本地端口占用探测，防
           #         SO_REUSEADDR 假成功）—— 所有 connect 目标必须全是 127.0.0.1。
           # 其余敏感调用与核心同口径全 0。
@@ -119,10 +121,19 @@ jobs:
           if bad:
               print('GUI 出现不该有的调用:', bad); sys.exit(1)
 
-          n_urllib = len(re.findall(r'urllib\.request', gsrc))
-          print('  gui  urllib.request     %d （环境补全下载器专用，=1 合规）' % n_urllib)
-          if n_urllib != 1:
-              print('GUI 的 urllib.request 出现 %d 次（应为 1 处，仅 _env_download）' % n_urllib); sys.exit(1)
+          import ast
+          tree = ast.parse(gsrc)
+          fn = next((n for n in tree.body
+                     if isinstance(n, ast.FunctionDef) and n.name == '_env_download'), None)
+          if fn is None:
+              print('GUI 里找不到 _env_download 函数'); sys.exit(1)
+          occ = [gsrc.count(chr(10), 0, m.start()) + 1
+                 for m in re.finditer(r'urllib\.request', gsrc)]
+          n_imp = len(re.findall(r'(?m)^\s*import\s+urllib\.request\b', gsrc))
+          bad_ln = [ln for ln in occ if not (fn.lineno <= ln <= fn.end_lineno)]
+          print('  gui  urllib.request     %d 处（import %d，_env_download 第 %d~%d 行，全在体内则合规）' % (len(occ), n_imp, fn.lineno, fn.end_lineno))
+          if n_imp != 1 or bad_ln:
+              print('GUI 的 urllib.request 违规：import=%d（应 1），越出行号=%s' % (n_imp, bad_ln)); sys.exit(1)
 
           n_conn = len(re.findall(r'\.connect\(', gsrc))
           n_local = len(re.findall(r'\.connect\(\("127\.0\.0\.1"', gsrc))

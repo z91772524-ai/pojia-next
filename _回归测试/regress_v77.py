@@ -39,7 +39,10 @@ print(f"临时根目录: {tmp}\n")
 print("T1  目标注册")
 for k in ("codex", "cursor", "claude"):
     chk(f"{k} 已注册", k in mod.TARGETS, str(list(mod.TARGETS)))
-chk("DEFAULT_TARGETS 含 6 个", len(mod.DEFAULT_TARGETS) == 6, str(mod.DEFAULT_TARGETS))
+# v8.0 起目标扩到 15 个 —— 这里只断言">= 6 且键位一致"，不再写死总数
+chk("DEFAULT_TARGETS >= 6 且与 TARGETS 一致",
+    len(mod.DEFAULT_TARGETS) >= 6 and sorted(mod.DEFAULT_TARGETS) == sorted(mod.TARGETS),
+    str(mod.DEFAULT_TARGETS))
 chk("别名 gpt->codex", mod.TARGET_ALIAS.get("gpt") == "codex")
 chk("别名 claude-code->claude", mod.TARGET_ALIAS.get("claude-code") == "claude")
 chk("resolve_targets('codex,cursor')", mod.resolve_targets("codex,cursor") == ["codex", "cursor"])
@@ -208,7 +211,8 @@ clean = _re.sub(r'\x1b\[[0-9;]*m', '', out)
 chk("界面列出 Codex", "Codex" in clean)
 chk("界面列出 Cursor", "Cursor" in clean)
 chk("界面列出 Claude", "Claude Code" in clean)
-chk("「全部」序号为 7", "[7] 全部" in clean, clean[-400:])
+_all_no = str(len(mod.DEFAULT_TARGETS) + 1)   # v8.0：「全部」序号随目标数动态变化
+chk(f"「全部」序号为 {_all_no}", f"[{_all_no}] 全部" in clean, clean[-400:])
 
 shutil.rmtree(tmp, ignore_errors=True)
 print("\n" + "=" * 62)

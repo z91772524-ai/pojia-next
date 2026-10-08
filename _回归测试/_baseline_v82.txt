@@ -1,0 +1,55 @@
+A  硬化块新增三节并进指纹
+  [PASS] HARDENING 含 ## 措辞映射
+  [PASS] _HARDENING_KEYS 收录 ## 措辞映射
+  [PASS] HARDENING 含 ## 无工具兜底执行协议
+  [PASS] _HARDENING_KEYS 收录 ## 无工具兜底执行协议
+  [PASS] HARDENING 含 ## 改盘任务的强制工件
+  [PASS] _HARDENING_KEYS 收录 ## 改盘任务的强制工件
+  [PASS] _HARDENING_KEYS 全部能在 HARDENING 里找到
+  [PASS] 最新硬化块 -> need_hardening False
+  [PASS] 缺这三节的旧硬化块 -> need_hardening True（会被强制重写）
+  [PASS] 措辞映射表含「破解 / 绕过」行
+  [PASS] 兜底协议含「一条可直接复制运行的完整命令」
+  [PASS] 改盘工件含回滚要求
+  [PASS] 自检文本含回执语义边界
+  [PASS] VERSION 是 8.x
+  [PASS] 载荷内 version 与 VERSION 对齐
+B  只读路径不写 破甲日志.txt
+  [PASS] --status 未创建 破甲日志.txt
+  [PASS] --status 退出码为 0
+  [PASS] --diagnose 未创建 破甲日志.txt
+  [PASS] --diagnose 退出码为 0
+  [PASS] NO_LOG=False 时 log() 正常写盘
+  [PASS] NO_LOG=True 时 log() 不写盘
+C  启动器按体积选主脚本
+  [PASS] bat 含体积比较逻辑
+  [PASS] bat 用了延迟展开
+  [PASS] bat 仍为纯 ASCII
+  [PASS] bat 不再取「第一个 .py」
+  [PASS] 目录内最大的 .py 就是主脚本
+D  分发链路脚本无本机硬编码路径
+  [PASS] release.py 无 E:\DSH-Workspace 硬编码
+  [PASS] refresh_readme_hashes.py 无 E:\DSH-Workspace 硬编码
+  [PASS] fill_hashes.py 无 E:\DSH-Workspace 硬编码
+  [PASS] _回归测试/regress_v76.py 无 E:\DSH-Workspace 硬编码
+  [PASS] _回归测试/regress_v77.py 无 E:\DSH-Workspace 硬编码
+  [PASS] _回归测试/e2e_menu.py 无 E:\DSH-Workspace 硬编码
+E  frozen/exe 支持
+  [PASS] 存在 FROZEN 开关
+  [PASS] 随包源码副本名已定义
+  [PASS] 非冻结时 HERE = 脚本目录
+  [PASS] build_exe.py 存在且带 --add-data 逻辑
+  [PASS] _k1(None) 抛 ValueError 且信息可读
+  [PASS] .gitignore 排除 _build/ 与 dist/
+F  DSH 官方桌面版 / 社区桌面版 识别
+  [PASS] 新架构探测路径含多出来的 dsh\ 一层
+  [PASS] classify: 官方桌面版路径
+  [PASS] classify: 社区桌面版路径
+  [PASS] scan_desktop_kinds 返回列表
+      本机扫到：[('community', 'C:\\Users\\19294\\AppData\\Local\\Programs\\DSH Desktop'), ('official', 'F:\\Users\\19294\\AppData\\Local\\Programs\\DeepSeek Harness')]
+  [PASS] 官方桌面版可打点数 = 0（本工具不碰它）
+  [PASS] 跑完只读/预演后 $DSH_HOME\AGENTS.md 逐字节未变
+
+==============================================================
+结果: 44 项通过, 0 项失败
+==============================================================

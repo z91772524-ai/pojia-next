@@ -2,15 +2,34 @@
 # -*- coding: utf-8 -*-
 """
 ================================================================================
- 破甲一键通  v7.8   （多目标统一脚本）
+ 破甲一键通  v8.0   （多目标统一脚本 · 图形界面版）
 ================================================================================
 
- 把桌面那几套破甲工具合并成【一个脚本】，一套人格，六个目标：
+ 把桌面那几套破甲工具合并成【一个脚本】，一套人格，十五个目标：
 
-     dsh   —— DeepSeek Harness（DSH Desktop / 官方 npm 全局 / npx 缓存 / 便携版）
-     wb    —— WorkBuddy（六层靶点：模板 / product.json / 命令闸门 / 网页过滤 /
+     dsh        —— DeepSeek Harness（DSH Desktop / 官方 npm 全局 / npx 缓存 / 便携版）
+     wb         —— WorkBuddy（六层靶点：模板 / product.json / 命令闸门 / 网页过滤 /
                           运行时缓存 / 会话快照 ＋ 账号级云记忆 memoryBlock）
-     zcode —— ZCode（智谱 zcode.z.ai：AGENTS.md / Memory / 技能 / 可选 cjs 系统提示词）
+     zcode      —— ZCode（智谱 zcode.z.ai：AGENTS.md / Memory / 技能 / 可选 cjs 系统提示词）
+     codex      —— OpenAI Codex CLI（config.toml model_instructions_file）
+     cursor     —— Cursor（.cursor/rules/*.mdc）
+     claude     —— Claude Code（CLAUDE.md）
+     gemini     —— Gemini CLI（~/.gemini/GEMINI.md）
+     qwen       —— Qwen Code（~/.qwen/QWEN.md）
+     iflow      —— iFlow CLI 心流（~/.iflow/IFLOW.md）
+     trae       —— Trae（~/.trae/rules/project_rules.md）
+     codebuddy  —— CodeBuddy 腾讯（~/.codebuddy/CODEBUDDY.md）
+     opencode   —— OpenCode（~/.config/opencode/AGENTS.md）
+     windsurf   —— Windsurf（~/.codeium/windsurf/memories/global_rules.md）
+     cline      —— Cline（~/Documents/Cline/Rules/pojia-inject.md）
+     copilot    —— GitHub Copilot CLI（~/.copilot/copilot-instructions.md）
+
+ v8.0 大改：
+   · 新增「破甲GUI.py」图形界面（本机网页 UI，零第三方依赖），双击 一键破甲.bat
+     默认进图形界面；命令行全套开关原样保留。
+   · 新增上面 9 个新目标，全部走"标记块"通道：可追加、可整块替换、可还原。
+   · DSH / WorkBuddy 的「宽松旧人格卡死」自愈：护照里记录 persona_hash，
+     人格文件一变，下次 apply 自动统一，不再要求用户记得加 --force。
 
  合并来源：
      WorkBuddy_Unlock_一键破甲_v1   （PowerShell，政策块替换）
@@ -27,7 +46,7 @@
    历史说明（为什么当初那样实现）保留在下方注释与 修复报告.md 里，不抹掉。
 
  ℹ 内部迭代号说明：代码注释里出现的 v7.9 / v7.10 是**开发期内部编号**，与对外发布的
-   `VERSION = "7.8"` 不是一回事 —— 对外只在「封条 + 功能」成套齐备时才发新版，
+   `VERSION = "8.0"` 不是一回事 —— 对外只在「封条 + 功能」成套齐备时才发新版，
    内部每轮改动各自记一个号。两号的分工是：
      · **v7.9** —— 加密块扩容（反圈钱提示 / 自证整段模板 / 反二改与退款提示收进
        `_SEALED`）；只读入口标志（`READONLY`）；进程表缓存；目标选择菜单探测缓存；
@@ -188,7 +207,7 @@ if IS_WIN and not getattr(subprocess, "_dsh_no_window_patched", False):
     subprocess.Popen = _popen_no_window
     subprocess._dsh_no_window_patched = True
 
-VERSION = "7.8"
+VERSION = "8.0"
 CHECK_EXIT_CODES = []          # --check 用：收集不达标项（只影响退出码，不改状态码）
 ERRORS = 0                     # v7.4：apply/revert 里的失败项累计（>0 → 进程退出码 1）
 
@@ -404,73 +423,73 @@ def _k2(src):
 
 
 _B0 = """\
-6y+2B5zS8Rw8MZsRLW9vxsGYcU+zyNMfTrLo5TLPaTc2NxPn2o6AfSoQf/8ukCZWdgy97u+JzkQX
-tl1rwhMyMbl3LHymaLIRAapSMg2vdoeNbG6F5w7q2dAqwfAkHXFzNRD8G2MaSPbMQ72aJ9ykVcy4
-LlEkr978TvoQRU9sC22u1vJEdNvZFpk2kHHJGi7ipr2QKKqp0G9mZKLkn4ukosmgTOKlFx9y6Wty
-MZh3xbFQ7W8XJuGggEosWamZFXN2/HRfAG6vrEM894YVAeCakpylMF4Y7hM5+QOpjU2A3I2idp6I
-T6CYmhC8eIqOvwHFv6G5HRHLwq8vUCG5Qx1vNU1beHYJU1f4GrlahU+srJk+xMiX/Bcfw4RGu92G
-wBk+/REIanScjFfS9IVxTV6gYvTwc30OnSp7zqRhivmVpW7kvb9o4+gviymFM28vRqMsJdIQxSbr
-SNVO95qOI0JP9f5RHpF40b2WZIhAWaCeayyDOTrnsbWh2itEJyktfK3CxsmxwAjqmvHA3UB214BB
-RTF+lZj8d1QQJiiQS4rXp4wHzc+FjtrY4TJskCUk0UbHesxW/jrPWzxg1OA8hPbYS98uyi1/DeOt
-WkYANXU7YZVUOXwghtdxUPBCiw5b15SHDDCFaDwZ9rV1octkpkAav9TdExCMQZPh9zlyJxW9beJW
-GQ0cCm/7EYwHOf8BF1ky1NtWxx2cDigLACHE8K2CVCokmkfB6NMwP/fr9jDfxq2n565YXMCBSldD
-mdkGP++D2MOCpBuvtDbu63Rih7oJfp5y6ti/pl07qE1XYo3N/SZ1aUWEF2panvidkNYEWnwPErvi
-kFtfxyk7IfJoERK19E737nRK1xUr4Z4iuN6zyjNaKuwSVA1e3nt71oJmKR4WM0uSayqSKuTC03HU
-liM/K+OceMBpRoF4F1giK/1pMxzGewpx2bv6WSz1a5pWjO0Rki1FVKm43QSllnGY4Z1fuSy1SReN
-tDet6ZTrpe4Q95YJkDDZ8YElpuR7cLvSNXlbp+KGj+kn0xnPFBMjJKAX69GHRQ7fTiJJATe38ugA
-DLNxrCQLBgBHKj5afXufk8n79h+C5QNCVvrP6v4wlBHTd+HZrkg174il3Leo5RYG7UNxQEhmugOf
-yVePICnnP5ksoEDnzA3/9Gmyq3HSvPBTDDjANF5dWVUL4FocCKx7hPj1DjlXo+o2WnxeUZsnykVr
-IIE2y00dFIxFbQZfpc+FBNo/IiOsl0WzsN3HEeXM7bjqStCOK+hYDIaC8OkYnEd6PzhN1xiEg4n0
-qqFnK/csI3i/t3mAg/6eZUwTiw/mv4ETmcdwH7OBm0QqzI80qhEYaXQBhQTIFYsd5JMc3+Wdhiqa
-pJw423pkbqJwgwR1a6glO2WCpAFsb8LMEGDIxSY9Ir/9+BnxFHqQGOKAlSHp+zHn9QW8UTu/1IOo
-IY3oNkErgR1N/c/dWCJiqRYjKQZZ6dYJ70FLJJPLstAtlPM1Jok9oBUdihDVNtpz/H3Aw1UIeDgC
-FHaN4zZ80TuGAmOdHNVRTdeeMWJTJa9FXPi7U3/WMpfqkYdZcNvYTqNkHv04DyjsbKnjstgmhdmV
-N/0LsYZhse5OQH4LQ1H5TeO1sYHvxNxPY947UYYrJ4Zep3uC8bjyDO7F4hwMl5lfegnFKIwSlz9i
-V45x/0DzC2Ib5vnD9Xx+HXDJqBZ6g1D1N7qoocZaeMDKjyJavZ6Xq2Ssq3D15QD9NGXqGuvSQQ1+
-v3bhLW4LjgQf/DagUIYWydjddX4b5HQhzfK+WhpGvCdhte4Ed+iJRaEPCwH4jPNN/kY2gg5Yl2fX
-b9QavDWYe2+auHyHZ+Fbyxhq5u13I3AyvJBrm/kGyIBKHUB9BqNV9THR/f6LGvpKi/ax77GrP79Q
-mIUaO3xrUtBWhhkroAbOiGERBt7w7073NNZ0nXECngyvofiy9gs0cWfzc4XBmdTUeQLPp7gQk1dL
-1pOZz3OjwxL8I1yAV4nHG36oFCJGq5y2/JEHlsamymkHO9yR+Ugm6VnRo5NzkfGUpL58ZLy6Lg8A
-dWsh5GUtI8rq7mkT58rcUXP5voFmEv7/dHB+uoa5NR9DH2sZvKgYYsmBP6prhY8A257dycXO40zY
-tBTkjZ22Rvz1/sB4u476/wwvcJ7tJjZ+dDtKKR8ytnm2NXTs0xEamoiCdaxft+Y/vVJXq/iCX+IA
-SDi4Rh4rMaPUdro/k1KGXz6uakfzMcbPzbDDUjp7vJjMHRDjrcV7k7pM8GgQy9gu9CX2nVHy2bBc
-0HC5n53kpzrdYmphBBZWnz9zWOS/PjZy66sFS+ey17T+7V1bZH/QN4B3YDylmrQmvkrjx2B731/w
-ipm3Hv0CYaMeWqvlpXa5DKi0vkokBnyxHYixwIPgbBojWWXL7Dq6w0FS63o5HUc0s7QkqUThOwJ/
-vF05gvuU9552xTQdRYIY79izwNcBOeWesMkdmlpXthFx2/d3VGTFaIMArnuxWgete95h/8LoNijN
-czi4lMJR3dup8qil3kM3gBPcj0kTSoqlD0dDpS44KfbfY+cOQpfoJfOR0hHNDuTfd7T5sBV4auH9
-jP5IoSB6UKzUdCp8ma5GglkyizgpaQWUZBO+pQl7G9SJTOgPdNSad87Cc1rvuI35P84LVM2k0Xlw
-1USjgc/rw3g14l6HxWMQ6EeoT04ykfmIgoGv11m9zx69LbEkiOzawFUHLhpc/gYLbtPTtnjN0xYE
-GLPHsJIs+l5XaZ1wCrFPiMDN7cAJqeHD7DHAlKkk1w6GrJwkXifIp3vl5b65Pr/orjWkp67a9EIB
-E5EcrIP4eXVJAd+sQg3EhAcPIe6u3Rw+Z6Njs0JmXvU+C3lqJSfV53a7m2lBt1bOr53nygUzapJz
-kx/5tw/VRiM6rZ1GZx+8/mP7QC7no0+ntItrFxwb602StWwGR3A99v1l5ZdXvwRvcW2RrpJkl4tH
-MXAUeZpHbkLYYQ7IteenJe4JcXIiCCGCs/NkWflKQlVkW9jKNqH/+wv39vuEI49M00vDSEE26KB7
-rXgA3Ds6frZn4xgLQzIzFqfJSWwOZFSnIbW8Qb6Y5jw652vCkQna2ltW9T0kJD5jbjbqhOYriH06
-1pvlUFgYsPW4AMvDhM5I+FgoJxh9r7u3DyVGb9nYtcGVV03DhqxGw0huiFcv+JWnxIa8v/qy0DTn
-gHzgIBOfO+TD4AfTdT2JUT2waWwfga+UZedCJVhEP//wxhF2ztriArIuSaZGlQkZBO1LDgIyMFU7
-voQ2q7p5g4+RBRlr2ZzlWo7lnpC1/HGxWV7IOTVDOe8x1yBWI/G8WGizoKmG5xYGgCUOib5LMbIS
-bQXFs0M2F3MyVtHF6XG6Cq2KUMU3U5A+vEF1zFjBiNsuxCd8hxl03Bf02nMAo2AO948qfKkSMARf
-wA/UB0bZIh17iLoyeWwQZ4HxjZFKRMqwihfNInGFuX2FgBB6c+SQOnMv4OM3RWvmW8g3VPj9/OOs
-x7aFBxvw9PgzpsafIGqnEhTLX67MsbWsvcouyXNlj+cNvCMeqaIUQWHs6KxLRgrKttXQQXbffh0E
-6tlJe63kB+lMBYAaj2YI2XbIb1xBatpzumV9fkVeYB1yNRzQuAz7M2uu634kLq8RGwUiTFdO7aRX
-u/VxesH4JNUmZe9jH6ZZquIM8LxRNw7Cm/cY8K4BXYoVTcO9PUOkB8kTIZNksngqFG473eKjels4
-QMyX9pQBnBFT39rmEr0Bn4v8/TypFlxMncP+GYJKcLp/PmuokeVIE7/Ew06VfmbruobCgl5pYs+x
-aCzsHp6GUj9AuIE1+HqYhYPkD5hcYJ12sqryTHM4WGn2b+7gTzfhZ3f9d7IrWOwt1fysxXrCeAM8
-G6gU7dtowJn0mUkiHlrXjegYdP9pQqpMnT8LP7WxFPV63Us9KdORBQFeTavl9euW1/0Jbxi/IPfh
-qUyXH3+EHUGfYMMoLrbwUzNTjAt4VErIiUT+ROMaLH5CXnjttwbAzbU7XBIzUA0D0/dMO6z5srN0
-XNBvbuqUy8CCK31NfvqEHRBMmLwxdkpXe/yrMm2MbEJixiHP9uNPbRJ1avP+1gb/TAKYIw7Dt0uf
-4CjtlhISvdmOgYGkTaWRkjsVRJWeGBDrCT9NzQnNlnIAjtkijiP0iLncJDtYJzTdBMjmXiXV//L3
-G0UAmqk81ck5P5WbJFvevhzUQwcMWi5yZi5a7W3+UUte49oi9gbAehUF0/UFCgjjS7cyFcFfS34O
-wM2usxsE15zO00jGHHLMjpdkYQDtRM8RXWxv2epTXFPmNNhXhh2htzwXGD1tPa2H9uCgQ1dBZTX5
-XGS6T9CFc+0iCj7VhB7SyEUWJpWkRn3sBBtfdtH9eNLfKu9v2XLxvIhR3NTdha/h5QmDIKWerQpC
-OoGuaisRkgwEGi8YmEUgGU4p7CwUwR9eIz1VkQWXhAHLaWoEOVkQolfpik2SEHKH37KBPlZlzQzX
-P6ziKQ+j0gqJGVWh3GUhx+VhGIKLkPMACRx+1EJyqSyQpCpfXasfILzvlCMDlsJh2MIXO6d/gA/m
-QkhJMxlT0uTAexZj74p2dnI1kJ66KBCHmc+XgSIswq9uIHAZjsXNOpqlpxbX0V3MoW2iVnyX6t6+
-IPzb0BecsjuBdkPei/9vnlxqYK73tJkwi1KxpMcWaPJC1w7oT5hEuopGScm4gKAWzZjBwN7Lstmy
-zHbtKVx3De2k5uMUSHoZ9zTicmMDtZc3y+Gayv6jVQbgcXG0V+9BV/tqie8Tr7I7njLjPIBmCLvY
-e3kjEZOeFHt6
+gRAtWCwOYWDLKDazvTPoNib4sDkByHMTREDog4M+dXQMdJe1L/AfFwNQE5gyWaNT3wda53urKp3t
+FegLaArKkmEqAWxkpNPqvQbCg5oM8gW5i/iw21vPbMcnpSffyLCvLA8lTKQYGYcvu7jv+cUyLayM
+/8IGnOzuM/1U4G1Q8izYEFv0GXySHSuCt4Izu2d9xsaBTphN1CAdn/dRld+xAHg9P94+5+afNo5z
+ho8n/JkWgGM2fnhaZFS2X/qchqdhLT1axVoyuozJAbMTY9yxdjseOC8u7rdvxE9VmP1Z3D2fHtHp
+WQuDCE0vlT+00eclQIq8AMvjkMuTIWIac8WF2n7bZSkqGqLm2oSmXYuFgKI8ei56Kul3jWrfT3Zd
+yXZW1b1oq6h2E7podw61xjRqJUv48DTSdVO03DjX11iMzfClphRib1rCy7xcav5wJt2tV8h4nRqO
+dc1dX3Qa32B3HkpfqNZgnPs3SVkE/d2oVbTsl6BnoGLZUvUJsjET4q+uYD5Y1jEkC6v0p6WxazCe
+nsA+GLMyZp6Z6EksF9WmFWOiEWTlDqKugBpIBCnaeqqgKHmbkBOittrYzMgKRN/PSLYRE3/bT7Zc
+z8fPxAuKCU42nXzB1CHepYyPN3c5gdPfWQGGRr/v+yneh+X//VmDU0j4yExU3RjAHln4S01xjvyP
+FCA6/rQbg6GBGRcKe6MZY0jvvLlWS+t22nDnnQ+wBgcyqrEZyv9k/lMq740CVrBaKlV2OTZ2w43x
+zedwST+EqTEwBmhRZ8loLJriKYn2G0isxsF6e3YRAsjsyOR7tkBabTu4PeE/xjTrHIKSk0o+lThZ
+2zA+Kn72qbrkGFrxDTBmG38AHMkCRLKK8x4y/Rg87G9tUTIQfIZjEpN5MH8kjpun6d0PgU/vfhCA
+VwtVMeq9J3icmqXJxfN/zAmqR+/LIFH9zWyorPPIp7B4yG/zyjmumtTcPZiGg3GvRQ1UnBC9x9BL
+DtGAsaaFeK2Cn5UvRSulmbGx6N3l/HLB5GkMJdToLEEfAfTHAoE5nb/s80TYBTvCx44IUc9GqbkW
+EfpcFVAw2BbNz/ej7/5IjTfmSupxCBa6NbUVYIFklsgluCO18pGG86ZgX0i3Q3JgLYJZa9zeo2J0
+09IuD1k4QwMlGKnpXFBNfzc8M7NVD4euisJZQroqLSDa/3y3+sjfhH28lpA4TmrTmB9tw8lgOlby
+OeOwM2j710vtTdKQw/azAmZzCtpLXKIYMiuHg0DFgkvJh6Og0OXZvt/JJVLesm2IbKx/Rk7WXDRT
+IioS7138L04mK+j9BiCFzM9TxGO1UQ1vkD/7s1wfv1WjDgtFJkGtly1vS4Z1We4ykorWd7lQExu4
+pUot0mLwSfGHwxgUEkDI33ACL4rT/UbxYoE+Qd/cF/fL9JNXTFhMOrpeZDJfOYAreUIFxMIfew2D
+Z4Em/fnPy7sIdCVdddVvaqf0Aar7507uzpsHV8RLeEAo/nDzcVo8w1Wdocq0LO/i3KYvgtbvByZH
+OEyuZ3M6RdCT+50SeCZJCw/S77mIMdiY8ZPU7f3A6cSF+dFo5txrFM5imGnAT3kf3zMu+IrQVoay
+8XEDPCxbXyAJu7dWlMbBQTg0o0PifST/DHp8mZdE1PyNJuc6qVNiPGFz5LEpsNAV7r9Sxgg7pohW
+tIP/AVP6ZAPpRiWparCh8zhJvbldVPk7VU2r7ok/g5mLNvMCLQSGq3C8pOgb1iNCGoIZpKoTFrmF
+ARxNtpk0JoXXNzUrLziiDJhmDyP8q/AqwqZ7F6Rigrrk1PFcxNsG6mEIwNO6Du72GwexcOEctajg
+tI7UnJt1VL+txl03UovlEVM8M63ND5HcnfSHTaDHSCPlRCRRBln7yaQW3aljUXyzDh8d/slTotJ+
+cuSLrbx7QGHt4QAw5YE6X44qa7O8QuQrNLagx9hB+VEAOxsMRXJrrY4gEOFDOYtZV0Ka8k/pNXMm
+QPEvxFNUi3XSOv8UgUZ3z9U/P+705bS7eqcpXNgR7OmmSbJWaH4xwuR7hMLFpoEghO24KsQSa6KU
+cClLq3UOQ53rfQa/KV+FnVe0IBFO/l0LZdepwRzUrNpobi4hMC1xWEQ3QtPN6h2E3aPQhddFh8cQ
+TkTrwIc0RMjmtFwQs/O67TiwU49EPw3csVgvrtweuJXVcEzXS0esGrw1N8vT+rStNhUT2CNojtlE
+7c3v7EdWhjjMmhsLzvbA9mUYejlNwcB1wBs6AtkIwfcrKS6fk9FNWun4HIcTc+W2Ko9LCbNaR9L9
+yARiXfijxluQluLOdUXyhIzZVugfTaJ2Hpq8vlV7S6bqlMxZTPoIbpBSWS7yB83mbO1nMPmOxIkv
+xTmS6m7yjDVk5D983Tw18O9JdtgnWkNCOnvGRjEosjJRYFsmcaULIlW6I5GQH6KIYnwSR5Vac4mr
+aY22wazTKrb5Z3WdSA3wnaF3Tosa3vi5pK/oco9FUVADemgoW3lqEl5rocp1oMZMff6+ZEwoae87
++cE/3TnG+rfLRT/EW4EoOLCv1MrS9FAm9UCGIbG/bp5NX/vzSVTZPzZRAVp4tLWrCzO0fwXS+Ant
+t3p6GYcbvP9e3jcdeJQb8NDKPe1R9vindgMhgwGtSWE2PPhuIQ5g05KKouAhnWRX47I6qJNN2AWf
+54HrotMVKItQAMtZWrfKAvBMTX5GZgQrDZz4Q5Z8+8Yhac1cZ5xMroL3E95BFS/uCoIjrwwDLQm6
+U0IW/GDWTY+4WKA7yLVdBrVkXPuvGv8URWkWv4Zd+hMX9t6O9LWWuyv5J7YgKNVOyBO1V8ptcjV6
+y5D2KxSjUc1jKv0Xkgf3rb30iL9tw7XY01rGY2CpVh4qZqCmZh5iOpvUREJ88rYfv3AVmFBsXV9B
+xnvHV0RFXuaGHQRWtMDRyjWX80DHzqw9T8lxIQPVWUOehFo06apAqX3AaTPbd2jD0+8zbLPwHTCV
+oUrcYx/br14/okdGPedTn6I5JyiC4+JjjDfkDO7u5fRwce0vKTiEkQ6O+eS9K+rpcGlI27tVXSGZ
+GX3vrBf8wDkXMfJvOcFbRmfUyKSd9o4qAvFryHSRUA0sA0i7ajr73RPxIC4JtW2ARI3nWpgDsjfw
+JzhYK5OqwSB+EZl9PW1oit/fiLhyOoC7N5sWJ2FuDhXLefFBtM+GtzNMUo9bGUGBLdWYdzREEKSH
+MzS6dUND8U4l68MoZb3GAn64SE2rJYHLJQ4X/HBU/ITlWHb3sAVBn/pIt/m8oSJHD5Oj2TzcjZeV
+T2GrDsi65yAYeX29Ej6FAhfQNYlrs6H/YGmBk1uuEoSF61vTmsZVRzIgPIFJmeZiu95lnPgKRZpf
+2IAcFIwxnjmZTILWVb0Ptk7EeFKq1pK1GZE7HiPwaZXzchZ7aIBDu013MVtLyal7binT5RjW9mFT
+3wOC/dLnTj3FroG/IaZV4WIl5mopfy/j1H0MNPcS8BFIAMGYwUK0bI+7aikEcXm/L3YW7saVyZPd
+Kg36gIxG1rLeo/tetxP5i8DU4k3PF6DnIAJ8RtvhGRKMpDx05DQu3ptRQPkbss8S9kmr2XI7KcmC
+gD0Ym5Rvhf1aTo+OL76DeOeyHi7dnMLBbgOlLDhsPzfEFbBnLiklhUyt3VQsWf4r0JcwOK3LHc4W
+DCTLKRCPSquxTtOSQx/YlnqgCy301Ydm89UNb2HehYmzA4E8JyQpv+qLpXqlOfEr/QaJSeOf/q2z
+b67D2kdyJqVHWbXB27xflKu07JlFfpyyQAp9HWRnfpb2+iftRNrgdGKF5SfX0b2KPMcgdXTySMjx
+9gAVzNuhnEBfI81Jv9bFVMDHnh5vUoosGDWxjtMokyV+amkr/3+XztgjvgUEbKvCyF03fWo+lPW3
+D/c0E3AYXDEFLt2cl2gbXPGh2vZTcLa6EEFsSdvsfTwZX3BG7ZiEMMVaxnw5FLypISNIUtzSwji8
+A82CL8aOJvWinCUoLdaYuB3fz1K88mFg40jrvsUpjCXOjcoXzsdi1iFbHNtNs4NefqhzuvbsasJO
+6wCv95052OEv+6j/hYZL5T7z4QyZsuKiUXXQQshdb/AdZxvhzwbgLkO5wwj2pI8MB1MfbxJe0iLe
+SGClcYbjjyBtdHhb9bI/Vn8XYUv1Wprf66vufJuu/olkooY1dUFQj+8lC76egyEO3SOsP77fPhhm
+YbvLf2i4skrKSSyPjjf0YVOUEQbk45qUILqCXYJPDHrpz8QQCA9n58195oi6wfvXlQi8nHtOuKBL
+HQcBtKNPeIjO3oQ8To+sV1pXBu73nWlocVVix7tJ5xEzr8SLPfJDTgDAsjnq4hBpeT31e1erfLXG
+r/7hnmf1UZ+tWT6Wo87cis4K0PIRgxBy+ryjq9XP2bAGTawQSIdk1KG4FtJzMAY7X66uCPGfYjmQ
+d28YwJ3GCgl6DVgkBRwVXzSwr6d3OI8O38AxsWgarNBi01KsSXXrs8DXMbUcyVDm6YS1UB9oRezd
+SPW4W18BjfJ3SSOd9td/OWDIXhwviIUlhAfFW5sks7WiVesxgIYWtNj1IJdVonnxf9ZrNXRNMKh2
+I6zvvDy/Gl2uKG0VCLR20lACXOfezFpl2Oc7ORxNh3/BMApjuvPgNEcL0HBYRcFY/kzr20Kwxs/B
+6I34E4HyTgg7Tw6ZSSv/aD8Krc+s8idW5hdYnW1LxHUNekqD2p+M4hLHbp4cs0JlHZnWR6Dtt7s4
+xPaDHqU3Hz6VyRiz9ES5F8z+bEg21ZolbYH3Um0OjtTG8gq1ZY5rvCiXVTG09ZePetCBeLbcV4x9
+EZlvStmDXb2Y
 """
-_B1 = "ef2e9fae9561113ff3098066e48b745504de41f85b106b9825c4e55da0d16139"
-_B2 = "9c70f25dc99a6ff7bc36818996aa9ee609ea8e04846949250020e2d0bef8bbe6"
+_B1 = "e403cc12ade1d90ccadc4c2b0c31e4416d2aa9f1eed225ca40e97e579043ceee"
+_B2 = "f8bc37edd6c125eb0d414b11afada697f5129b5efc902b98b23fd131f805cf7f"
 
 #__seg_b0__
 _SX = ("#__d0__", "#__d1__")
@@ -560,12 +579,15 @@ def _seal_alarm(reason, detail="", code=3):
 def _seal_read_source():
     """读自身源码文本（换行统一为 \n）。
 
-    · 明文运行（getattr(sys,"frozen",False) 为假）—— 读文件字节，统一换行；
-      **不抹平任何字面量**：封条绑定的是真实文件内容。
-    · 打包成 exe（frozen）—— 没有明文源码可校验，返回 None，跳过源码层。
-      代价：exe 分发时源码层失效，但密文层 + _k2 派生密钥层仍在。
+    · 源码文件在手边（明文运行，或 GUI 的 exe 加载旁边的核心 .py）——
+      读文件字节，统一换行；**不抹平任何字面量**：封条绑定的是真实文件内容。
+    · 打包成 exe 且身边**真的没有** .py 源码 —— 返回 None，跳过源码层。
+      代价：那种分发方式源码层失效，但密文层 + _k2 派生密钥层仍在。
+    · v8.0 修：以前"是 frozen 就直接 None"—— 但 GUI 的 exe 正是加载旁边
+      的 .py 跑的，源码明明在却返回 None，_k2(None) 当场把载荷解密炸成
+      TypeError，exe 根本起不来。改成"读得到就校验"，真读不到才跳过。
     """
-    if getattr(sys, "frozen", False):
+    if getattr(sys, "frozen", False) and not os.path.exists(SELF):
         return None
     with open(SELF, "rb") as _fh:
         raw = _fh.read()
@@ -809,6 +831,9 @@ BAK_WB = ".unlockbak"
 BAK_CODEX = ".pojia.bak"
 BAK_CURSOR = ".pojia.bak"
 BAK_CLAUDE = ".pojia.bak"
+# v8.0：标记块通道的新目标（Gemini/Qwen/iFlow/Trae/CodeBuddy/OpenCode/
+#       Windsurf/Cline/Copilot）共用这一个备份后缀
+BAK_MARK = ".pojia.bak"
 
 # Codex：config.toml 的 model_instructions_file 注入 + managed-prompts 目录
 CODEX_MARK = "pojia-next"
@@ -2324,10 +2349,18 @@ class DshTarget:
         # 老版本升级判据（v7.2 补）：DSH 之前是唯一没接 need_upgrade 的目标 ——
         # "版本号没变但内容变了"（比如只新增硬化块）时它会永久跳过，连 --force 都救不回来。
         # 这里按 DSH_HOME 算一次，传给每个靶点的 persona 注入。
-        _up = need_upgrade(self.dsh_home(), self.key) if mode != "revert" else False
+        # v8.0：再加"人格过期"判据 —— persona.md 换过（护照里的 persona_hash 对不上）
+        # 也自动重写。这是"DSH 破甲不稳定"的主因：人格一改，全部靶点卡在 [other]。
+        _up = False
+        if mode != "revert":
+            _up = need_upgrade(self.dsh_home(), self.key) \
+                or persona_stale(self.dsh_home(), want)
         if _up and mode == "apply":
-            log("检测到旧版安装（护照 %s → 本版 %s）：DSH 靶点将自动重写升级。"
-                % (passport_version(self.dsh_home()) or "无护照", VERSION), "c", "dsh")
+            _why = ("护照 %s → 本版 %s" % (passport_version(self.dsh_home()) or "无护照", VERSION)
+                    if need_upgrade(self.dsh_home(), self.key)
+                    else "人格文件已更新（护照记录 %s → 当前 %s）"
+                         % (passport_persona_hash(self.dsh_home())[:12] or "?", want[:12]))
+            log("检测到需要统一重写：%s：DSH 靶点将自动升级。" % _why, "c", "dsh")
         for b in bases:
             for fp, funcs in self.collect_targets(b):
                 if mode == "revert":
@@ -3472,7 +3505,7 @@ class WorkBuddyTarget:
         if mode == "apply" and not dry:
             anchor = data_dir if (data_dir and os.path.isdir(data_dir)) else install
             if anchor:
-                pp = passport_new(self.key, anchor, "", "", "policy")
+                pp = passport_new(self.key, anchor, "", "", "policy", persona_hash=want)
                 pp["install"] = install or ""
                 pp["data_dir"] = data_dir or ""
                 old_pp, _p = load_passport(anchor)
@@ -4019,6 +4052,29 @@ def need_upgrade(root, key=""):
     独立工具箱）。此时重写一遍是幂等的，多写一次没有副作用。
     """
     return passport_version(root) != VERSION
+
+
+def passport_persona_hash(root):
+    """v8.0：从护照里读回"上次注入用的是哪一版人格"。没有则返回 ""。"""
+    obj, _p = load_passport(root)
+    if not obj or obj.get("tool") != "pojia-yijiantong":
+        return ""
+    return str(obj.get("persona_hash", "") or "")
+
+
+def persona_stale(root, want_hash):
+    """v8.0：客户端里是不是"宽松态但人格过期"。
+
+    背景（DSH 不稳定的真凶）：persona.md 或脚本更新后，靶点文件里注入的还是
+    上一版人格 —— loose_state 判为 "other"，apply 默认跳过，--force 用户又不知道
+    要加，于是一直停在旧人格（本机实测：10 个 DSH 靶点全部 [other] 卡死）。
+
+    现在 apply 前用护照里记录的 persona_hash 对一下：不一致 = 人格过期 = 自动重写。
+    护照里没记过哈希（v7.x 时代打的）返回 False —— 尊重"不白写大文件"的旧原则，
+    第一次跑 v8.0 后护照就有哈希了，之后人格一变就会自动统一。
+    """
+    got = passport_persona_hash(root)
+    return bool(got and want_hash and got != want_hash)
 
 
 def passport_status(root, key):
@@ -4860,7 +4916,7 @@ class ZCodeTarget:
             log("  " + ln, "g" if n_sk else "dg", "zcode")
 
         # 护照 + 回执行
-        pp = passport_new(self.key, home, "", cfg_agents, "policy", "")
+        pp = passport_new(self.key, home, "", cfg_agents, "policy", "", persona_hash=want)
         pp["cjs"] = cjs
         pp["mem_files"] = mems
         old_pp, _p = load_passport(home)
@@ -5702,24 +5758,324 @@ class ClaudeTarget(_MarkBlockTarget):
                          "本工具只处理用户级", "")]
 
 
+# ---- v8.0 新增九个目标：全部走标记块通道，路径均为官方文档的全局配置位置 ----
+#  共同点：客户端把全局指令/规则文件整份读进系统提示词，我们在其中维护一个
+#  `<!-- POJIA-NEXT-INJECT:BEGIN/END -->` 标记块：没有就追加、有就整块替换、
+#  还原时按标记剥离（原文件有备份就从备份还原）。
+
+class GeminiTarget(_MarkBlockTarget):
+    key = "gemini"
+    label = "Gemini CLI"
+    home_name = ".gemini"
+    prompt_file = "GEMINI.md"
+    bak_suffix = BAK_MARK
+    arg_name = "gemini_dir"
+    env_vars = ("GEMINI_CLI_HOME",)
+    proc_names = ("gemini.exe", "gemini")
+
+    def pick_title(self):
+        return "选择 Gemini CLI 的配置目录（一般是 用户目录\\.gemini）"
+
+    def pick_hint(self):
+        return os.path.expanduser("~")
+
+    def resolve_pick(self, path):
+        p = os.path.normpath(os.path.expanduser(path))
+        if os.path.basename(p).lower() == ".gemini":
+            return p, ""
+        cand = os.path.join(p, ".gemini")
+        if os.path.isdir(cand):
+            return cand, ""
+        if os.path.exists(os.path.join(p, "GEMINI.md")) or os.path.isdir(os.path.join(p, "settings.json")):
+            return p, ""
+        return "", "这里不像 Gemini CLI 配置目录。要选 .gemini 那一层（里面通常有 GEMINI.md 或 settings.json）。"
+
+    def extra_checks(self, home, args):
+        return [("info", "提示：Gemini CLI 还读各工程的 GEMINI.md，本工具只处理用户级", "")]
+
+
+class QwenTarget(_MarkBlockTarget):
+    key = "qwen"
+    label = "Qwen Code"
+    home_name = ".qwen"
+    prompt_file = "QWEN.md"
+    bak_suffix = BAK_MARK
+    arg_name = "qwen_dir"
+    env_vars = ("QWEN_CONFIG_DIR",)
+    proc_names = ("qwen.exe", "qwen")
+
+    def pick_title(self):
+        return "选择 Qwen Code 的配置目录（一般是 用户目录\\.qwen）"
+
+    def pick_hint(self):
+        return os.path.expanduser("~")
+
+    def resolve_pick(self, path):
+        p = os.path.normpath(os.path.expanduser(path))
+        if os.path.basename(p).lower() == ".qwen":
+            return p, ""
+        cand = os.path.join(p, ".qwen")
+        if os.path.isdir(cand):
+            return cand, ""
+        if os.path.exists(os.path.join(p, "QWEN.md")) or os.path.exists(os.path.join(p, "settings.json")):
+            return p, ""
+        return "", "这里不像 Qwen Code 配置目录。要选 .qwen 那一层（里面通常有 QWEN.md 或 settings.json）。"
+
+    def extra_checks(self, home, args):
+        return [("info", "提示：Qwen Code 还读各工程的 QWEN.md，本工具只处理用户级", "")]
+
+
+class IflowTarget(_MarkBlockTarget):
+    key = "iflow"
+    label = "iFlow CLI"
+    home_name = ".iflow"
+    prompt_file = "IFLOW.md"
+    bak_suffix = BAK_MARK
+    arg_name = "iflow_dir"
+    env_vars = ("IFLOW_CONFIG_DIR",)
+    proc_names = ("iflow.exe", "iflow")
+
+    def pick_title(self):
+        return "选择 iFlow CLI 的配置目录（一般是 用户目录\\.iflow）"
+
+    def pick_hint(self):
+        return os.path.expanduser("~")
+
+    def resolve_pick(self, path):
+        p = os.path.normpath(os.path.expanduser(path))
+        if os.path.basename(p).lower() == ".iflow":
+            return p, ""
+        cand = os.path.join(p, ".iflow")
+        if os.path.isdir(cand):
+            return cand, ""
+        if os.path.exists(os.path.join(p, "IFLOW.md")) or os.path.exists(os.path.join(p, "settings.json")):
+            return p, ""
+        return "", "这里不像 iFlow CLI 配置目录。要选 .iflow 那一层（里面通常有 IFLOW.md 或 settings.json）。"
+
+
+class TraeTarget(_MarkBlockTarget):
+    key = "trae"
+    label = "Trae"
+    home_name = ".trae"
+    prompt_file = os.path.join("rules", "project_rules.md")
+    bak_suffix = BAK_MARK
+    arg_name = "trae_dir"
+    env_vars = ("TRAE_HOME",)
+    proc_names = ("Trae.exe", "Trae")
+
+    def pick_title(self):
+        return "选择 Trae 的配置目录（一般是 用户目录\\.trae）"
+
+    def pick_hint(self):
+        return os.path.expanduser("~")
+
+    def resolve_pick(self, path):
+        p = os.path.normpath(os.path.expanduser(path))
+        if os.path.basename(p).lower() == ".trae":
+            return p, ""
+        cand = os.path.join(p, ".trae")
+        if os.path.isdir(cand):
+            return cand, ""
+        if os.path.isdir(os.path.join(p, "rules")):
+            return p, ""
+        return "", "这里不像 Trae 配置目录。要选 .trae 那一层（里面通常有 rules\\）。"
+
+    def extra_checks(self, home, args):
+        return [("info", "提示：Trae 还读各工程 .trae\\rules\\，本工具只处理用户级", "")]
+
+
+class CodeBuddyTarget(_MarkBlockTarget):
+    key = "codebuddy"
+    label = "CodeBuddy"
+    home_name = ".codebuddy"
+    prompt_file = "CODEBUDDY.md"
+    bak_suffix = BAK_MARK
+    arg_name = "codebuddy_dir"
+    # ⚠ 不要用 CODEBUDDY_CONFIG_DIR 当探测变量：WorkBuddy/CodeBuddy 桌面宿主会把
+    #   它指向自己的数据目录（本机实测指到了 .workbuddy），一用就探错地方。
+    #   CodeBuddy CLI 的全局指令固定在 用户目录\.codebuddy\CODEBUDDY.md。
+    env_vars = ()
+    proc_names = ("codebuddy.exe", "CodeBuddy.exe", "codebuddy")
+
+    def pick_title(self):
+        return "选择 CodeBuddy 的配置目录（一般是 用户目录\\.codebuddy）"
+
+    def pick_hint(self):
+        return os.path.expanduser("~")
+
+    def resolve_pick(self, path):
+        p = os.path.normpath(os.path.expanduser(path))
+        if os.path.basename(p).lower() == ".codebuddy":
+            return p, ""
+        cand = os.path.join(p, ".codebuddy")
+        if os.path.isdir(cand):
+            return cand, ""
+        if os.path.exists(os.path.join(p, "CODEBUDDY.md")):
+            return p, ""
+        return "", "这里不像 CodeBuddy 配置目录。要选 .codebuddy 那一层（里面通常有 CODEBUDDY.md 或 logs\\）。"
+
+
+class OpenCodeTarget(_MarkBlockTarget):
+    key = "opencode"
+    label = "OpenCode"
+    home_name = os.path.join(".config", "opencode")
+    prompt_file = "AGENTS.md"
+    bak_suffix = BAK_MARK
+    arg_name = "opencode_dir"
+    env_vars = ("OPENCODE_CONFIG", "XDG_CONFIG_HOME")
+    proc_names = ("opencode.exe", "opencode")
+
+    def pick_title(self):
+        return "选择 OpenCode 的配置目录（一般是 用户目录\\.config\\opencode）"
+
+    def pick_hint(self):
+        return os.path.join(os.path.expanduser("~"), ".config")
+
+    def resolve_pick(self, path):
+        p = os.path.normpath(os.path.expanduser(path))
+        if os.path.basename(p).lower() == "opencode":
+            return p, ""
+        for cand in (os.path.join(p, ".config", "opencode"),
+                     os.path.join(p, "opencode")):
+            if os.path.isdir(cand):
+                return cand, ""
+        if os.path.exists(os.path.join(p, "AGENTS.md")) or os.path.exists(os.path.join(p, "opencode.json")):
+            return p, ""
+        return "", "这里不像 OpenCode 配置目录。要选 .config\\opencode 那一层（里面通常有 opencode.json）。"
+
+
+class WindsurfTarget(_MarkBlockTarget):
+    key = "windsurf"
+    label = "Windsurf"
+    home_name = os.path.join(".codeium", "windsurf")
+    prompt_file = os.path.join("memories", "global_rules.md")
+    bak_suffix = BAK_MARK
+    arg_name = "windsurf_dir"
+    env_vars = ("WINDSURF_HOME", "CODEIUM_HOME")
+    # ⚠ global_rules.md 有 6000 字符上限：超出部分 Windsurf 不读。
+    #    人格块超限时在写后自检里提示（不回滚 —— 破甲主体仍然生效）。
+    GLOBAL_RULES_CAP = 6000
+    proc_names = ("Windsurf.exe", "windsurf.exe", "Windsurf")
+
+    def pick_title(self):
+        return "选择 Windsurf 的配置目录（一般是 用户目录\\.codeium\\windsurf）"
+
+    def pick_hint(self):
+        return os.path.join(os.path.expanduser("~"), ".codeium")
+
+    def resolve_pick(self, path):
+        p = os.path.normpath(os.path.expanduser(path))
+        if os.path.basename(p).lower() == "windsurf":
+            return p, ""
+        cand = os.path.join(p, ".codeium", "windsurf")
+        if os.path.isdir(cand):
+            return cand, ""
+        cand = os.path.join(p, "windsurf")
+        if os.path.isdir(cand):
+            return cand, ""
+        return "", "这里不像 Windsurf 配置目录。要选 .codeium\\windsurf 那一层（里面通常有 memories\\ 或 mcp_config.json）。"
+
+    def _post_write_check(self, target):
+        n = len(read_text_safe(target) or "")
+        if n > self.GLOBAL_RULES_CAP:
+            log("  注意：global_rules.md 现在共 %d 字符，Windsurf 全局规则只读前 %d 字符，"
+                "超出部分可能不生效（可在 Windsurf 设置里精简）。"
+                % (n, self.GLOBAL_RULES_CAP), "y", self.key)
+        return ""
+
+
+class ClineTarget(_MarkBlockTarget):
+    key = "cline"
+    label = "Cline"
+    home_name = os.path.join("Documents", "Cline", "Rules")
+    prompt_file = "pojia-inject.md"
+    bak_suffix = BAK_MARK
+    arg_name = "cline_dir"
+    env_vars = ("CLINE_CONFIG_DIR",)
+    proc_names = ()
+
+    def pick_title(self):
+        return "选择 Cline 全局规则目录（一般是 用户目录\\Documents\\Cline\\Rules）"
+
+    def pick_hint(self):
+        return os.path.join(os.path.expanduser("~"), "Documents")
+
+    def resolve_pick(self, path):
+        p = os.path.normpath(os.path.expanduser(path))
+        low = os.path.basename(p).lower()
+        if low == "rules":
+            return p, ""
+        cand = os.path.join(p, "Documents", "Cline", "Rules")
+        if os.path.isdir(cand):
+            return cand, ""
+        for sub in (os.path.join("Cline", "Rules"), "Cline"):
+            cand = os.path.join(p, sub)
+            if os.path.isdir(cand):
+                return cand, ""
+        return "", "这里不像 Cline 规则目录。要选 Documents\\Cline\\Rules 那一层。"
+
+
+class CopilotTarget(_MarkBlockTarget):
+    key = "copilot"
+    label = "Copilot CLI"
+    home_name = ".copilot"
+    prompt_file = "copilot-instructions.md"
+    bak_suffix = BAK_MARK
+    arg_name = "copilot_dir"
+    env_vars = ("COPILOT_HOME",)
+    proc_names = ("copilot.exe", "copilot")
+
+    def pick_title(self):
+        return "选择 GitHub Copilot CLI 的配置目录（一般是 用户目录\\.copilot）"
+
+    def pick_hint(self):
+        return os.path.expanduser("~")
+
+    def resolve_pick(self, path):
+        p = os.path.normpath(os.path.expanduser(path))
+        if os.path.basename(p).lower() == ".copilot":
+            return p, ""
+        cand = os.path.join(p, ".copilot")
+        if os.path.isdir(cand):
+            return cand, ""
+        if os.path.exists(os.path.join(p, "copilot-instructions.md")):
+            return p, ""
+        return "", "这里不像 Copilot CLI 配置目录。要选 .copilot 那一层（里面通常有 agent 或 instructions 相关文件）。"
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  五、统一调度
 # ══════════════════════════════════════════════════════════════════════════════
 
 TARGETS = {"dsh": DshTarget, "wb": WorkBuddyTarget, "zcode": ZCodeTarget,
-           "codex": CodexTarget, "cursor": CursorTarget, "claude": ClaudeTarget}
+           "codex": CodexTarget, "cursor": CursorTarget, "claude": ClaudeTarget,
+           "gemini": GeminiTarget, "qwen": QwenTarget, "iflow": IflowTarget,
+           "trae": TraeTarget, "codebuddy": CodeBuddyTarget, "opencode": OpenCodeTarget,
+           "windsurf": WindsurfTarget, "cline": ClineTarget, "copilot": CopilotTarget}
 TARGET_ALIAS = {"workbuddy": "wb", "dsh-desktop": "dsh",
                 "z-code": "zcode", "zcode-desktop": "zcode",
                 "gpt": "codex", "openai": "codex",
                 "claude-code": "claude", "anthropic": "claude",
+                "gemini-cli": "gemini", "google": "gemini",
+                "qwen-code": "qwen", "qwencode": "qwen",
+                "iflow-cli": "iflow", "iflowcli": "iflow", "心流": "iflow",
+                "trae-cn": "trae", "trae-ide": "trae",
+                "codebuddy-cli": "codebuddy", "tencent": "codebuddy",
+                "codeium": "windsurf",
+                "copilot-cli": "copilot", "github": "copilot",
                 "all": "all"}
-DEFAULT_TARGETS = ["dsh", "wb", "zcode", "codex", "cursor", "claude"]
+DEFAULT_TARGETS = ["dsh", "wb", "zcode", "codex", "cursor", "claude",
+                   "gemini", "qwen", "iflow", "trae", "codebuddy",
+                   "opencode", "windsurf", "cline", "copilot"]
 
 # 界面用的短名。启动横幅由它 + DEFAULT_TARGETS 拼出来 ——
 # 原来横幅写死成 "DSH / WorkBuddy / ZCode"，v7.7 加到六个目标后忘了同步，
 # 于是启动界面一直少列三个（用户可见的陈旧文案）。改成动态生成，以后加目标不会再漂。
 TARGET_LABEL = {"dsh": "DSH", "wb": "WorkBuddy", "zcode": "ZCode",
-                "codex": "Codex", "cursor": "Cursor", "claude": "Claude Code"}
+                "codex": "Codex", "cursor": "Cursor", "claude": "Claude Code",
+                "gemini": "Gemini CLI", "qwen": "Qwen Code", "iflow": "iFlow CLI",
+                "trae": "Trae", "codebuddy": "CodeBuddy", "opencode": "OpenCode",
+                "windsurf": "Windsurf", "cline": "Cline", "copilot": "Copilot CLI"}
 
 
 def resolve_targets(spec):
@@ -5734,7 +6090,7 @@ def resolve_targets(spec):
         if part == "all":
             return list(DEFAULT_TARGETS)
         if part not in TARGETS:
-            say("[!] 未知目标：%s（可选 dsh / wb / zcode / codex / cursor / claude / all）" % part, "red")
+            say("[!] 未知目标：%s（可选 %s / all）" % (part, " / ".join(list(TARGETS))), "red")
             continue
         if part not in out:
             out.append(part)
@@ -5765,6 +6121,25 @@ INSTALL_HINT = {
                "https://cursor.com"),
     "claude": ("Claude Code（安装后配置目录为 ~\\.claude）",
                "https://claude.com/product/claude-code"),
+    # ---- v8.0 新增 ----
+    "gemini": ("Gemini CLI（npm install -g @google/gemini-cli）",
+               "https://github.com/google-gemini/gemini-cli"),
+    "qwen": ("Qwen Code（npm install -g @qwen-code/qwen-code）",
+             "https://github.com/QwenLM/qwen-code"),
+    "iflow": ("iFlow CLI 心流（官网下载 / npm 安装）",
+              "https://iflow.cn"),
+    "trae": ("Trae（字节跳动 AI IDE，装完打开一次就会生成 ~\\.trae）",
+             "https://www.trae.cn"),
+    "codebuddy": ("CodeBuddy 腾讯（安装后配置目录为 ~\\.codebuddy）",
+                  "https://www.codebuddy.cn"),
+    "opencode": ("OpenCode（npm i -g opencode-ai）",
+                 "https://opencode.ai"),
+    "windsurf": ("Windsurf（装完打开一次就会生成 ~\\.codeium\\windsurf）",
+                 "https://windsurf.com"),
+    "cline": ("Cline（VS Code 插件，全局规则在 文档\\Cline\\Rules）",
+              "https://cline.bot"),
+    "copilot": ("GitHub Copilot CLI（npm i -g @github/copilot）",
+                "https://docs.github.com/copilot"),
 }
 
 
@@ -6010,8 +6385,7 @@ def _pick_targets(args=None, title="选目标"):
     v7.7：目标列表由 DEFAULT_TARGETS 动态生成，加目标时这里不会漏（踩过）。
     """
     order = list(DEFAULT_TARGETS)
-    label = {"dsh": "DSH (DeepSeek Harness)", "wb": "WorkBuddy", "zcode": "ZCode",
-             "codex": "Codex", "cursor": "Cursor", "claude": "Claude Code"}
+    label = dict(TARGET_LABEL)             # v8.0：不再写死 —— 加目标这里自动跟上
     all_key = str(len(order) + 1)          # "全部" 的序号
     # v7.9：探测结果只在第一次重绘时算，之后复用。
     # 原来 while 每轮都对 6 个目标重跑 _detect_quick —— 实测每轮 16.4 秒，
@@ -6081,8 +6455,7 @@ def _confirm(text):
 
 def _confirm_and_run(args, mode, sel):
     say("")
-    label = {"dsh": "DSH", "wb": "WorkBuddy", "zcode": "ZCode",
-             "codex": "Codex", "cursor": "Cursor", "claude": "Claude Code"}
+    label = dict(TARGET_LABEL)             # v8.0：不再写死
     say("  目标：%s" % "、".join(label.get(k, k) for k in sel), "c")
     # v7.6：只在真的会碰 DSH 时才提 DSH 进程的事，选了别的还说就是噪声。
     if "dsh" in sel:
@@ -6192,7 +6565,9 @@ def check_runtime():
 
 def build_parser():
     p = argparse.ArgumentParser(
-        description="破甲一键通 v%s —— DSH / WorkBuddy / ZCode / Codex / Cursor / Claude 六目标一键破甲" % VERSION,
+        description="破甲一键通 v%s —— %s，共 %d 个目标一键破甲"
+                    % (VERSION, " / ".join(TARGET_LABEL[k] for k in DEFAULT_TARGETS),
+                       len(DEFAULT_TARGETS)),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""示例：
   python 破甲一键通.py                              交互菜单
@@ -6234,7 +6609,7 @@ def build_parser():
     p.add_argument("--persona", help="人格文件（默认脚本目录 persona.md）")
     p.add_argument("--pick", metavar="TARGET",
                    help="弹系统目录选择窗口，手动指定某个目标的安装位置并记住"
-                        "（dsh/wb/zcode/codex/cursor/claude）")
+                        "（" + " / ".join(list(TARGETS)) + "）")
     p.add_argument("--clear", action="store_true",
                    help="配合 --pick 用：清除记住的手动路径，改回自动探测")
     p.add_argument("--dsh-dir", help="手动指定 @deepseek-ai 目录或 DSH Desktop 根")

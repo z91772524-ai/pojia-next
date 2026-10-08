@@ -3,7 +3,12 @@ name: security
 # 安全扫描：每次推送 / PR 自动跑。README 上挂的徽章就是这个 workflow 的状态。
 #   · bandit   —— Python 安全静态扫描（**HIGH / MEDIUM 必须为 0**，否则 job 失败）
 #   · semgrep  —— 通用安全规则集（ERROR / WARNING 必须为 0）
-#   · 自查清单 —— 关键敏感调用必须为 0（requests / socket / eval / exec / os.system / shell=True）
+#   · 自查清单 —— 关键敏感调用逐项断言：核心脚本全 0；GUI 单独口径
+#                 （GUI 的环境补全页允许 urllib.request，见该 job 内注释）
+#
+# v8.5 起扫描两个文件：
+#   · 破甲一键通.py  —— 核心（补丁/备份/还原引擎，带封条）
+#   · 破甲GUI.py     —— 图形界面（调用核心，无封条；含环境补全下载器）
 #
 # 用到的配置：仓库根目录的 .bandit.yml（逐条写明哪些告警是已知且可接受的）
 
@@ -27,10 +32,10 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install --disable-pip-version-check bandit
       - name: 完整报告（含 LOW，便于人工审计）
-        run: bandit -c .bandit.yml -r 破甲一键通.py -f txt || true
+        run: bandit -c .bandit.yml -r 破甲一键通.py 破甲GUI.py -f txt || true
       - name: 门禁：HIGH / MEDIUM 必须为 0
         run: |
-          bandit -c .bandit.yml -r 破甲一键通.py -f json -o bandit-report.json --exit-zero
+          bandit -c .bandit.yml -r 破甲一键通.py 破甲GUI.py -f json -o bandit-report.json --exit-zero
           python -c "import json,sys; d=json.load(open('bandit-report.json',encoding='utf-8')); hi=[r for r in d.get('results',[]) if r['issue_severity'] in ('HIGH','MEDIUM')]; print('HIGH/MEDIUM:',len(hi)); [print('  line %s [%s/%s] %s' % (r['line_number'], r['test_id'], r['issue_severity'], r['issue_text'])) for r in hi]; sys.exit(1 if hi else 0)"
 
   semgrep:
@@ -50,7 +55,7 @@ jobs:
           EXCLUDE="--exclude-rule python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1"
           semgrep --config p/python --config p/security-audit \
                   --severity ERROR --severity WARNING --error --metrics=off \
-                  $EXCLUDE --json -o semgrep.json 破甲一键通.py || true
+                  $EXCLUDE --json -o semgrep.json 破甲一键通.py 破甲GUI.py || true
           python -c "import json,sys; d=json.load(open('semgrep.json',encoding='utf-8')); bad=[r for r in d.get('results',[]) if (r.get('extra',{}).get('severity') or '').upper() in ('ERROR','WARNING')]; print('ERROR/WARNING:',len(bad)); [print('  %s %s:%s' % (r['check_id'], r['path'], r['start']['line'])) for r in bad[:40]]; sys.exit(1 if bad else 0)"
 
   call-audit:
@@ -58,12 +63,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: 敏感调用逐项断言（全部必须为 0）
+      - name: 敏感调用逐项断言（核心全 0 · GUI 单独口径）
         run: |
           python -c "
           import re, sys
-          src = open('破甲一键通.py', encoding='utf-8').read()
-          pats = {
+
+          def count(path, pats):
+              src = open(path, encoding='utf-8').read()
+              return {name: len(re.findall(p, src)) for name, p in pats.items()}
+
+          # ── 核心脚本：零网络、零动态执行、零 shell ──────────────────────
+          CORE = '破甲一键通.py'
+          core_pats = {
               'import requests': r'(?m)^\s*import\s+requests|from\s+requests\s+import',
               'import socket': r'(?m)^\s*import\s+socket|from\s+socket\s+import',
               'eval(': r'\beval\s*\(',
@@ -76,12 +87,47 @@ jobs:
               '__import__(': r'__import__\s*\(',
               'subprocess 拼串命令': r'subprocess\.run\([^\[\n]*%|subprocess\.run\([^\[\n]*\.format\(',
           }
-          bad = []
-          for name, p in pats.items():
-              n = len(re.findall(p, src))
-              print('  %-20s %d' % (name, n))
-              if n: bad.append(name)
+          bad = [n for n, c in count(CORE, core_pats).items() if c]
+          for n, c in count(CORE, core_pats).items():
+              print('  core %-18s %d' % (n, c))
           if bad:
-              print('出现不该有的调用:', bad); sys.exit(1)
-          print('全部为 0')
+              print('核心出现不该有的调用:', bad); sys.exit(1)
+
+          # ── GUI：零网络例外 = 环境补全下载器 + 本地端口探测 ────────────
+          # 例外 1：urllib.request 只允许出现在 _env_download（环境补全页的
+          #         用户主动下载，URL 全部为脚本内字面量的官方/镜像源）——
+          #         出现次数必须恰好等于 1 处 import；
+          # 例外 2：socket 只允许出现在 _port_busy（本地端口占用探测，防
+          #         SO_REUSEADDR 假成功）—— 所有 connect 目标必须全是 127.0.0.1。
+          # 其余敏感调用与核心同口径全 0。
+          GUI = '破甲GUI.py'
+          gui_pats = {
+              'import requests': r'(?m)^\s*import\s+requests|from\s+requests\s+import',
+              'eval(': r'\beval\s*\(',
+              'exec(': r'\bexec\s*\(',
+              'os.system(': r'os\.system\s*\(',
+              'shell=True': r'shell\s*=\s*True',
+              'http.client': r'http\.client',
+              'pickle/marshal': r'\bpickle\.|\bmarshal\.',
+              '__import__(': r'__import__\s*\(',
+              'subprocess 拼串命令': r'subprocess\.run\([^\[\n]*%|subprocess\.run\([^\[\n]*\.format\(',
+          }
+          gsrc = open(GUI, encoding='utf-8').read()
+          bad = [n for n, c in count(GUI, gui_pats).items() if c]
+          for n, c in count(GUI, gui_pats).items():
+              print('  gui  %-18s %d' % (n, c))
+          if bad:
+              print('GUI 出现不该有的调用:', bad); sys.exit(1)
+
+          n_urllib = len(re.findall(r'urllib\.request', gsrc))
+          print('  gui  urllib.request     %d （环境补全下载器专用，=1 合规）' % n_urllib)
+          if n_urllib != 1:
+              print('GUI 的 urllib.request 出现 %d 次（应为 1 处，仅 _env_download）' % n_urllib); sys.exit(1)
+
+          n_conn = len(re.findall(r'\.connect\(', gsrc))
+          n_local = len(re.findall(r'\.connect\(\("127\.0\.0\.1"', gsrc))
+          print('  gui  socket connect     %d/%d 指向 127.0.0.1（全为本地回环则合规）' % (n_local, n_conn))
+          if n_conn != n_local:
+              print('GUI 的 socket connect 存在非 127.0.0.1 目标！'); sys.exit(1)
+          print('全部合规')
           "

@@ -1,24 +1,46 @@
 @echo off
 rem ==================================================================
-rem  Pojia YiJianTong v7.5  --  launcher
+rem  Pojia YiJianTong v8.0  --  launcher
 rem
-rem  This file is deliberately 100%% ASCII. A .bat that contains any
+rem  This file is deliberately 100% ASCII. A .bat that contains any
 rem  non-ASCII byte gets mangled when cmd.exe parses it under the
 rem  wrong code page, and the whole script falls apart.  All Chinese
-rem  text lives in the .md docs and inside the Python file.
-rem  The target .py is located by wildcard because its name is
-rem  non-ASCII as well -- never write that name into this file.
+rem  text lives in the .md docs and inside the Python files.
+rem  The target .py / GUI .exe are located by wildcard and size
+rem  because their names are non-ASCII -- never write those names here.
+rem
+rem  v8.0 behaviour:
+rem    - double-click (no arguments)  ->  GUI exe (*GUI.exe) next to
+rem      this launcher; without the exe, the classic CLI menu.
+rem    - any argument                 ->  command-line interface
+rem      (the GUI exe is a windowless build, so CLI output must go
+rem      through Python to be visible in this console).
+rem
+rem  How the CORE .py is found: the repo also holds small helper .py
+rem  files (hash fillers, release scripts) and the ~50 KB GUI .py.
+rem  The sealed core is the only .py over 100 KB -- pick that one.
 rem ==================================================================
 
 cd /d "%~dp0"
 
+rem ---- locate the CORE .py: the only .py over 100 KB in this folder ----
 set "SCRIPT="
-for %%F in ("%~dp0*.py") do if not defined SCRIPT set "SCRIPT=%%~fF"
+for %%F in ("%~dp0*.py") do if %%~zF GTR 100000 set "SCRIPT=%%~fF"
+
+rem ---- locate the GUI exe (non-ASCII name, found by wildcard) ----
+set "GUIEXE="
+for %%F in ("%~dp0*GUI.exe") do if not defined GUIEXE set "GUIEXE=%%~fF"
+
+rem ---- double-click and the GUI exe is sitting right there -> GUI ----
+if "%~1"=="" if defined GUIEXE (
+    start "" "%GUIEXE%"
+    exit /b 0
+)
 
 if not defined SCRIPT (
     echo.
-    echo   [!] No .py file found next to this launcher.
-    echo       Keep the .bat and the .py in the same folder.
+    echo   [!] The core .py was not found next to this launcher.
+    echo       Keep the .bat and the core .py in the same folder.
     echo.
     pause
     exit /b 1
@@ -48,6 +70,8 @@ if not defined PYEXE (
     echo       Install Python 3.8 or newer from:
     echo         https://www.python.org/downloads/
     echo       Remember to tick  "Add python.exe to PATH".
+    echo       Without Python, double-click still works if the GUI
+    echo       exe is present next to this launcher.
     echo.
     pause
     exit /b 1

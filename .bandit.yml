@@ -9,5 +9,12 @@ skips:
   - B607   # partial executable path —— 依赖 PATH 里的系统命令，Windows 上属标准做法
   - B324   # SHA1 —— 只用于"人格版本标记"与随机快照目录名，非密码学用途，
            #        且已显式标注 usedforsecurity=False
+  - B104   # binding 0.0.0.0 —— 误报：破甲GUI.py 里命中的 "0.0.0.0" 是注册表
+           #        读到的 WebView2 版本号比较值（pv 字段），不是绑定地址；
+           #        GUI 的本地服务只绑 127.0.0.1，见 破甲GUI.py `_pick_port`
+  - B310   # urlopen 协议审计 —— 仅 GUI 的环境补全下载器（`_env_download`）使用
+           #        urlopen，URL 全部是脚本内字面量（python.org / 微软官方 /
+           #        华为云·清华镜像），且只在用户点「下载」时触发；
+           #        核心脚本零网络请求，call-audit 对它断言 urllib.request == 0
 exclude_dirs:
   - tests

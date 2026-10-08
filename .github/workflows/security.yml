@@ -49,10 +49,15 @@ jobs:
       - run: python -m pip install --disable-pip-version-check semgrep
       - name: 门禁：ERROR / WARNING 必须为 0
         run: |
-          # 唯一排除项：insecure-hash-sha1 —— 本项目的 sha1 只用于"人格版本标记 / 快照目录名"，
-          # 非密码学用途，且代码里已显式标注 usedforsecurity=False（bandit 认可该标注）。
-          # 排除理由写在这里，而不是把整条规则关掉不看。
+          # 排除项逐条写明理由，而不是把整条规则关掉不看：
+          #   1) insecure-hash-sha1 —— 本项目的 sha1 只用于"人格版本标记 / 快照目录名"，
+          #      非密码学用途，且代码里已显式标注 usedforsecurity=False（bandit 认可该标注）。
+          #   2) dynamic-urllib-use-detected —— GUI 的 _env_download(url, ...) 是环境补全页
+          #      下载器，所有调用点的 URL 均为脚本内字面量（Python 官方 / 镜像源），非用户可控
+          #      输入；call-audit job 已用 AST 断言把 urllib.request 的全部出现限定在该函数
+          #      体内（import 恰好 1 处），两个 job 互为佐证。
           EXCLUDE="--exclude-rule python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1"
+          EXCLUDE="$EXCLUDE --exclude-rule python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected"
           semgrep --config p/python --config p/security-audit \
                   --severity ERROR --severity WARNING --error --metrics=off \
                   $EXCLUDE --json -o semgrep.json 破甲一键通.py 破甲GUI.py || true
@@ -136,7 +141,9 @@ jobs:
               print('GUI 的 urllib.request 违规：import=%d（应 1），越出行号=%s' % (n_imp, bad_ln)); sys.exit(1)
 
           n_conn = len(re.findall(r'\.connect\(', gsrc))
-          n_local = len(re.findall(r'\.connect\(\("127\.0\.0\.1"', gsrc))
+          # 注意：这段脚本跑在 bash 的 python -c "..." 双引号里，裸双引号会被 bash
+          # 剥掉、正则被静默改写 —— 所以这里用 \x22 表示双引号字符（re 层等价）。
+          n_local = len(re.findall(r'\.connect\(\(\x22127\.0\.0\.1\x22', gsrc))
           print('  gui  socket connect     %d/%d 指向 127.0.0.1（全为本地回环则合规）' % (n_local, n_conn))
           if n_conn != n_local:
               print('GUI 的 socket connect 存在非 127.0.0.1 目标！'); sys.exit(1)

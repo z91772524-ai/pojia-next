@@ -2,7 +2,7 @@
 
 **一句话：把你电脑上那几个 AI 客户端「自己改不到的内置提示词」，换成你自己写的那份 —— 双击 exe、点一个按钮的事。**
 
-支持 **DSH / WorkBuddy / ZCode / Codex / Cursor / Claude Code** 六个客户端，一个工具全管，六个口径完全一致。
+支持 **DSH / WorkBuddy / ZCode / Codex / Cursor / Claude Code / Gemini CLI / Qwen Code / iFlow / Trae / CodeBuddy / OpenCode / Windsurf / Cline / Copilot CLI** 十五个客户端，一个工具全管，口径完全一致。
 **图形界面（原生窗口）+ 单文件 exe**：不装 Python、不敲命令、不进浏览器；
 源码照样全公开 —— 核心与界面是两个纯 Python 文件，CI 每次提交自动扫描。
 
@@ -35,7 +35,7 @@
 | 换完之后 | 说明 |
 |---|---|
 | 用**你的**身份设定 | 而不是软件自带的默认身份 |
-| **六个客户端一份口径** | 共用一个 `persona.md`，不用各改各的、也不会前后矛盾 |
+| **十五个客户端一份口径** | 共用一个 `persona.md`，不用各改各的、也不会前后矛盾 |
 | **当场能自证** | 发一句固定口令验证真载入，不靠"感觉好像生效了" |
 | **随时能还原** | 点一下「还原」回到官方原版，备份一直都在 |
 
@@ -90,7 +90,7 @@ v8.5 的窗口长这样（对应上面第一张截图）：
 
 | 区域 | 干什么 |
 |---|---|
-| 顶部页签 **破甲** | 主页：六个客户端一张卡一行，状态灯 / 版本 / 靶点数，勾选框 |
+| 顶部页签 **破甲** | 主页：十五个客户端一张卡一行，状态灯 / 版本 / 靶点数，勾选框 |
 | 顶部页签 **环境** | 检测本机 Python / Java / Node / Git / WebView2 / ADB… 缺哪个一键装哪个（全部官方源） |
 | 顶部页签 **Skill** | 本机已装技能 / 市场可装技能 / 精选推荐三分节，搜索过滤，点「安装」直接装 |
 | 顶部页签 **日志** | 实时滚动执行日志（落盘日志在数据目录里） |
@@ -168,13 +168,13 @@ A：工具会自动扫 `Program Files`、`%LOCALAPPDATA%\Programs`、注册表�
 A：**把 exe 直接发过去就行**，对方双击即用，什么都不用装。**完全免费，别花钱买。**
 
 **Q：我的客户端不在支持的六个里？**
-A：那不支持。工具只处理下面列出的六个目标，不会去猜、也不会乱动别的软件。
+A：那不支持。工具只处理下面列出的十五个目标，不会去猜、也不会乱动别的软件。
 
 ---
 
 ## 📖 详细一点
 
-### 它管哪六个客户端
+### 它管哪十五个客户端
 
 | 目标 | 是什么 | 注入方式 |
 |---|---|---|
@@ -184,8 +184,17 @@ A：那不支持。工具只处理下面列出的六个目标，不会去猜、�
 | `codex` | Codex（OpenAI Codex CLI，`~\.codex`） | `config.toml` 里加一行 `model_instructions_file` 指向 `managed-prompts\pojia-persona.md`（**直接替换**模型指令）；旧版写在 `AGENTS.md` 的标记块会自动清理 |
 | `cursor` | Cursor（`~\.cursor`） | `rules\pojia-inject.mdc`；`.cursorrules` 已存在才同步；**不扫你的项目目录** |
 | `claude` | Claude Code（`~\.claude`） | `CLAUDE.md` 标记块；**只处理用户级**，不碰各工程根目录的项目级文件 |
+| `gemini` | Gemini CLI（Google，`~\.gemini`） | `GEMINI.md` 标记块 |
+| `qwen` | Qwen Code（通义，`~\.qwen`） | `QWEN.md` 标记块 |
+| `iflow` | iFlow CLI 心流（`~\.iflow`） | `IFLOW.md` 标记块 |
+| `trae` | Trae（`~\.trae`） | `rules\project_rules.md` 标记块 |
+| `codebuddy` | CodeBuddy 腾讯（`~\.codebuddy`） | `CODEBUDDY.md` 标记块 |
+| `opencode` | OpenCode（`~\.config\opencode`） | `AGENTS.md` 标记块 |
+| `windsurf` | Windsurf（`~\.codeium`） | `windsurf\memories\global_rules.md` 标记块 |
+| `cline` | Cline（VS Code，`~/Documents/Cline/Rules`） | `pojia-inject.md` 标记块 |
+| `copilot` | GitHub Copilot CLI（`~\.copilot`） | `copilot-instructions.md` 标记块 |
 
-> Cursor / Claude 走**标记块**注入：只往你的配置里追加
+> 以上 9 个 v8.5 新目标与 Cursor / Claude 一样，全部走**标记块**注入：只往你的配置里追加
 > `<!-- POJIA-NEXT-INJECT:BEGIN -->` … `END` 之间那一段，**你原有的内容一律保留**，
 > 卸载时按标记精确删除，重复执行也不会堆叠。
 >
@@ -223,7 +232,7 @@ python 破甲一键通.py --apply --yes
 
 ```bash
 python 破甲一键通.py                            # 交互菜单
-python 破甲一键通.py --status                   # 只读：六个目标全查一遍
+python 破甲一键通.py --status                   # 只读：十五个目标全查一遍
 python 破甲一键通.py --check                    # 只读体检（有问题退出码 1）
 python 破甲一键通.py --diagnose                 # 只读：详细取证
 python 破甲一键通.py --dry-run                  # 演练，不改盘
@@ -405,7 +414,7 @@ sha256sum -c SHA256SUMS.txt          # 文件名对得上就直接逐项校验
 
 | 文件 | SHA256（完整值见清单） | 字节 |
 |---|---|---|
-| `破甲一键通GUI.exe` | `5519ca7dafe77076a74d7b8746f986b9`… | 37634458 |
+| `破甲一键通GUI.exe` | `00d38755de4e32498c9f8bbaf44422e`… | 37633820 |
 | `破甲一键通.py` | `c5ae129ad139cd8ec4ca4b2b89f89349`… | 336899 |
 | `破甲GUI.py` | `768b5d159607bd29bd100a33b3ccb182`… | 110546 |
 | `一键破甲.bat` | `f9735845d490ac9bb97d242914ad8f01`… | 2958 |
@@ -793,7 +802,7 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 | `破甲GUI.py` | 图形界面源码（无封条，本地回环服务 + WebView2 窗口） |
 | `破甲一键通.py` | 核心引擎：补丁 / 备份 / 还原逻辑全在这（带防二改封条），GUI 与命令行共用 |
 | `一键破甲.bat` | 纯 ASCII 启动器，通配符定位 `.py`，自动找 Python |
-| `persona.md` | 唯一共用人格源（六个目标共用） |
+| `persona.md` | 唯一共用人格源（十五个目标共用） |
 | `使用说明.md` | 完整说明书（图文步骤、找不到安装位置怎么办） |
 | `更新日志.md` | v7.4 → v8.5 每版改了什么、升级要注意什么 |
 | `小白教程.md` | 给完全没基础的朋友的六步图文教程 |

@@ -14,13 +14,17 @@ import zipfile
 REPO = r"E:\DSH-Workspace\破甲next-github"
 DIST = r"E:\DSH-Workspace\破甲next-发布素材"
 
-# Release 附件里放哪些（v7.5 起把 preview.png 也带上：README 引用了它，
-# 不带的话解压出来的 README 里那张预览图是坏图）
-ASSETS = ["破甲一键通.py", "一键破甲.bat", "persona.md", "使用说明.md",
-          "修复报告.md", "README.md", "LICENSE", "preview.png", "赞赏码.png"]
+# Release 附件 zip 里放哪些（v7.5 起把 preview.png 也带上：README 引用了它，
+# 不带的话解压出来的 README 里那张预览图是坏图；v8.5 起 README 同时引用
+# preview-skills.png 与 icon.ico，所以这两个也要随包）。
+# ⚠ ASSETS + EXTRA 必须**恰好等于** SHA256SUMS.txt 的实际条目集合：
+#   少一个 → 下次跑本脚本会把那条从清单里冲掉（踩过一次）；
+#   多一个 → 清单里出现仓库里不存在的文件。
+ASSETS = ["破甲一键通.py", "破甲GUI.py", "一键破甲.bat", "persona.md",
+          "使用说明.md", "更新日志.md", "小白教程.md", "修复报告.md",
+          "README.md", "LICENSE", "preview.png", "preview-skills.png",
+          "icon.ico", "赞赏码.png"]
 # 清单里额外列出的仓库文件（进 SHA256SUMS.txt，但**不**塞进 Release 附件的 zip）。
-# ⚠ 这个列表必须和 SHA256SUMS.txt 的实际条目对齐：漏了的话，下一次跑本脚本
-#   会把这些条目从清单里冲掉，用户按 README 校验就会失败（踩过一次）。
 EXTRA = ["反抄袭通告.md",
          "evidence/2026-09-25-group-notice.png",
          "evidence/2026-09-25-group-chat.png",
@@ -38,6 +42,13 @@ def sha256(path):
 
 
 def version():
+    # v8.5 起：对外版本号以 GUI 的 DISPLAY_VER 为准（核心 VERSION 以封印文件为准，
+    # 可能滞后于产品版本 —— 见 破甲一键通.py 头部「内部迭代号说明」）。
+    gui = os.path.join(REPO, "破甲GUI.py")
+    if os.path.isfile(gui):
+        for line in open(gui, encoding="utf-8"):
+            if line.startswith("DISPLAY_VER"):
+                return line.split("=")[1].split("#")[0].strip().strip('"')
     for line in open(os.path.join(REPO, "破甲一键通.py"), encoding="utf-8"):
         if line.startswith("VERSION = "):
             return line.split("=")[1].strip().strip('"')

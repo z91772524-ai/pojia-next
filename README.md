@@ -48,7 +48,9 @@
 
 ### 1️⃣ 下载
 打开 [**Releases 页面**](https://github.com/z91772524-ai/pojia-next/releases/latest)，
-下载 **`破甲一键通GUI.exe`** —— 一个单文件 exe，**电脑上不用装 Python**，放哪都行（桌面就行）。
+下载 **`pojia-next-v8.5-exe.zip`**，解压得到 **`破甲一键通GUI.exe`** ——
+单文件 exe，**电脑上不用装 Python**，放哪都行（桌面就行）。
+（GitHub 对附件文件名只认英文，所以 exe 装在 zip 里发行，解压一次就行。）
 
 ### 2️⃣ 双击
 弹出一个原生窗口（WebView2 内核，Win10/11 自带运行时）。
@@ -399,7 +401,7 @@ def backup_file(path, suffix=None, bak_path=None, is_pristine=None):
 
 ### 校验下载的文件没被篡改（SHA256）
 
-仓库根目录有 [`SHA256SUMS.txt`](SHA256SUMS.txt)（覆盖仓库全部核心文件；**Release 附件里另有一份只含 exe 的精简版**），下载后自己核一遍：
+仓库根目录有 [`SHA256SUMS.txt`](SHA256SUMS.txt)（覆盖仓库全部核心文件；**Release 附件另有一份 exe 版的精简校验 `SHA256SUMS-exe.txt`**：zip 下载后核一层，解压出来的 exe 再核一层），下载后自己核一遍：
 
 ```powershell
 # Windows PowerShell
@@ -798,7 +800,7 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 
 | 文件 | 说明 |
 |---|---|
-| `破甲一键通GUI.exe` | **图形界面单文件版**（Release 附件，仓库不入库）—— 免装 Python，双击即用 |
+| `破甲一键通GUI.exe` | **图形界面单文件版**（在 Release 的 `pojia-next-v8.5-exe.zip` 里，仓库不入库）—— 免装 Python，双击即用 |
 | `破甲GUI.py` | 图形界面源码（无封条，本地回环服务 + WebView2 窗口） |
 | `破甲一键通.py` | 核心引擎：补丁 / 备份 / 还原逻辑全在这（带防二改封条），GUI 与命令行共用 |
 | `一键破甲.bat` | 纯 ASCII 启动器，通配符定位 `.py`，自动找 Python |

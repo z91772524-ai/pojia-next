@@ -7,14 +7,20 @@ skips:
   - B404   # import subprocess —— 需要调用 schtasks/taskkill/git 查状态，必然要它
   - B603   # subprocess without shell —— 一律**列表形式**调用，命令来自脚本内字面量
   - B607   # partial executable path —— 依赖 PATH 里的系统命令，Windows 上属标准做法
-  - B324   # SHA1 —— 只用于"人格版本标记"与随机快照目录名，非密码学用途，
-           #        且已显式标注 usedforsecurity=False
+  - B324   # SHA1 —— 只用于"人格版本标记"、随机快照目录名与补丁戳（file_sha16，
+           #        护照 file_stamps 的宿主覆盖比对），非密码学用途，
+           #        且各处均显式标注 usedforsecurity=False
   - B104   # binding 0.0.0.0 —— 误报：破甲GUI.py 里命中的 "0.0.0.0" 是注册表
            #        读到的 WebView2 版本号比较值（pv 字段），不是绑定地址；
            #        GUI 的本地服务只绑 127.0.0.1，见 破甲GUI.py `_pick_port`
-  - B310   # urlopen 协议审计 —— 仅 GUI 的环境补全下载器（`_env_download`）使用
-           #        urlopen，URL 全部是脚本内字面量（python.org / 微软官方 /
-           #        华为云·清华镜像），且只在用户点「下载」时触发；
+  - B102   # exec —— 仅 GUI 的 _core_module_from 一处：v8.6 云核心内存加载的
+           #        机制本体（exec(compile(服务器下发的核心源码))，TLS+CA 链校验 +
+           #        HMAC 签名 + 核心自身封条三重验证后才到达这里，非用户输入；
+           #        call-audit job 已用 AST 断言它恰好 1 处且在该函数体内）
+  - B310   # urlopen 协议审计 —— GUI 的两个网络白名单函数使用 urlopen：
+           #        _env_download（环境补全下载器，URL 全部是脚本内字面量的
+           #        python.org / 微软官方 / 华为云·清华镜像，只在用户点「下载」时触发）
+           #        与 _cloud_fetch（v8.6 云验证握手，TLS+CA 链校验 + HMAC 签名）；
            #        核心脚本零网络请求，call-audit 对它断言 urllib.request == 0
 exclude_dirs:
   - tests

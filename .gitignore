@@ -10,6 +10,8 @@ __pycache__/
 # ── 构建产物（exe 走 Release 附件分发，不进 git）──────────────────
 dist/
 build/
+dist_*/
+build_*/
 *.exe
 *.spec.bak
 

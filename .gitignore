@@ -39,5 +39,12 @@ _云端加密/
 _tmp/
 build_log*.txt
 
+# ── UI 重写过程的临时文件（CSS 草稿 / 预览截图 / 已废弃备份）──────────
+_ui_new.css
+_ui_shots/
+rewrite_ui_css.py
+*.bak-ui
+
 # ── 云验证 CA（与服务器端证书同文件；exe 内嵌走 spec datas，仓库不需要）──
 ca.pem
+*.log

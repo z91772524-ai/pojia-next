@@ -383,7 +383,60 @@ def _cloud_verify(group):
             core = None
             _CORE_READY.clear()
             return False, "SERVER"
+        _notice_async()               # v8.6：云验证通过 → 拉云公告弹窗
         return True, ""
+
+
+# ---- v8.6：云下发公告（GET /pojia/notice，服务器 notice.json 控制开关与内容） ----
+_NOTICE_SHOWN = {"key": ""}           # 同一次进程内同一条公告只弹一次
+
+
+def _notice_async():
+    threading.Thread(target=_notice_worker, daemon=True,
+                     name="cloud-notice").start()
+
+
+def _notice_worker():
+    try:
+        import urllib.request as _ur
+        import ssl as _ssl
+        cafile = os.path.join(getattr(sys, "_MEIPASS", "") or HERE, "ca.pem")
+        ctx = _ssl.create_default_context(cafile=cafile)
+        req = _ur.Request("https://%s:%d/pojia/notice"
+                          % (_CLOUD_HOST, _CLOUD_PORT),
+                          headers={"User-Agent": "pojia-gui/" + VERSION})
+        with _ur.urlopen(req, timeout=12, context=ctx) as resp:
+            r = json.loads(resp.read().decode("utf-8", "replace"))
+        if not r.get("ok"):
+            return
+        title = str(r.get("title") or "公告")
+        text = str(r.get("text") or "").strip()
+        if not text:
+            return
+        key = title + "|" + text[:64]
+        with _CLOUD_LOCK:
+            if _NOTICE_SHOWN["key"] == key:
+                return               # 本进程已弹过同一条
+            _NOTICE_SHOWN["key"] = key
+        _push_log("[公告] 云下发：%s" % title)
+        _notice_show(title, text)
+    except Exception:
+        pass                          # 公告失败不影响任何主流程
+
+
+def _notice_show(title, text):
+    """等 pywebview 窗口就绪后 evaluate_js 弹窗（最多等 25s）。"""
+    import webview
+    arg = json.dumps({"t": title, "x": text}, ensure_ascii=False)
+    js = "try{const _n=%s;showCloudNotice(_n.t,_n.x)}catch(e){}" % arg
+    for _ in range(50):
+        try:
+            if webview.windows:
+                webview.windows[0].evaluate_js(js)
+                return
+        except Exception:
+            pass
+        time.sleep(0.5)
 
 
 def _load_core():
@@ -2514,6 +2567,29 @@ function openExt(u){           // 优先 pywebview 桥（Python 开系统浏览�
 }
 function joinQQ(){toast("浏览器打开加群页，进群后看群公告拿群号…");openExt(QQ_LINK);}
 function joinTG(){toast("打开 TG 频道…");openExt(TG_LINK);}
+
+/* ---- 云下发公告弹窗（v8.6）：Python 在云验证通过后 evaluate_js 调这里 ---- */
+function showCloudNotice(title,text){
+  let veil=document.getElementById("noticeveil");
+  if(!veil){
+    veil=document.createElement("div");veil.id="noticeveil";
+    veil.style.cssText="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.62);"
+      +"display:none;align-items:center;justify-content:center;";
+    veil.innerHTML='<div style="max-width:520px;width:86%;background:#1d1f24;border:1px solid #3a3f4b;'
+      +'border-radius:14px;padding:26px 28px;box-shadow:0 18px 60px rgba(0,0,0,.55);">'
+      +'<div id="nt-title" style="font-size:17px;font-weight:700;color:#e8eaf0;'
+      +'margin-bottom:12px;"></div>'
+      +'<div id="nt-text" style="font-size:14px;line-height:1.75;color:#aab0bd;'
+      +'white-space:pre-wrap;word-break:break-word;"></div>'
+      +'<button id="nt-ok" style="margin-top:20px;width:100%;padding:10px 0;font-size:14px;'
+      +'border:0;border-radius:9px;background:#4f7cff;color:#fff;cursor:pointer;">我知道了</button></div>';
+    document.body.appendChild(veil);
+    veil.querySelector("#nt-ok").onclick=()=>{veil.style.display="none";};
+  }
+  veil.querySelector("#nt-title").textContent=title||"公告";
+  veil.querySelector("#nt-text").textContent=text||"";
+  veil.style.display="flex";
+}
 function showJoinVeil(){$("#pickveil").classList.remove("show");$("#joinveil").classList.add("show");}
 function showPickVeil(){$("#joinveil").classList.remove("show");$("#pickveil").classList.add("show");}
 function hideVeils(){$("#joinveil").classList.remove("show");$("#pickveil").classList.remove("show");}

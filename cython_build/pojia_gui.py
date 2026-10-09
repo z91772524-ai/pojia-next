@@ -630,6 +630,41 @@ def _notice_worker():
             pass
 
 
+# ---- v8.7：云端广告（GET /pojia/ad，服务器 ad.json）----
+#   商业化预留：广告内容与跳转链接全部服务器下发（enabled/html/link），
+#   以后换广告素材 / 换链接零客户端改动。拉取失败 → 广告位保持隐藏。
+_AD_CACHE = {"data": {"ok": True, "enabled": False, "html": "", "link": ""},
+             "ts": 0.0}
+
+
+def _ad_fetch():
+    """同步拉一次云端广告（进程内缓存 10 分钟）。失败返回禁用。"""
+    import time as _t
+    if _t.time() - _AD_CACHE["ts"] < 600:
+        return _AD_CACHE["data"]
+    try:
+        import urllib.request as _ur
+        import ssl as _ssl
+        cafile = os.path.join(getattr(sys, "_MEIPASS", "") or HERE, "ca.pem")
+        ctx = _ssl.create_default_context(cafile=cafile)
+        req = _ur.Request("https://%s:%d/pojia/ad"
+                          % (_CLOUD_HOST, _CLOUD_PORT),
+                          headers={"User-Agent": "pojia-gui/" + VERSION})
+        with _ur.urlopen(req, timeout=8, context=ctx) as resp:
+            r = json.loads(resp.read().decode("utf-8", "replace"))
+        if r.get("ok") and r.get("enabled"):
+            data = {"ok": True, "enabled": True,
+                    "html": str(r.get("html") or ""),
+                    "link": str(r.get("link") or "")}
+        else:
+            data = {"ok": True, "enabled": False, "html": "", "link": ""}
+    except Exception:
+        data = {"ok": True, "enabled": False, "html": "", "link": ""}
+    _AD_CACHE["data"] = data
+    _AD_CACHE["ts"] = _t.time()
+    return data
+
+
 def _notice_show(title, text, image="", link=""):
     """等 pywebview 窗口就绪后 evaluate_js 弹窗（最多等 25s）。
     v3.9：支持图片（image=图片 src，base64 data URI 或外链）与点击跳转 link。
@@ -2392,6 +2427,8 @@ body[data-p="log"] .logbox{height:calc(100vh - 162px)}
   display:flex;align-items:center;justify-content:center;color:var(--tx3);
   font-size:12px;background:var(--panel);overflow:hidden}
 .adslot img{max-width:100%;display:block}
+#adwrap{transition:border-color .18s}
+#adwrap:hover .adslot{border-color:var(--ac)}
 
 /* 无障碍：尊重系统「减少动态效果」 */
 @media (prefers-reduced-motion:reduce){
@@ -3130,16 +3167,20 @@ function _nextAfterClose(){
 function _veilSeqTryAgain(){setTimeout(_veilSeqRun,1800);}
 
 /* ---- 广告位（商业化预留，v8.7）：默认隐藏；有内容才显示 ---- */
-function setAd(html){
+function setAd(html,link){
   const wrap=document.getElementById("adwrap"),slot=document.getElementById("adslot");
   if(!wrap||!slot)return;
-  if(!html){wrap.style.display="none";slot.innerHTML="";return;}
+  if(!html){wrap.style.display="none";slot.innerHTML="";wrap.onclick=null;wrap.style.cursor="";return;}
   slot.innerHTML=html;wrap.style.display="block";
+  // 整块广告可点：点任意位置调系统浏览器打开落地页（v8.7 商业化）
+  wrap.style.cursor="pointer";
+  wrap.onclick=()=>{if(link)openExt(link);};
+  wrap.title="点击了解详情";
 }
 async function loadAd(){
   try{
     const r=await fetch("/api/ad");const j=await r.json();
-    if(j&&j.enabled&&j.html){setAd(j.html);}
+    if(j&&j.enabled&&j.html){setAd(j.html,j.link||"");}
   }catch(e){}
 }
 
@@ -3291,8 +3332,9 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/api/donate":
             return self._json({"ok": True, "image": _donate_qr_uri()})
         if self.path == "/api/ad":
-            # 商业化预留：广告位默认关闭；将来开广告只需在此返回 enabled+html
-            return self._json({"ok": True, "enabled": False, "html": ""})
+            # v8.7：云端广告（服务器 /pojia/ad 下发 enabled/html/link），
+            # 拉取失败或未启用 → enabled:false，广告位保持隐藏
+            return self._json(_ad_fetch())
         if self.path == "/api/skills":
             installed = _scan_installed_skills()
             inst_names = {s["name"] for s in installed}

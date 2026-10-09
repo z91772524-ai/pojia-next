@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:1600px;height:1000px;background:#0b0f14;color:#e8edf2;
+  font-family:"Microsoft YaHei","PingFang SC",sans-serif;overflow:hidden}
+.wrap{width:100%;height:100%;padding:64px 90px 56px;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;gap:16px}
+.logo-dot{width:16px;height:16px;border-radius:50%;background:#1d9e75;
+  box-shadow:0 0 18px rgba(29,158,117,.8)}
+.logo-name{font-size:22px;font-weight:700;letter-spacing:1px;color:#9fe1cb}
+.logo-tag{font-size:13px;color:#5b6672;border:1px solid #2a3441;border-radius:20px;padding:3px 14px}
+h1{margin-top:38px;font-size:64px;font-weight:800;line-height:1.2}
+h1 .hl{color:#1d9e75}
+.sub{margin-top:16px;font-size:22px;color:#8b95a3}
+.sub b{color:#c9d4e0;font-weight:600}
+.wall{margin-top:44px;display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.m{border:1px solid #223041;border-radius:12px;padding:14px 18px;background:#111823}
+.m .n{font-size:17px;font-weight:600;color:#dfe8f1;letter-spacing:.3px}
+.m .f{margin-top:5px;font-size:12px;color:#5b6672}
+.m .n .mini{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:8px;vertical-align:2px}
+.g-glm .mini{background:#5dcaa5}.g-ds .mini{background:#378add}
+.g-kimi .mini{background:#d4537e}.g-mm .mini{background:#ef9f27}
+.g-hy .mini{background:#7f77dd}.g-x .mini{background:#888780}
+.feats{margin-top:auto;display:flex;gap:18px}
+.feat{flex:1;border:1px solid #1d3a33;background:rgba(29,158,117,.08);border-radius:14px;
+  padding:20px 26px;display:flex;align-items:center;gap:16px}
+.feat .ic{font-size:26px}
+.feat .t{font-size:19px;font-weight:700;color:#d7efe6}
+.feat .d{margin-top:3px;font-size:13px;color:#6fa592}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="logo-dot"></div>
+    <div class="logo-name">CODE RELAY</div>
+    <div class="logo-tag">API 中转站</div>
+  </div>
+  <h1>一个中转站，<span class="hl">33 个模型</span>全接入</h1>
+  <div class="sub">GLM · DeepSeek · Kimi · MiniMax · 混元 · HY —— <b>统一接口，开箱即用</b></div>
+  <div class="wall">
+    <div class="m g-x"><div class="n"><span class="mini"></span>auto</div><div class="f">智能路由</div></div>
+    <div class="m g-x"><div class="n"><span class="mini"></span>default</div><div class="f">默认模型</div></div>
+    <div class="m g-x"><div class="n"><span class="mini"></span>hy3</div><div class="f">HY-3</div></div>
+    <div class="m g-x"><div class="n"><span class="mini"></span>hy3-x</div><div class="f">HY-3</div></div>
+    <div class="m g-x"><div class="n"><span class="mini"></span>hy4-preview</div><div class="f">HY-4 Preview</div></div>
+    <div class="m g-x"><div class="n"><span class="mini"></span>hy4-preview-x</div><div class="f">HY-4 Preview</div></div>
+    <div class="m g-glm"><div class="n"><span class="mini"></span>glm-5.3</div><div class="f">GLM 5.3</div></div>
+    <div class="m g-glm"><div class="n"><span class="mini"></span>glm-5.2</div><div class="f">GLM 5.2</div></div>
+    <div class="m g-glm"><div class="n"><span class="mini"></span>glm-5.1</div><div class="f">GLM 5.1</div></div>
+    <div class="m g-glm"><div class="n"><span class="mini"></span>glm-5.0</div><div class="f">GLM 5.0</div></div>
+    <div class="m g-glm"><div class="n"><span class="mini"></span>glm-4.7</div><div class="f">GLM 4.7</div></div>
+    <div class="m g-glm"><div class="n"><span class="mini"></span>glm-4.6</div><div class="f">GLM 4.6</div></div>
+    <div class="m g-glm"><div class="n"><span class="mini"></span>glm-5v-turbo</div><div class="f">GLM-5V Turbo</div></div>
+    <div class="m g-glm"><div class="n"><span class="mini"></span>glm-4.6v</div><div class="f">GLM-4.6V 视觉</div></div>
+    <div class="m g-glm"><div class="n"><span class="mini"></span>glm-5.1-flash</div><div class="f">GLM-5.1 Flash</div></div>
+    <div class="m g-ds"><div class="n"><span class="mini"></span>deepseek-v4-pro</div><div class="f">DeepSeek V4 Pro</div></div>
+    <div class="m g-ds"><div class="n"><span class="mini"></span>deepseek-v4-flash</div><div class="f">DeepSeek V4 Flash</div></div>
+    <div class="m g-ds"><div class="n"><span class="mini"></span>deepseek-v4.1-flash</div><div class="f">DeepSeek V4.1 Flash</div></div>
+    <div class="m g-ds"><div class="n"><span class="mini"></span>deepseek-v3.2-volc</div><div class="f">DeepSeek V3.2</div></div>
+    <div class="m g-kimi"><div class="n"><span class="mini"></span>kimi-k3.1</div><div class="f">Kimi K3.1</div></div>
+    <div class="m g-kimi"><div class="n"><span class="mini"></span>kimi-k3</div><div class="f">Kimi K3</div></div>
+    <div class="m g-kimi"><div class="n"><span class="mini"></span>kimi-k3-preview</div><div class="f">Kimi K3 Preview</div></div>
+    <div class="m g-kimi"><div class="n"><span class="mini"></span>kimi-k2.7</div><div class="f">Kimi K2.7</div></div>
+    <div class="m g-kimi"><div class="n"><span class="mini"></span>kimi-k2.6</div><div class="f">Kimi K2.6</div></div>
+    <div class="m g-kimi"><div class="n"><span class="mini"></span>kimi-k2.5</div><div class="f">Kimi K2.5</div></div>
+    <div class="m g-kimi"><div class="n"><span class="mini"></span>kimi-k2-thinking</div><div class="f">Kimi K2 Thinking</div></div>
+    <div class="m g-mm"><div class="n"><span class="mini"></span>minimax-m3</div><div class="f">MiniMax M3</div></div>
+    <div class="m g-mm"><div class="n"><span class="mini"></span>minimax-m2.5</div><div class="f">MiniMax M2.5</div></div>
+    <div class="m g-mm"><div class="n"><span class="mini"></span>minimax-M2.3</div><div class="f">MiniMax M2.3</div></div>
+    <div class="m g-hy"><div class="n"><span class="mini"></span>hunyuan-2.0-thinking</div><div class="f">混元 2.0 Thinking</div></div>
+    <div class="m g-hy"><div class="n"><span class="mini"></span>hunyuan-chat</div><div class="f">混元对话</div></div>
+    <div class="m g-hy"><div class="n"><span class="mini"></span>hunyuan-image-alpha</div><div class="f">混元图像 Alpha</div></div>
+    <div class="m g-x"><div class="n"><span class="mini"></span>space-bunny</div><div class="f">Space Bunny</div></div>
+  </div>
+  <div class="feats">
+    <div class="feat"><div class="ic">⚡</div><div><div class="t">工具调用全支持</div><div class="d">Agent / 自动化工作流直接跑</div></div></div>
+    <div class="feat"><div class="ic">🔌</div><div><div class="t">一个 Key 全模型</div><div class="d">OpenAI 兼容接口，改个地址就能用</div></div></div>
+    <div class="feat"><div class="ic">🛡️</div><div><div class="t">稳定直连</div><div class="d">高并发可用，拒绝排队掉线</div></div></div>
+  </div>
+</div>
+</body>
+</html>

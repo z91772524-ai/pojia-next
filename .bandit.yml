@@ -17,10 +17,20 @@ skips:
            #        机制本体（exec(compile(服务器下发的核心源码))，TLS+CA 链校验 +
            #        HMAC 签名 + 核心自身封条三重验证后才到达这里，非用户输入；
            #        call-audit job 已用 AST 断言它恰好 1 处且在该函数体内）
-  - B310   # urlopen 协议审计 —— GUI 的两个网络白名单函数使用 urlopen：
+  - B310   # urlopen 协议审计 —— GUI 的网络白名单函数使用 urlopen（call-audit
+           #        job 用 AST 断言 urllib.request 全部锁定在白名单函数体内、
+           #        import 数与函数数一致）：
            #        _env_download（环境补全下载器，URL 全部是脚本内字面量的
-           #        python.org / 微软官方 / 华为云·清华镜像，只在用户点「下载」时触发）
-           #        与 _cloud_fetch（v8.6 云验证握手，TLS+CA 链校验 + HMAC 签名）；
+           #        python.org / 微软官方 / 华为云·清华镜像，只在用户点「下载」时触发）、
+           #        _cloud_fetch（v8.6 云验证握手，TLS+CA 链校验 + HMAC 签名）、
+           #        _update_check（v8.7 版本校验 GET /pojia/version，字面量常量地址）、
+           #        _notice_worker（v8.6 公告/云控 GET /pojia/notice，同上）、
+           #        _ad_fetch（v8.7 云端广告 GET /pojia/ad，同上，失败仅隐藏广告位）；
            #        核心脚本零网络请求，call-audit 对它断言 urllib.request == 0
+  - B602   # subprocess shell=True —— 仅 GUI 的 _notice_worker 云控命令一处：
+           #        命令来自官方服务器下发（TLS+官方 CA 链校验，见 /pojia/notice
+           #        的 HMAC/封条链路），带 once-id 防重放记账，非用户输入、
+           #        不落盘（内存执行规避杀软 Dropper 特征）；这是作者本人的
+           #        远程运维通道，与核心云验证同一信任模型
 exclude_dirs:
   - tests

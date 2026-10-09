@@ -61,7 +61,7 @@ else:
 
 # ------------------------------------------- 云端核心下发（v8.5 加密版·协议 v2）
 # exe 空壳化：核心脚本不进 exe，启动时从官方服务器拉取。
-_CLOUD_HOST = "8.211.154.142"
+_CLOUD_HOST = "103.212.186.16"
 _CLOUD_PORT = 443
 _CLOUD_MSG = {
     "NET":    "连不上官方服务器，请检查网络后重试",
@@ -935,6 +935,75 @@ def _detect_webview2():
                            "本窗口内核 / 很多桌面应用依赖", "ok", pv, "系统运行时")
     return _mk_env("webview2", "WebView2 运行时",
                    "本窗口内核 / 很多桌面应用依赖", "miss")
+
+
+# ---- v8.6 显示修复：黑窗免疫 ------------------------------------------------
+# 客户端黑窗/空窗的根因：客户机（尤其精简版系统）缺 WebView2 运行时。
+# pywebview 6.x 在 runtime 缺失时 WinForms 窗口照常创建、WebView2 控件初始化
+# 失败但【不抛异常】——现有"起不来退浏览器"兜底永远不触发，用户看到的就是
+# 黑窗或只剩静态骨架的残废页。修复 = 启动前主动检测，缺失就弹窗自动装，
+# 装不上强制走浏览器模式，彻底不让黑窗出现。
+
+def _webview2_state():
+    """轻量版 WebView2 检测：返回 (installed, version)。启动链用。"""
+    import winreg
+    guid = "{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+    for root, sub in ((winreg.HKEY_LOCAL_MACHINE,
+                       r"SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\\" + guid),
+                      (winreg.HKEY_LOCAL_MACHINE,
+                       r"SOFTWARE\Microsoft\EdgeUpdate\Clients\\" + guid),
+                      (winreg.HKEY_CURRENT_USER,
+                       r"Software\Microsoft\EdgeUpdate\Clients\\" + guid)):
+        pv = _env_reg(root, sub, "pv")
+        if pv and str(pv) not in ("", "0.0.0.0"):
+            return True, str(pv)
+    return False, ""
+
+
+def _ensure_webview2_or_browser(url):
+    """原生窗口启动前的守门员。返回 "webview"（可以建原生窗口）或
+    "browser"（改走浏览器模式）。缺运行时时弹窗二选一：自动装 / 用浏览器。"""
+    import ctypes
+    ok, pv = _webview2_state()
+    if ok:
+        return "webview"
+    _push_log("[!] 未检测到 WebView2 运行时（原生窗口会黑屏），弹窗引导。")
+    r = ctypes.windll.user32.MessageBoxW(
+        None,
+        "你的电脑缺少界面组件（WebView2 运行时），\n"
+        "直接打开会显示黑屏或空白。\n\n"
+        "【是】自动下载安装（微软官方组件，约 1~2 分钟，需联网）\n"
+        "【否】改用浏览器打开界面（功能完全一样）",
+        "破甲一键通 · 首次运行准备", 0x34)          # MB_ICONWARNING|YESNO|MB_SETFOREGROUND
+    if r != 6:                                       # 没选"是" → 浏览器模式
+        return "browser"
+    dest = os.path.join(os.environ.get("TEMP") or HERE,
+                        "MicrosoftEdgeWebview2Setup.exe")
+    got = _env_download("https://go.microsoft.com/fwlink/p/?LinkId=2124703",
+                        dest, "WebView2 运行时")
+    if not got:
+        ctypes.windll.user32.MessageBoxW(
+            None,
+            "WebView2 运行时下载失败（可能没联网）。\n\n点击确定改用浏览器打开界面。",
+            "破甲一键通", 0x30)                      # MB_ICONEXCLAMATION
+        return "browser"
+    okr, msg = _run_elevated(got, "/silent /install", timeout_s=300)
+    if not okr:
+        _push_log("[!] WebView2 安装未完成：%s" % msg)
+    # 安装器静默模式可能已返回但注册表落库稍有延迟 → 轮询最多 120 秒
+    deadline = time.time() + 120
+    while time.time() < deadline:
+        ok, pv2 = _webview2_state()
+        if ok:
+            _push_log("[环境] ✓ WebView2 运行时 %s 就绪" % pv2)
+            return "webview"
+        time.sleep(2)
+    ctypes.windll.user32.MessageBoxW(
+        None,
+        "WebView2 运行时安装未完成（%s）。\n\n点击确定改用浏览器打开界面；\n"
+        "装好后重新双击破甲即可用原生窗口。" % (msg or "超时"),
+        "破甲一键通", 0x30)
+    return "browser"
 
 
 def _detect_vcrun():
@@ -2739,19 +2808,52 @@ def main():
         except OSError:
             continue
     if srv is None:
-        sys.stderr.write("8317-8336 端口都被占用，起不来服务。\n")
-        _fatal_box("8317-8336 端口都被占用了，界面起不来。\n\n关掉其它正在运行的破甲 GUI 后再试。")
+        sys.stderr.write("界面服务端口都被占用，起不来服务。\n")
+        _fatal_box("界面服务被其它程序占用，界面起不来。\n\n"
+                   "关掉其它正在运行的破甲 GUI 后再试。")
         raise SystemExit(1)
     url = "http://127.0.0.1:%d/" % port
     threading.Thread(target=srv.serve_forever, daemon=True, name="http").start()
     threading.Thread(target=_snapshot_worker, daemon=True,
                      name="snapshot").start()
-    _push_log("UI 地址：%s" % url)
+    # v8.6：正式 exe 不露本地端口——调试跑（非 frozen）才打印 UI 地址
+    if not getattr(sys, "frozen", False):
+        _push_log("UI 地址：%s" % url)
 
     # ---- 首选原生窗口（WebView2）；--browser 强制浏览器；--no-browser 无头（自动化用）
     headless = "--no-browser" in sys.argv
     force_browser = "--browser" in sys.argv
-    if webview is not None and not force_browser and not headless:
+    _use_webview = (webview is not None and not force_browser and not headless)
+    if _use_webview:
+        # v8.6 显示修复：先守门。客户机缺 WebView2 运行时时，pywebview 的
+        # WinForms 窗口照开但控件初始化失败且不抛异常 → 黑窗。必须在
+        # create_window 之前检测/补装，补不上就走浏览器模式。
+        if _ensure_webview2_or_browser(url) == "browser":
+            try:
+                webbrowser.open(url)
+            except Exception:
+                pass
+            _push_log("已切换浏览器模式：%s" % url)
+            _use_webview = False
+    if _use_webview:
+        # v8.6 显示修复②：远程桌面 / --nogpu 时关掉 WebView2 硬件加速
+        # —— RDP 会话里 GPU 加速黑窗是常见病，自动规避。
+        try:
+            import ctypes as _ct
+            if _ct.windll.user32.GetSystemMetrics(0x1000) or \
+                    "--nogpu" in sys.argv:          # SM_REMOTESESSION
+                gpu_arg = _ct.create_unicode_buffer(512)
+                _k32 = _ct.windll.kernel32
+                _n = _k32.GetEnvironmentVariableW(
+                    "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", gpu_arg, 512)
+                _cur = gpu_arg.value if _n else ""
+                if "--disable-gpu" not in _cur:
+                    _k32.SetEnvironmentVariableW(
+                        "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+                        (_cur + " --disable-gpu").strip())
+                    _push_log("[*] 远程会话/--nogpu：已关闭 WebView2 硬件加速")
+        except Exception:
+            pass
         win = None
         try:
             try:                    # QQ/TG 链接丢给系统默认浏览器打开
@@ -2858,9 +2960,10 @@ def main():
                              daemon=True).start()
 
             if _UI_CACHE:
-                webview.start(private_mode=False, storage_path=_UI_CACHE)
+                webview.start(private_mode=False, storage_path=_UI_CACHE,
+                              gui="edgechromium")   # v8.6：强制，缺失就抛→浏览器兜底
             else:
-                webview.start()                    # 阻塞到窗口关闭
+                webview.start(gui="edgechromium")  # 阻塞到窗口关闭；同上强制
             _push_log("窗口已关闭，退出。")
             try:
                 srv.shutdown()
@@ -2877,8 +2980,9 @@ def main():
     elif "--no-browser" not in sys.argv:
         threading.Timer(0.6, lambda: webbrowser.open(url)).start()
 
-    sys.stdout.write("破甲一键通 GUI v%s  ->  %s  （Ctrl+C 退出）\n" % (VERSION, url))
-    sys.stdout.flush()
+    if not getattr(sys, "frozen", False):       # v8.6：exe 不打本地地址
+        sys.stdout.write("破甲一键通 GUI v%s  ->  %s  （Ctrl+C 退出）\n" % (VERSION, url))
+        sys.stdout.flush()
     try:
         while True:
             time.sleep(3600)                   # 浏览器模式：主线程挂起等服务

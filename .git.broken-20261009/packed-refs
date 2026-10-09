@@ -1,0 +1,12 @@
+# pack-refs with: peeled fully-peeled sorted 
+072556c6828050258932467d098f5613d99c7f76 refs/remotes/origin/main
+c2380480d99492dca0b7ce29b40465b156d96da8 refs/remotes/origin/v8-hardening
+e3ff478de26d3144ed98e2cb41e001828da7bbe0 refs/tags/v7.8
+9f5dde682f2220b0fba8955d5a3dfc18485553bb refs/tags/v7.9
+^fdf28835c8ddda0699020759ab559e44a8e632cf
+c2380480d99492dca0b7ce29b40465b156d96da8 refs/tags/v8.2
+33d7cd8c2001e73a74e2e6954d1fabbdd600b045 refs/tags/v8.3
+aac06d04b53ab5d4ccd5c28b49f2c0dae2d859c1 refs/tags/v8.4
+^199d2c812fa07f377b7c5397f2447a0dc9375ee7
+c9ee840dc76fb1efc949fd4f5173d818f7e3b168 refs/tags/v8.5
+^93ccdcb4be1355043312783707a88681495a0143

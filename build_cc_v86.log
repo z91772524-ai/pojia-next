@@ -1,0 +1,121 @@
+795 INFO: PyInstaller: 6.21.0, contrib hooks: 2026.6
+797 INFO: Python: 3.12.10
+945 INFO: Platform: Windows-11-10.0.26300-SP0
+945 INFO: Python environment: C:\Users\19294\AppData\Local\Programs\Python\Python312
+983 INFO: Removing temporary files and cleaning cache in C:\Users\19294\AppData\Local\pyinstaller
+14855 INFO: Module search paths (PYTHONPATH):
+['E:\\DSH-Workspace\\pojia-clean',
+ 'F:\\Users\\19294\\AppData\\Local\\Programs\\WorkBuddy\\resources\\app.asar.unpacked\\cli\\vendor\\shim',
+ 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\python312.zip',
+ 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\DLLs',
+ 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib',
+ 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312',
+ 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages',
+ 'E:\\DSH-Workspace\\pojia-clean']
+C:\Users\19294\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:86: RequestsDependencyWarning: Unable to find acceptable character detection dependency (chardet or charset_normalizer).
+  warnings.warn(
+pygame 2.6.1 (SDL 2.28.4, Python 3.12.10)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+18715 INFO: Appending 'datas' from .spec
+18716 INFO: checking Analysis
+18716 INFO: Building Analysis because Analysis-00.toc is non existent
+18716 INFO: Looking for Python shared library...
+18716 INFO: Using Python shared library: C:\Users\19294\AppData\Local\Programs\Python\Python312\python312.dll
+18716 INFO: Running Analysis Analysis-00.toc
+18716 INFO: Target bytecode optimization level: 0
+18716 INFO: Initializing module dependency graph...
+18719 INFO: Initializing module graph hook caches...
+18955 INFO: Analyzing modules for base_library.zip ...
+24138 INFO: Processing standard module hook 'hook-encodings.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+26293 INFO: Processing standard module hook 'hook-math.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+29725 INFO: Processing standard module hook 'hook-pickle.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+33023 INFO: Processing standard module hook 'hook-heapq.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+34610 INFO: Caching module dependency graph...
+34906 INFO: Analyzing E:\DSH-Workspace\pojia-clean\破甲GUI.py
+35609 INFO: Processing standard module hook 'hook-webbrowser.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+36676 INFO: Processing standard module hook 'hook-multiprocessing.util.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+38050 INFO: Processing standard module hook 'hook-_ctypes.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+38409 INFO: Processing standard module hook 'hook-webview.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\webview\\__pyinstaller'
+39302 INFO: Processing standard module hook 'hook-platform.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+43266 INFO: Processing standard module hook 'hook-psycopg2.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+45340 INFO: Processing pre-safe-import-module hook 'hook-typing_extensions.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+45348 INFO: SetuptoolsInfo: initializing cached setuptools info...
+48659 INFO: Processing pre-safe-import-module hook 'hook-distutils.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+48682 INFO: Processing standard module hook 'hook-setuptools.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+48879 INFO: Processing standard module hook 'hook-sysconfig.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+48892 INFO: Processing pre-safe-import-module hook 'hook-jaraco.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+48895 INFO: Setuptools: 'jaraco' appears to be a full setuptools-vendored copy - creating alias to 'setuptools._vendor.jaraco'!
+48929 INFO: Processing pre-safe-import-module hook 'hook-more_itertools.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+48931 INFO: Setuptools: 'more_itertools' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.more_itertools'!
+49569 INFO: Processing pre-safe-import-module hook 'hook-packaging.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+50173 INFO: Processing standard module hook 'hook-setuptools._vendor.jaraco.text.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+50177 INFO: Processing pre-safe-import-module hook 'hook-importlib_resources.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+50698 INFO: Processing pre-safe-import-module hook 'hook-backports.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+50700 INFO: Setuptools: 'backports' appears to be a partial setuptools-vendored copy - extending search paths to ['C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\setuptools\\_vendor\\backports', 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\backports']!
+50702 INFO: Processing pre-safe-import-module hook 'hook-backports.tarfile.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+50704 INFO: Setuptools: 'backports.tarfile' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.backports.tarfile'!
+50976 INFO: Processing standard module hook 'hook-backports.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+51211 INFO: Processing pre-safe-import-module hook 'hook-importlib_metadata.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+51212 INFO: Setuptools: 'importlib_metadata' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.importlib_metadata'!
+51300 INFO: Processing standard module hook 'hook-setuptools._vendor.importlib_metadata.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+51391 INFO: Processing pre-safe-import-module hook 'hook-zipp.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+51393 INFO: Setuptools: 'zipp' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.zipp'!
+52033 INFO: Processing pre-safe-import-module hook 'hook-tomli.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+52035 INFO: Setuptools: 'tomli' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.tomli'!
+53375 INFO: Processing pre-safe-import-module hook 'hook-wheel.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+53377 INFO: Setuptools: 'wheel' appears to be a setuptools-vendored copy - creating alias to 'setuptools._vendor.wheel'!
+53575 INFO: Processing standard module hook 'hook-zope.interface.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+53782 INFO: Processing standard module hook 'hook-difflib.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+58315 INFO: Processing standard module hook 'hook-xml.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+60924 INFO: Processing standard module hook 'hook-pygments.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+68227 INFO: Processing standard module hook 'hook-mako.codegen.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+68640 INFO: Processing standard module hook 'hook-jinja2.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+70114 INFO: Processing pre-safe-import-module hook 'hook-gi.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\pre_safe_import_module'
+70435 INFO: Processing standard module hook 'hook-clr.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\pythonnet\\_pyinstaller'
+70600 INFO: Processing standard module hook 'hook-clr_loader.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+70929 INFO: Processing standard module hook 'hook-pycparser.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+72873 INFO: Processing standard module hook 'hook-xml.etree.cElementTree.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+73072 INFO: Processing module hooks (post-graph stage)...
+73073 WARNING: Hidden import "mx.DateTime" not found!
+73073 WARNING: Hidden import "pycparser.lextab" not found!
+73073 WARNING: Hidden import "pycparser.yacctab" not found!
+73163 INFO: Processing standard module hook 'hook-PIL.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+73459 INFO: Processing standard module hook 'hook-PIL.Image.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+75055 INFO: Processing standard module hook 'hook-numpy.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+79495 INFO: Processing standard module hook 'hook-psutil.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\stdhooks'
+80721 INFO: Processing standard module hook 'hook-xml.dom.domreg.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+81558 INFO: Processing standard module hook 'hook-PIL.ImageFilter.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+86041 INFO: Processing standard module hook 'hook-PIL.SpiderImagePlugin.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks'
+86151 INFO: Performing binary vs. data reclassification (128 entries)
+86418 INFO: Looking for ctypes DLLs
+86663 INFO: Analyzing run-time hooks ...
+86675 INFO: Including run-time hook 'pyi_rth_inspect.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+86680 INFO: Including run-time hook 'pyi_rth_setuptools.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+86685 INFO: Including run-time hook 'pyi_rth_pkgutil.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+86690 INFO: Including run-time hook 'pyi_rth_multiprocessing.py' from 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks'
+86736 INFO: Creating base_library.zip...
+86771 INFO: Looking for dynamic libraries
+89455 INFO: Extra DLL search directories (AddDllDirectory): ['C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\numpy.libs', 'C:\\Users\\19294\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\psycopg2_binary.libs']
+89455 INFO: Extra DLL search directories (PATH): []
+93974 INFO: Warnings written to E:\DSH-Workspace\pojia-clean\build\破甲一键通GUI\warn-破甲一键通GUI.txt
+94257 INFO: Graph cross-reference written to E:\DSH-Workspace\pojia-clean\build\破甲一键通GUI\xref-破甲一键通GUI.html
+94428 INFO: checking PYZ
+94429 INFO: Building PYZ because PYZ-00.toc is non existent
+94429 INFO: Building PYZ (ZlibArchive) E:\DSH-Workspace\pojia-clean\build\破甲一键通GUI\PYZ-00.pyz
+95923 INFO: Building PYZ (ZlibArchive) E:\DSH-Workspace\pojia-clean\build\破甲一键通GUI\PYZ-00.pyz completed successfully.
+95992 INFO: checking PKG
+95992 INFO: Building PKG because PKG-00.toc is non existent
+95992 INFO: Building PKG (CArchive) 破甲一键通GUI.pkg
+106397 INFO: Building PKG (CArchive) 破甲一键通GUI.pkg completed successfully.
+106411 INFO: Bootloader C:\Users\19294\AppData\Local\Programs\Python\Python312\Lib\site-packages\PyInstaller\bootloader\Windows-64bit-intel\runw.exe
+106411 INFO: checking EXE
+106411 INFO: Building EXE because EXE-00.toc is non existent
+106411 INFO: Building EXE from EXE-00.toc
+107520 INFO: Copying bootloader EXE to E:\DSH-Workspace\pojia-clean\dist\破甲一键通GUI.exe
+107630 INFO: Copying icon to EXE
+107719 INFO: Copying 0 resources to EXE
+107719 INFO: Embedding manifest in EXE
+107790 INFO: Appending PKG archive to EXE
+107828 INFO: Fixing EXE headers
+108215 INFO: Building EXE from EXE-00.toc completed successfully.
+108228 INFO: Build complete! The results are available in: E:\DSH-Workspace\pojia-clean\dist

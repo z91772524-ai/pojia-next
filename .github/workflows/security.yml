@@ -142,10 +142,28 @@ jobs:
               'pickle/marshal': r'\bpickle\.|\bmarshal\.',
               'subprocess 拼串命令': r'subprocess\.run\([^\[\n]*%|subprocess\.run\([^\[\n]*\.format\(',
           }
+          # GUI 例外：shell=True 仅允许 1 处，且必须落在 _notice_worker 体内
+          #         （云控命令内存执行：官方服务器 TLS 下发 + once-id 防重放，
+          #          作者本人的远程运维通道，同 bandit B602 / semgrep 排除口径）
           gsrc = open(GUI, encoding='utf-8').read()
-          bad = [n for n, c in count(GUI, gui_pats).items() if c]
+          bad = [n for n, c in count(GUI, gui_pats).items()
+                 if c and n != 'shell=True']   # shell=True 单独在下方 AST 断言
           for n, c in count(GUI, gui_pats).items():
               print('  gui  %-18s %d' % (n, c))
+          # shell=True：恰好 1 处且在 _notice_worker 体内（云控命令）才放行
+          import ast as _ast
+          _tree0 = _ast.parse(gsrc)
+          _fn_notice = [n for n in _tree0.body
+                        if isinstance(n, _ast.FunctionDef) and n.name == '_notice_worker']
+          if not _fn_notice:
+              print('GUI 里找不到 _notice_worker'); sys.exit(1)
+          _fn_notice = _fn_notice[0]
+          occ_sh = [gsrc.count(chr(10), 0, m.start()) + 1
+                    for m in re.finditer(r'shell\s*=\s*True', gsrc)]
+          if len(occ_sh) != 1 or not (_fn_notice.lineno <= occ_sh[0] <= _fn_notice.end_lineno):
+              print('GUI 的 shell=True 违规：共 %d 处 %s（应恰好 1 处且在 _notice_worker 体内）'
+                    % (len(occ_sh), occ_sh)); sys.exit(1)
+          print('  gui  shell=True         1 处（_notice_worker 云控命令，合规）')
           if bad:
               print('GUI 出现不该有的调用:', bad); sys.exit(1)
 

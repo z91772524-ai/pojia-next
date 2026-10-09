@@ -178,6 +178,13 @@ def _cloud_fetch(group, ver="", timeout=25):
         if err == "group wrong":
             raise CloudError("GROUP")
         if err == "pirate":
+            # v8.6.1：弹窗文案改为服务器可配（pirate.json），本地只是兜底
+            try:
+                _PIRATE_REMOTE["text"] = str(r.get("text") or "")[:1000]
+                _PIRATE_REMOTE["title"] = str(r.get("title") or "")[:80]
+                _PIRATE_REMOTE["url"] = str(r.get("url") or "")[:200]
+            except Exception:
+                pass
             raise CloudError("PIRATE")
         if err == "revoked":
             raise CloudError("REVOKE")
@@ -502,23 +509,31 @@ _PIRATE_TEXT = (
     "咒他家死去的爷爷奶奶在棺材里都不得安宁，\n"
     "断子绝孙、出门被车撞死、生儿子没屁眼，\n"
     "全家族世世代代穷困潦倒、烂疮烂到死。\n\n"
-    "本项目完全免费、完全开源 —— 任何收费渠道全是骗子。\n"
-    "原作者官方交流群：1121243020（群公告看群号）\n\n"
+    "本项目完全免费、完全开源 —— 任何收费渠道全是骗子。\n\n"
     "点「确定」带你到官方 GitHub 仓库，免费下载正版。")
 
 
+# 服务器下发的弹窗参数（pirate.json 可配，v8.6.1）
+_PIRATE_REMOTE = {"title": "", "text": "", "url": ""}
+_PIRATE_FALLBACK_URL = "https://github.com/z91772524-ai/pojia-next/"
+
+
 def _pirate_box():
-    """弹辱骂窗（每 8s 循环弹，直到用户点确定跳 GitHub）。"""
+    """弹辱骂窗（每 8s 循环弹，直到用户点确定跳 GitHub）。
+    文案/标题/跳转链接优先用服务器 pirate.json 下发的值。"""
     try:
         import ctypes
+        text = _PIRATE_REMOTE["text"] or _PIRATE_TEXT
+        title = _PIRATE_REMOTE["title"] or "破甲一键通 —— 盗版狗死全家"
+        url = _PIRATE_REMOTE["url"] or _PIRATE_FALLBACK_URL
         while True:
             r = ctypes.windll.user32.MessageBoxW(
-                None, _PIRATE_TEXT, "破甲一键通 —— 盗版狗死全家", 0x10)  # MB_ICONERROR
+                None, text, title, 0x10)      # MB_ICONERROR
             if r == 1:                      # IDOK → 跳官方仓库
                 break
             time.sleep(8)                   # 点关闭再弹，跑到点确定为止
         try:
-            webbrowser.open("https://github.com/z91772524-ai/pojia-next/")
+            webbrowser.open(url)
         except Exception:
             pass
     except Exception:

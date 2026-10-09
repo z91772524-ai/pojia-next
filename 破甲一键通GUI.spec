@@ -11,7 +11,7 @@ a = Analysis(
     # cryptography 仍排除（卡巴斯基 A/B 实测）；
     # ⚠ cffi/pycparser 必须保留 —— clr_loader.ffi 顶层 import cffi，
     #   排掉它 webview 的 .NET 加载链直接断，exe 会退回浏览器模式。
-    datas=[('icon.ico', '.'), ('ca.pem', '.')],
+    datas=[('icon.ico', '.'), ('ca.pem', '.'), ('donate-qr.png', '.')],
     hiddenimports=['webview', 'webview.platforms.winforms', 'webview.platforms.edgechromium',
                    'clr_loader', 'clr_loader.ffi', 'pythonnet',
                    'argparse', 'base64', 'ctypes', 'datetime', 'glob', 'hashlib',

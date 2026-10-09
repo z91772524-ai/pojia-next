@@ -6,7 +6,7 @@ a = Analysis(
     ['launcher.py'],
     pathex=[],
     binaries=[('cython_build/pojia_gui.pyd', '.')],
-    datas=[('icon.ico', '.'), ('ca.pem', '.')],
+    datas=[('icon.ico', '.'), ('ca.pem', '.'), ('donate-qr.png', '.')],
     hiddenimports=['webview', 'webview.platforms.winforms', 'webview.platforms.edgechromium',
                    'clr_loader', 'clr_loader.ffi', 'pythonnet',
                    'argparse', 'base64', 'ctypes', 'datetime', 'glob', 'hashlib',

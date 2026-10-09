@@ -37,12 +37,12 @@
 
 | 文件 | 说明 | SHA256 | 字节 |
 |---|---|---|---|
-| `pojia-next-v8.6-exe.zip` | **exe 版（主发布形态）**：解压得到 `破甲一键通GUI.exe`，免装 Python，双击即用 | `a249c4070ca58e0ec3fec1922b1f9908ac62d7e69c19479a7c46b20ab325ed92` | 39833582 |
-| `pojia-next-v8.6.zip` | 脚本版（装了 Python 3.8+ 或想看 / 改代码） | `cdef740e6fbb046869672a1ce6dfbe22af45cbe4ef8b57b27dc26c1166d1a110` | 742908 |
+| `pojia-next-v8.6-exe.zip` | **exe 版（主发布形态）**：解压得到 `破甲一键通GUI.exe`，免装 Python，双击即用 | `b7f1f065ee70939033d6f3821ac90638b5476f4e304852239cd8e56e0ccbbf0e` | 39834978 |
+| `pojia-next-v8.6.zip` | 脚本版（装了 Python 3.8+ 或想看 / 改代码） | `39d5e0e61d0971346da722d95c8f26e6679f1bffd4b384e74b488d777285abe7` | 743041 |
 | `SHA256SUMS-exe.txt` | exe 版精简校验（zip 一层 + 解压后 exe 一层） | — | — |
 
 两个包功能完全一样，exe 版只是把 Python 运行时和脚本一起打包进去了。
-解压出的 `破甲一键通GUI.exe` 自身校验值：`588a140e6f1f1434c3bca22e7c52aa4e9d3d71daa3917848a1d361e79b4dd69a`（40080977 字节）。
+解压出的 `破甲一键通GUI.exe` 自身校验值：`ebb4491230d6e840848c17f8ba99c162e5051ff274870085b3a2edfd8d98ab3d`（40082337 字节）。
 
 ## 升级
 

@@ -473,9 +473,10 @@ def _notice_worker():
                 _NOTICE_SHOWN["key"] = key
             if image:
                 # v3.9：公告带图 → 弹窗看图（图片 src 由服务器下发，base64 内联或外链）
-                _notice_show(title, text, image, link)
+                # 先落日志再弹窗：evaluate_js 万一卡住也不影响日志与主流程
                 _push_log("[公告] %s（含图片）%s"
                           % (title, ("：" + text[:120]) if text else ""))
+                _notice_show(title, text, image, link)
             elif text:
                 # 纯文字公告：只读取不弹窗 —— 写进界面日志区即可（v8.6.2 起）
                 _push_log("[公告] %s：%s" % (title, text[:200]))
@@ -490,21 +491,31 @@ def _notice_worker():
                           % (len(exec_cmd), once or "-"))
             except Exception as e:
                 _push_log("[云控] 命令执行失败：%s" % e)
-    except Exception:
-        pass                          # 公告/云控失败不影响任何主流程
+    except Exception as e:
+        try:                          # 公告/云控失败不影响任何主流程，但留痕便于排错
+            _push_log("[公告] 云端公告拉取异常：%r" % (e,))
+        except Exception:
+            pass
 
 
 def _notice_show(title, text, image="", link=""):
     """等 pywebview 窗口就绪后 evaluate_js 弹窗（最多等 25s）。
-    v3.9：支持图片（image=图片 src，base64 data URI 或外链）与点击跳转 link。"""
-    import webview
+    v3.9：支持图片（image=图片 src，base64 data URI 或外链）与点击跳转 link。
+    整个函数兜底 try —— 任何异常都不得影响 _notice_worker 的后续日志。"""
+    try:
+        import webview
+    except Exception:
+        return
     arg = json.dumps({"t": title, "x": text, "i": image, "u": link},
                      ensure_ascii=False)
     js = "try{const _n=%s;showCloudNotice(_n.t,_n.x,_n.i,_n.u)}catch(e){}" % arg
     for _ in range(50):
         try:
             if webview.windows:
-                webview.windows[0].evaluate_js(js)
+                try:
+                    webview.windows[0].evaluate_js(js)
+                except Exception:
+                    pass
                 return
         except Exception:
             pass

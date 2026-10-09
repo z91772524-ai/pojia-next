@@ -2601,6 +2601,7 @@ body[data-p="log"] .logbox{height:calc(100vh - 162px)}
            style="width:100%;max-width:320px;border-radius:12px;
                   border:1px solid rgba(255,255,255,.12);background:#fff;padding:6px">
       <div class="vfoot" style="margin-top:8px">微信扫码 或 支付宝扫码 · 感谢支持</div>
+      <button class="dbtn primary" id="b-don-ok" style="margin-top:12px">我知道了</button>
     </div>
     <div class="vbtns" id="don-btns">
       <button class="dbtn" id="b-don-later">下次一定</button>
@@ -3068,6 +3069,17 @@ $("#b-don-later").onclick=()=>{
   try{localStorage.setItem("pojia_donated_seen","1");}catch(e){}
   $("#donateveil").classList.remove("show");
 };
+$("#b-don-ok").onclick=()=>{
+  try{localStorage.setItem("pojia_donated_seen","1");}catch(e){}
+  $("#donateveil").classList.remove("show");toast("感谢支持！");
+};
+/* 所有浮层：点遮罩空白处关闭（强制更新窗除外，不许绕过） */
+document.addEventListener("click",e=>{
+  const v=e.target;
+  if(!v.classList||!v.classList.contains("veil")||!v.id)return;
+  if(v.id==="updateveil"&&v.dataset.force==="1")return;
+  v.classList.remove("show");
+});
 
 function hideVeils(){$("#joinveil").classList.remove("show");$("#pickveil").classList.remove("show");}
 $("#vl-qq").onclick=joinQQ;

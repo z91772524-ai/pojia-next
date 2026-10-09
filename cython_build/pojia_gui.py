@@ -229,11 +229,38 @@ _CLOUD_LOCK = threading.Lock()
 
 
 def _cloud_saved_group():
-    """历史存档（v8.5.1 起每次启动都要输群号，此值仅作信息回显）。"""
+    """历史存档群号（v8.7 起每日免输：当天验证过直接静默进）。"""
     try:
         return json.load(open(_CLOUD_GROUP_FILE, encoding="utf-8")).get("group", "")
     except Exception:
         return ""
+
+
+def _cloud_today_ok():
+    """v8.7：今天（本地日期）已云验证过 → True（免输群号自动进）。"""
+    try:
+        d = json.load(open(_CLOUD_GROUP_FILE, encoding="utf-8"))
+        return (d.get("last_ok") == time.strftime("%Y-%m-%d")
+                and bool(d.get("group")))
+    except Exception:
+        return False
+
+
+def _cloud_mark_ok(group):
+    """v8.7：云验证成功 → 记 group + 今天日期（原子写）。次日启动需重新验证。"""
+    try:
+        try:
+            d = json.load(open(_CLOUD_GROUP_FILE, encoding="utf-8"))
+        except Exception:
+            d = {}
+        d["group"] = group
+        d["last_ok"] = time.strftime("%Y-%m-%d")
+        tmp = _CLOUD_GROUP_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps(d, ensure_ascii=False))
+        os.replace(tmp, _CLOUD_GROUP_FILE)
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------- 定位并加载核心
@@ -256,13 +283,15 @@ def _find_core():
 CORE_PATH = _find_core()
 CLOUD_MODE = not CORE_PATH          # 找不到本地核心 → 云端验证模式（v8.5 加密版）
 if CLOUD_MODE:
-    # 用户要求：每次启动都要输群号验证（不存档静默跳过）
-    _CLOUD_STATE["state"] = "wait_group"
+    # v8.7：每天（本地日期）验证一次即可 —— 当天已验证过 → 直接用存档群号
+    # 自动云验证（界面上显示「加载中」，成功后提示「登录成功」）；
+    # 跨天（含凌晨后首次打开）→ 弹群号输入。
+    _CLOUD_STATE["state"] = "loading" if _cloud_today_ok() else "wait_group"
 
 
 # v8.5：核心改为后台线程加载 —— 窗口先弹出来，封印自检 / 类初始化在后台跑完
 # 再放行 API。启动体感快一截。核心没就绪时，所有接口返回「加载中」占位。
-DISPLAY_VER = "8.6"              # GUI 显示版本（核心 VERSION 以封印文件为准）
+DISPLAY_VER = "8.7"              # GUI 显示版本（核心 VERSION 以封印文件为准）
 core = None
 PERSONA_FILE = ""
 VERSION = DISPLAY_VER
@@ -401,6 +430,7 @@ def _cloud_verify(group):
             return False, "SERVER"
         _notice_async()               # v8.6：云验证通过 → 拉云公告弹窗
         _update_async()               # v8.7：云验证通过 → 校验版本（强制更新）
+        _cloud_mark_ok(group)         # v8.7：记今天已验证（次日需重新输入）
         return True, ""
 
 
@@ -493,6 +523,90 @@ def _update_async(interactive=False):
             except Exception:
                 pass
     threading.Thread(target=work, daemon=True, name="update-check").start()
+
+
+# ---- v8.7 在线更新：选目录 → 官方服务器静默下载新版 zip → 打开所在文件夹 ----
+_UPD_DL = {"running": False}          # 防重复下载
+
+
+def _update_inline_start():
+    """同步入口（POST /api/update/inline 调用）：弹目录选择框，选好后起后台
+    下载线程。返回 (ok, msg)。tkinter 不可用 → 回退「下载」文件夹直接下。"""
+    if _UPD_DL["running"]:
+        return True, "已有下载在进行"
+    dest_dir = ""
+    tk_ok = False
+    try:
+        import tkinter as _tk
+        from tkinter import filedialog as _fd
+        root = _tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        dest_dir = _fd.askdirectory(title="选择新版保存位置") or ""
+        root.destroy()
+        tk_ok = True
+    except Exception:
+        dest_dir = ""
+    if tk_ok and not dest_dir:
+        return False, "已取消"
+    if not dest_dir:
+        # 无对话框环境（服务/无头）→ 回退用户「下载」文件夹
+        up = os.path.join(os.environ.get("USERPROFILE") or HERE, "Downloads")
+        dest_dir = up if os.path.isdir(up) else (os.environ.get("USERPROFILE") or HERE)
+    if not os.path.isdir(dest_dir):
+        return False, "保存位置无效"
+    _UPD_DL["running"] = True
+    threading.Thread(target=_update_inline_work, args=(dest_dir,),
+                     daemon=True, name="update-dl").start()
+    return True, "已开始下载"
+
+
+def _update_inline_work(dest_dir):
+    """后台下载线程：官方服务器 /pojia/download 流式拉新版 zip，进度落界面日志。"""
+    fname = "pojia-next-v%s-exe.zip" % DISPLAY_VER
+    dest = os.path.join(dest_dir, fname)
+    try:
+        import urllib.request as _ur
+        import ssl as _ssl
+        cafile = os.path.join(getattr(sys, "_MEIPASS", "") or HERE, "ca.pem")
+        ctx = _ssl.create_default_context(cafile=cafile)
+        req = _ur.Request("https://%s:%d/pojia/download"
+                          % (_CLOUD_HOST, _CLOUD_PORT),
+                          headers={"User-Agent": "pojia-gui/" + VERSION})
+        _push_log("[更新] 开始从官方服务器下载新版：%s" % fname)
+        t0 = time.time()
+        with _ur.urlopen(req, timeout=30, context=ctx) as resp:
+            total = int(resp.headers.get("Content-Length") or 0)
+            done = 0
+            next_pct = 10
+            with open(dest + ".part", "wb") as f:
+                while True:
+                    chunk = resp.read(65536)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    done += len(chunk)
+                    if total and done * 100 // total >= next_pct:
+                        _push_log("[更新] 下载进度 %d%%（%.1f/%.1f MB）"
+                                  % (done * 100 // total, done / 1048576.0,
+                                     total / 1048576.0))
+                        next_pct += 10
+        os.replace(dest + ".part", dest)
+        _push_log("[更新] 下载完成：%s（%.1f MB，%.0f 秒）—— 已打开所在文件夹，"
+                  "解压后双击新版即用" % (dest, os.path.getsize(dest) / 1048576.0,
+                                         time.time() - t0))
+        try:
+            os.startfile(dest_dir)        # 打开所在文件夹（Windows）
+        except Exception:
+            pass
+    except Exception as e:
+        try:
+            os.remove(dest + ".part")
+        except Exception:
+            pass
+        _push_log("[更新] 在线下载失败：%r —— 请改用「浏览器更新」" % (e,))
+    finally:
+        _UPD_DL["running"] = False
 
 
 def _update_show(force=True):
@@ -2657,7 +2771,8 @@ body[data-p="log"] .logbox{height:calc(100vh - 162px)}
          color:#aab0bd;white-space:pre-wrap;text-align:left;max-height:32vh;overflow:auto"></div>
     <div class="vbtns">
       <button class="dbtn" id="b-upd-skip" style="display:none">稍后再说</button>
-      <button class="dbtn primary" id="b-upd-go">立即更新</button>
+      <button class="dbtn" id="b-upd-inline" style="display:none">在线更新</button>
+      <button class="dbtn primary" id="b-upd-go">浏览器更新</button>
     </div>
     <div class="vfoot" id="upd-foot">点「立即更新」前往官方下载页（完全免费）</div>
   </div>
@@ -3067,6 +3182,8 @@ function showUpdate(u){
   $("#upd-note").style.display=(u.note?"block":"none");
   const skip=$("#b-upd-skip");
   skip.style.display=force?"none":"inline-block";   // 强制更新不给跳过
+  // v8.7：在线更新按钮仅在强制更新时出现（普通提示走浏览器更新即可）
+  $("#b-upd-inline").style.display=force?"inline-block":"none";
   $("#upd-foot").textContent=force
     ? "旧版本已停止服务，必须更新后才能继续使用（完全免费）"
     : "点「立即更新」前往官方下载页（完全免费）";
@@ -3077,6 +3194,26 @@ $("#b-upd-go").onclick=()=>{
   const u=(window.__pojiaUpdUrl)||"https://github.com/z91772524-ai/pojia-next/releases";
   openExt(u||"https://github.com/z91772524-ai/pojia-next/releases");
   if($("#updateveil").dataset.force==="1") toast("请下载新版后重新打开（当前窗口仍可查看日志）");
+};
+/* v8.7 在线更新：选保存目录 → 服务器静默下载 zip → 完成打开所在文件夹 */
+$("#b-upd-inline").onclick=async()=>{
+  const btn=$("#b-upd-inline");
+  btn.disabled=true;btn.textContent="正在准备…";
+  try{
+    const r=await fetch("/api/update/inline",{method:"POST"});
+    const j=await r.json();
+    if(j&&j.ok){
+      btn.textContent="已开始后台下载";
+      $("#upd-line").textContent="正在后台下载新版…完成后自动打开所在文件夹";
+      toast("已开始下载，请看界面日志里的进度");
+    }else{
+      btn.disabled=false;btn.textContent="在线更新";
+      toast("在线更新不可用："+(j&&j.msg||"未知原因")+"，可用「浏览器更新」");
+    }
+  }catch(e){
+    btn.disabled=false;btn.textContent="在线更新";
+    toast("在线更新启动失败，可用「浏览器更新」");
+  }
 };
 $("#b-upd-skip").onclick=()=>{$("#updateveil").classList.remove("show");toast("已跳过，可稍后更新");};
 
@@ -3236,6 +3373,7 @@ function cloudDone(){
   CLOUD_OK=true;
   if(CLOUD_TIMER){clearInterval(CLOUD_TIMER);CLOUD_TIMER=null;}
   cloudUI(false,"",false,false);
+  toast("登录成功");
   appBoot();
 }
 function cloudGo(){
@@ -3370,6 +3508,11 @@ class Handler(BaseHTTPRequestHandler):
             _update_async(interactive=True)
             return self._json({"ok": True})
 
+        if self.path == "/api/update/inline":
+            # v8.7 在线更新：弹目录选择 → 后台静默下载（阻塞至选完目录才返回）
+            ok, msg = _update_inline_start()
+            return self._json({"ok": ok, "msg": msg})
+
         if self.path == "/api/skill/install":
             src = str(req.get("src") or "")
             if not src:
@@ -3446,6 +3589,12 @@ def main():
     # v8.5：核心放到后台线程加载（封条自检 + 类初始化约 1-2s），窗口/网页先起，
     # 核心就绪前 API 返回「加载中」，就绪瞬间前端轮询自然拿到真数据。
     threading.Thread(target=_load_core, daemon=True, name="core-loader").start()
+
+    # v8.7：今天已验证过（每日免输）→ 自动用存档群号云验证，
+    # 前端轮询到 loading 显示「正在验证…」，成功后提示「登录成功」。
+    if CLOUD_MODE and _CLOUD_STATE["state"] == "loading":
+        threading.Thread(target=_cloud_verify, args=(_cloud_saved_group(),),
+                         daemon=True, name="cloud-auto").start()
 
     def _port_busy(p):
         """有人真在听这个口吗？（SO_REUSEADDR 下 bind 成功不代表端口空闲）"""

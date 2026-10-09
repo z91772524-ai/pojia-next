@@ -54,15 +54,16 @@ jobs:
           # 排除项逐条写明理由，而不是把整条规则关掉不看：
           #   1) insecure-hash-sha1 —— 本项目的 sha1 只用于"人格版本标记 / 快照目录名 /
           #      补丁戳（file_sha16）"，非密码学用途，且各处显式标注 usedforsecurity=False。
-          #   2) dynamic-urllib-use-detected —— GUI 的 urllib.request 只有五个白名单函数：
+          #   2) dynamic-urllib-use-detected —— GUI 的 urllib.request 只有六个白名单函数：
           #      _env_download(url, ...)（环境补全下载器，URL 均为脚本内字面量的 Python
           #      官方 / 镜像源）、_cloud_fetch(group, ...)（v8.6 云验证握手）、
           #      _update_check()（v8.7 版本校验 GET /pojia/version）、
           #      _notice_worker()（v8.6 公告/云控 GET /pojia/notice）、
-          #      _ad_fetch()（v8.7 云端广告 GET /pojia/ad）——
+          #      _ad_fetch()（v8.7 云端广告 GET /pojia/ad）、
+          #      _update_inline_work()（v8.7 在线更新 GET /pojia/download）——
           #      后四个的 URL 均由脚本内字面量常量 _CLOUD_HOST/_CLOUD_PORT 拼出，
           #      TLS+CA 链校验，均非用户可控输入；call-audit job 已用 AST 断言把
-          #      urllib.request 的全部出现限定在这五个函数体内（import 恰好 5 处），
+          #      urllib.request 的全部出现限定在这五个函数体内（import 恰好 6 处），
           #      两个 job 互为佐证。
           EXCLUDE="--exclude-rule python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1"
           EXCLUDE="$EXCLUDE --exclude-rule python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected"
@@ -116,13 +117,14 @@ jobs:
               print('核心出现不该有的调用:', bad); sys.exit(1)
 
           # ── GUI：零网络例外 = 环境补全下载器 + 云验证握手 + 版本校验/公告/广告 + 本地端口探测 ──
-          # 例外 1：urllib.request 只允许出现在五个白名单函数体内（URL 全部由
+          # 例外 1：urllib.request 只允许出现在六个白名单函数体内（URL 全部由
           #         脚本内字面量常量拼出，TLS+CA 链校验）：
           #         _env_download（用户主动下载官方/镜像源）、
           #         _cloud_fetch（云验证握手）、_update_check（版本校验）、
-          #         _notice_worker（公告/云控）、_ad_fetch（云端广告，失败仅隐藏广告位）
-          #         ——import 必须恰好 5 处（每函数体内 1 处），且每一处引用都
-          #         落在五个函数体内；函数体内「import + urlopen 调用」多处
+          #         _notice_worker（公告/云控）、_ad_fetch（云端广告）、
+          #         _update_inline_work（在线更新下载，失败回退浏览器更新）
+          #         ——import 必须恰好 6 处（每函数体内 1 处），且每一处引用都
+          #         落在六个函数体内；函数体内「import + urlopen 调用」多处
           #         字符串属正常写法，不能用「全文恰好 N 处」粗计数一刀切；
           # 例外 2：socket 只允许出现在 _port_busy（本地端口占用探测，防
           #         SO_REUSEADDR 假成功）—— 所有 connect 目标必须全是 127.0.0.1。
@@ -169,7 +171,7 @@ jobs:
 
           import ast
           tree = ast.parse(gsrc)
-          want_fns = ('_env_download', '_cloud_fetch', '_update_check', '_notice_worker', '_ad_fetch')
+          want_fns = ('_env_download', '_cloud_fetch', '_update_check', '_notice_worker', '_ad_fetch', '_update_inline_work')
           fns = [n for n in tree.body
                  if isinstance(n, ast.FunctionDef) and n.name in want_fns]
           missing = [w for w in want_fns if w not in [f.name for f in fns]]

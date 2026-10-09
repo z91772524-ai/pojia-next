@@ -62,12 +62,11 @@ jobs:
           #      出现限定在这两个函数体内（import 恰好 2 处），两个 job 互为佐证。
           EXCLUDE="--exclude-rule python.lang.security.insecure-hash-algorithms.insecure-hash-algorithm-sha1"
           EXCLUDE="$EXCLUDE --exclude-rule python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected"
-          #   3) exec（双候选 ID）—— v8.6 云核心内存加载的 exec(compile(...)) 在
+          #   3) exec-detected —— v8.6 云核心内存加载的 exec(compile(...)) 在
           #      _core_module_from 体内（服务器下发、TLS+HMAC+封条三重校验后的核心
           #      源码，非用户输入）；call-audit job 已用 AST 断言把它锁定为「恰好
           #      1 处且在该函数体内」，比 exec 的粗粒度审计告警更精准，此处放行。
-          EXCLUDE="$EXCLUDE --exclude-rule python.lang.security.audit.exec.exec"
-          EXCLUDE="$EXCLUDE --exclude-rule python.lang.security.audit.exec-audit.exec-audit"
+          EXCLUDE="$EXCLUDE --exclude-rule python.lang.security.audit.exec-detected.exec-detected"
           semgrep --config p/python --config p/security-audit \
                   --severity ERROR --severity WARNING --error --metrics=off \
                   $EXCLUDE --json -o semgrep.json 破甲一键通.py 破甲GUI.py || true

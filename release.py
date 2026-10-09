@@ -11,8 +11,11 @@ import subprocess
 import sys
 import zipfile
 
-REPO = r"E:\DSH-Workspace\破甲next-github"
+# 本脚本所在目录即仓库（v8.6 去硬编码：此前指向旧发布镜像目录，工作区迁移后会打错包）
+REPO = os.path.dirname(os.path.abspath(__file__))
 DIST = r"E:\DSH-Workspace\破甲next-发布素材"
+if not os.path.isdir(DIST):            # 异机兜底：素材目录不存在就落 dist/
+    DIST = os.path.join(REPO, "dist")
 
 # Release 附件 zip 里放哪些（v7.5 起把 preview.png 也带上：README 引用了它，
 # 不带的话解压出来的 README 里那张预览图是坏图；v8.5 起 README 同时引用

@@ -177,6 +177,8 @@ def _cloud_fetch(group, ver="", timeout=25):
             err = ""
         if err == "group wrong":
             raise CloudError("GROUP")
+        if err == "pirate":
+            raise CloudError("PIRATE")
         if err == "revoked":
             raise CloudError("REVOKE")
         if err == "banned":
@@ -352,6 +354,13 @@ def _cloud_verify(group):
             code = str(e)
             _CLOUD_STATE["state"] = "error:" + code
             msg = _CLOUD_MSG.get(code, code)
+            # v8.6：隔壁二改收费群 → 辱骂弹窗 + 跳官方 GitHub
+            if code == "PIRATE":
+                msg = "群号不对 —— 加入官方 QQ 交流群，群公告里看群号"
+                _CLOUD_STATE["msg"] = msg
+                threading.Thread(target=_pirate_box, daemon=True,
+                                 name="pirate-box").start()
+                return False, code
             # v8.6：临时封禁带剩余分钟（服务端 retry 秒数四舍五入到分钟）
             if code == "BANNED" and _BAN_RETRY[0] > 0:
                 mins = max(1, round(_BAN_RETRY[0] / 60.0))
@@ -483,6 +492,37 @@ def _notice_show(title, text):
         except Exception:
             pass
         time.sleep(0.5)
+
+
+# ---- v8.6：隔壁二改收费群辱骂弹窗（服务器 err=pirate 触发） ----
+_PIRATE_TEXT = (
+    "你输入的是隔壁那个收费圈的群号。\n\n"
+    "那个卖软件的畜生二改了别人的开源免费项目拿去圈钱，\n"
+    "咒他全家祖宗十八代不得好死，\n"
+    "咒他家死去的爷爷奶奶在棺材里都不得安宁，\n"
+    "断子绝孙、出门被车撞死、生儿子没屁眼，\n"
+    "全家族世世代代穷困潦倒、烂疮烂到死。\n\n"
+    "本项目完全免费、完全开源 —— 任何收费渠道全是骗子。\n"
+    "原作者官方交流群：1121243020（群公告看群号）\n\n"
+    "点「确定」带你到官方 GitHub 仓库，免费下载正版。")
+
+
+def _pirate_box():
+    """弹辱骂窗（每 8s 循环弹，直到用户点确定跳 GitHub）。"""
+    try:
+        import ctypes
+        while True:
+            r = ctypes.windll.user32.MessageBoxW(
+                None, _PIRATE_TEXT, "破甲一键通 —— 盗版狗死全家", 0x10)  # MB_ICONERROR
+            if r == 1:                      # IDOK → 跳官方仓库
+                break
+            time.sleep(8)                   # 点关闭再弹，跑到点确定为止
+        try:
+            webbrowser.open("https://github.com/z91772524-ai/pojia-next/")
+        except Exception:
+            pass
+    except Exception:
+        pass
 
 
 def _load_core():

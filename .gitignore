@@ -47,4 +47,12 @@ rewrite_ui_css.py
 
 # ── 云验证 CA（与服务器端证书同文件；exe 内嵌走 spec datas，仓库不需要）──
 ca.pem
+ca.pem.bak*
 *.log
+
+# ── 2026-10-10 清理：误入库的垃圾（git 目录备份/编译中间产物/旧包/哈希草稿）──
+.git.broken*/
+cython_build/
+*.zip
+sha-old.txt
+pojia-next-v8.6-exe.zip

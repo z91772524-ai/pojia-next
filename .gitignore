@@ -56,3 +56,10 @@ cython_build/
 *.zip
 sha-old.txt
 pojia-next-v8.6-exe.zip
+
+# 本地版本归档（不入库）
+_版本归档/
+破甲GUI.py
+破甲一键通.py
+一键破甲.bat
+*.spec

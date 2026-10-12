@@ -414,13 +414,13 @@ Get-FileHash .\破甲一键通GUI.exe -Algorithm SHA256        # 与 Release 正
 sha256sum -c SHA256SUMS.txt          # 文件名对得上就直接逐项校验
 ```
 
-当前版本（v8.6）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)）：
+当前版本（v8.14）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)）：
 
 | 文件 | SHA256（完整值见清单） | 字节 |
 |---|---|---|
-| `破甲一键通GUI.exe` | `ad6588fd838453a73711276895892dd0`… | 43520162 |
-| `破甲一键通.py` | `33a745482581199982aab1cd39fe9684`… | 344105 |
-| `破甲GUI.py` | `727fc0e40a938c6a01bbb8a8d1acf26`… | 171559 |
+| `破甲一键通GUI.exe` | `110ffb1b1943d785d871fa70c4f223d1`… | 44157815 |
+| `破甲一键通.py` | `f470a41ac51116fd12052f8c01eecf2d`… | 351393 |
+| `破甲GUI.py` | `e622c9e8eac5e84f44eee35cab548f95`… | 228944 |
 | `一键破甲.bat` | `f9735845d490ac9bb97d242914ad8f01`… | 2958 |
 | `persona.md` | `2ae4eee3c5808a2fb5467bbff3cfc761`… | 3599 |
 

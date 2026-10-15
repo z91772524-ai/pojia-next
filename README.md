@@ -1,10 +1,10 @@
-# 破甲一键通 v8.6
+# 破甲一键通
 
 **一句话：把你电脑上那几个 AI 客户端「自己改不到的内置提示词」，换成你自己写的那份 —— 双击 exe、点一个按钮的事。**
 
 支持 **DSH / WorkBuddy / ZCode / Codex / Cursor / Claude Code / Gemini CLI / Qwen Code / iFlow / Trae / CodeBuddy / OpenCode / Windsurf / Cline / Copilot CLI** 十五个客户端，一个工具全管，口径完全一致。
 **图形界面（原生窗口）+ 单文件 exe**：不装 Python、不敲命令、不进浏览器；
-源码照样全公开 —— 核心与界面是两个纯 Python 文件，CI 每次提交自动扫描。
+仓库只发成品 exe（Release 附件），源码不再随仓库分发。
 
 [![Release](https://img.shields.io/github/v/release/z91772524-ai/pojia-next?label=release&color=2ea043)](https://github.com/z91772524-ai/pojia-next/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -871,3 +871,4 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 ---
 
 *仅供本地自用与学习研究。把 exe 直接发给朋友就能用 —— 对方什么都不用装。完全免费，别花钱买。*
+

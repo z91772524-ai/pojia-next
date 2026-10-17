@@ -6,6 +6,7 @@
 **图形界面（原生窗口）+ 单文件 exe**：不装 Python、不敲命令、不进浏览器；
 仓库只发成品 exe（Release 附件），源码不再随仓库分发。
 
+[![Stars](https://img.shields.io/github/stars/z91772524-ai/pojia-next?style=flat-square&logo=github&label=Stars&color=ea580c)](https://github.com/z91772524-ai/pojia-next/stargazers)
 [![Release](https://img.shields.io/github/v/release/z91772524-ai/pojia-next?label=release&color=2ea043)](https://github.com/z91772524-ai/pojia-next/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
@@ -847,6 +848,20 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 > 但 **GitHub 的 Contributors（贡献者）列表只统计「个人账号」**：组织账号（如 `anywhere-labs`）
 > 和没有 GitHub 账号的产品，无论怎么写都不会出现在那个列表里 —— 作者实测验证过（组织的 noreply 邮箱两种写法都不被解析）。
 > 所以它们的署名以本节表格 + 提交信息为准，**不是漏掉了**。
+
+---
+
+## ⭐ 星标趋势
+
+[![Stars](https://img.shields.io/github/stars/z91772524-ai/pojia-next?style=for-the-badge&logo=github&logoColor=white&label=Stars&color=ea580c)](https://github.com/z91772524-ai/pojia-next/stargazers)
+[![Forks](https://img.shields.io/github/forks/z91772524-ai/pojia-next?style=for-the-badge&logo=github&logoColor=white&label=Forks&color=1e293b)](https://github.com/z91772524-ai/pojia-next/forks)
+
+<a href="https://star-history.com/#z91772524-ai/pojia-next&Date">
+  <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=z91772524-ai/pojia-next&type=Date" width="760">
+</a>
+
+<sub>曲线由 [star-history.com](https://star-history.com) 实时生成 —— star 每涨一个，图上跟着动，不用手动改。
+需要拿去群里 / 站外发的静态大图（带总数、天数和 forks 统计）见 [`docs/star-history.png`](docs/star-history.png)。</sub>
 
 ---
 

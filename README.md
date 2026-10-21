@@ -415,15 +415,15 @@ Get-FileHash .\破甲一键通GUI.exe -Algorithm SHA256        # 与 Release 正
 sha256sum -c SHA256SUMS.txt          # 文件名对得上就直接逐项校验
 ```
 
-当前版本（v8.14）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)）：
+当前版本（v8.21）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)）：
 
-| 文件 | SHA256（完整值见清单） | 字节 |
+| 文件 | MD5（完整值见清单） | 字节 |
 |---|---|---|
-| `破甲一键通GUI.exe` | `110ffb1b1943d785d871fa70c4f223d1`… | 44157815 |
-| `破甲一键通.py` | `f470a41ac51116fd12052f8c01eecf2d`… | 351393 |
-| `破甲GUI.py` | `e622c9e8eac5e84f44eee35cab548f95`… | 228944 |
-| `一键破甲.bat` | `f9735845d490ac9bb97d242914ad8f01`… | 2958 |
-| `persona.md` | `2ae4eee3c5808a2fb5467bbff3cfc761`… | 3599 |
+| `破甲一键通GUI.exe` | `ab43a0283ea9678586dd151768a98dde` | 20676678 |
+| `破甲一键通.py` | `4aa525cdfafe3d9fcaca2931605bb435`… | 380027 |
+| `破甲GUI.py` | `8a5006f75b1561f680ba6b8397e94cd2`… | 228944 |
+| `一键破甲.bat` | `829c50281e71f45d50199ceb9f670c08`… | 2958 |
+| `persona.md` | `58e03d1c8479786695a33ad020c74dc1`… | 3599 |
 
 > exe 的完整哈希发布在 **Release 页面正文**里 —— 仓库源码随时会更新，而 Release 附件是定版快照，
 > 在正文里写死才能一一对应（v7.8 前写在 README 里踩过"改一处两处都对不上"的循环引用坑）。

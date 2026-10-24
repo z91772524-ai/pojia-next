@@ -1,5 +1,11 @@
 name: security
 
+# 2026-10-24 修复（对应 v8.22 第 0 项）
+#   d00b305「移除源码文件（源码不再随仓库分发）」之后，仓库里已不存在
+#   破甲一键通.py / 破甲GUI.py，但 bandit / semgrep / call-audit 仍硬编码扫码这两个文件名，
+#   call-audit 在 open() 时抛 FileNotFoundError，main 从 2026-10-13 起连续 5 次红。
+#   修法不是删门禁，而是把门禁改成「源码在场才跑」，不在场时输出 notice 而不是静默假绿。
+
 # 安全扫描：每次推送 / PR 自动跑。README 上挂的徽章就是这个 workflow 的状态。
 #   · bandit   —— Python 安全静态扫描（**HIGH / MEDIUM 必须为 0**，否则 job 失败）
 #   · semgrep  —— 通用安全规则集（ERROR / WARNING 必须为 0）
@@ -24,8 +30,28 @@ permissions:
   contents: read
 
 jobs:
+
+  # ── 源码在场判定（2026-10-24 新增）──────────────────────────────────
+  guard:
+    name: sources
+    runs-on: ubuntu-latest
+    outputs:
+      present: ${{ steps.detect.outputs.present }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: detect
+        run: |
+          if [ -f 破甲一键通.py ] && [ -f 破甲GUI.py ]; then
+            echo "present=yes" >> "$GITHUB_OUTPUT"
+            echo "源码在场：本次跑完整静态门禁。"
+          else
+            echo "present=no" >> "$GITHUB_OUTPUT"
+            echo "::notice title=静态门禁跳过::仓库未分发源码（v8.17 起只发成品 exe）。bandit / semgrep / call-audit 在构建机本地执行，CI 不做假绿。"
+          fi
   bandit:
     name: bandit
+    needs: guard
+    if: needs.guard.outputs.present == 'yes'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +68,8 @@ jobs:
 
   semgrep:
     name: semgrep
+    needs: guard
+    if: needs.guard.outputs.present == 'yes'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -83,6 +111,8 @@ jobs:
 
   call-audit:
     name: call-audit
+    needs: guard
+    if: needs.guard.outputs.present == 'yes'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

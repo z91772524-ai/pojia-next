@@ -415,7 +415,7 @@ Get-FileHash .\破甲一键通GUI.exe -Algorithm SHA256        # 与 Release 正
 sha256sum -c SHA256SUMS.txt          # 文件名对得上就直接逐项校验
 ```
 
-当前版本（v8.21）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)）：
+当前版本（v8.22）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)）：
 
 | 文件 | MD5（完整值见清单） | 字节 |
 |---|---|---|

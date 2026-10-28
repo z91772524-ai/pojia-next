@@ -6,6 +6,7 @@
 **图形界面（原生窗口）+ 单文件 exe**：不装 Python、不敲命令、不进浏览器；
 仓库只发成品 exe（Release 附件），源码不再随仓库分发。
 
+[![官网](https://img.shields.io/badge/官网-aaaa.yiye.pw-0f766e)](https://aaaa.yiye.pw/)
 [![Stars](https://img.shields.io/github/stars/z91772524-ai/pojia-next?style=flat-square&logo=github&label=Stars&color=ea580c)](https://github.com/z91772524-ai/pojia-next/stargazers)
 [![Release](https://img.shields.io/github/v/release/z91772524-ai/pojia-next?label=release&color=2ea043)](https://github.com/z91772524-ai/pojia-next/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -49,7 +50,7 @@
 
 ### 1️⃣ 下载
 打开 [**Releases 页面**](https://github.com/z91772524-ai/pojia-next/releases/latest)，
-下载 **`pojia-next-v8.26-exe.zip`**，解压得到 **`破甲一键通GUI-8.26.exe`** ——
+下载 **`pojia-next-v8.27-exe.zip`**，解压得到 **`破甲一键通GUI-8.27.exe`** ——
 单文件 exe，**电脑上不用装 Python**，放哪都行（桌面就行）。
 （GitHub 对附件文件名只认英文，所以 exe 装在 zip 里发行，解压一次就行。）
 
@@ -419,7 +420,7 @@ Get-FileHash .\破甲一键通GUI.exe -Algorithm SHA256        # 与 Release 正
 sha256sum -c SHA256SUMS.txt          # 文件名对得上就直接逐项校验
 ```
 
-当前版本（v8.26）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)）：
+当前版本（v8.27）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)）：
 
 | 文件 | MD5（完整值见清单） | 字节 |
 |---|---|---|
@@ -681,6 +682,12 @@ def _d2(src):
 
 <details>
 <summary><b>📋 版本记录</b>（精简版 · 全量见 <a href="更新日志.md">更新日志.md</a> · 点开）</summary>
+
+### v8.27 —— 双层破甲：镜像层兜底
+
+| 改了什么 | 说明 |
+|---|---|
+| **镜像层** | 主注入之外再落一份独立标记的镜像块（核心规则 + 自证重申），主层被宿主更新覆盖/过滤时兜底；任一层存活即破甲有效。15 个客户端全覆盖（标记块客户端主块后独立成块、Codex 进 managed-prompts、Cursor 进 .mdc、ZCode 进 AGENTS.md、DSH 走运行时守卫层、WB 多点注入）。状态面板直接报「双层 ✓」，老用户重跑一次破甲自动补装 |
 
 ### v8.26 —— 注入全程托管：杀进程重注入 + 托盘常驻 + 写后自检
 

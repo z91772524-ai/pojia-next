@@ -59,10 +59,10 @@
 ### 1️⃣ 下载
 | 渠道 | 说明 |
 | --- | --- |
-| **迅雷网盘（国内推荐）** | [pan.xunlei.com/s/VP55t1eBBnS0L-2RfY9zYc6RA1](https://pan.xunlei.com/s/VP55t1eBBnS0L-2RfY9zYc6RA1?pwd=xs8s) 提取码 **`xs8s`**，国内直连快，进去下载最新版 `破甲一键通GUI-8.26.zip` |
-| GitHub Releases（备用） | [pojia-next/releases/latest](https://github.com/z91772524-ai/pojia-next/releases/latest) 下载 `pojia-next-v8.26-exe.zip` |
+| **迅雷网盘（国内推荐）** | [pan.xunlei.com/s/VP55t1eBBnS0L-2RfY9zYc6RA1](https://pan.xunlei.com/s/VP55t1eBBnS0L-2RfY9zYc6RA1?pwd=xs8s) 提取码 **`xs8s`**，国内直连快，进去下载最新版 `破甲一键通GUI-8.27.exe` |
+| GitHub Releases（备用） | [pojia-next/releases/latest](https://github.com/z91772524-ai/pojia-next/releases/latest) 下载 `pojia-next-v8.27-exe.zip` |
 
-两个渠道内容一致，哪个快用哪个。解压得到 **`破甲一键通GUI-8.26.exe`** ——
+两个渠道内容一致，哪个快用哪个。解压得到 **`破甲一键通GUI-8.27.exe`** ——
 单文件 exe，**电脑上不用装 Python**，放哪都行（桌面就行）。
 （GitHub 对附件文件名只认英文，所以 exe 装在 zip 里发行，解压一次就行。）
 
@@ -92,7 +92,7 @@
 
 ## 🖥 界面上有什么
 
-v8.26 的窗口长这样（对应上面第一张截图）：
+v8.27 的窗口长这样（对应上面第一张截图）：
 
 | 区域 | 干什么 |
 |---|---|
@@ -320,19 +320,19 @@ GUI 里每个目标的状态灯 + 「演练」就是体检入口，全程只读�
 
 ```powershell
 # Windows PowerShell
-Get-FileHash .\破甲一键通GUI-8.26.exe -Algorithm SHA256   # 与 SHA256SUMS-exe.txt / Release 正文对照
+Get-FileHash .\破甲一键通GUI-8.27.exe -Algorithm SHA256   # 与 SHA256SUMS-exe.txt / Release 正文对照
 ```
 ```bash
 # Linux / macOS
 sha256sum -c SHA256SUMS-exe.txt      # 对着清单逐项校验
 ```
 
-当前版本（v8.26）发行包：
+当前版本（v8.27）发行包：
 
 | 文件 | SHA256 | 说明 |
 |---|---|---|
-| `pojia-next-v8.26-exe.zip` | `feb7cec1e764de8c0cb9844b7bbbeefe51d136acb96b0c368f0f69b6fd894db4` | Release 附件 |
-| `破甲一键通GUI-8.26.exe` | `9f0f213788c0cd028c345d44e59f6102a5fca3a580308ba52b980c0d4a48df30` | zip 解压所得 |
+| `pojia-next-v8.27-exe.zip` | `0483947abf1a5aed1936f37d1d5ce5db5203095babe84a5a5be54c0390be94cc` | Release 附件 |
+| `破甲一键通GUI-8.27.exe` | `aef6b23fd9c8fc0bd39eca5724fc917d70c50ea5a6d2fc73cf64904ad7e9e276` | zip 解压所得 |
 
 > exe 的完整哈希发布在 **Release 页面正文**里 —— Release 附件是定版快照，
 > 在正文里写死才能一一对应（v7.8 前写在 README 里踩过"改一处两处都对不上"的循环引用坑）。
@@ -348,6 +348,19 @@ exe 里的立场文案（免费声明 / 防倒卖提示等）以**密文块**形
 
 <details>
 <summary><b>📋 版本记录</b>（精简版 · 全量见 <a href="更新日志.md">更新日志.md</a> · 点开）</summary>
+
+### v8.27 —— 双层破甲 + 开屏广告云端管理 + 巡检自愈
+
+| 改了什么 | 说明 |
+|---|---|
+| **双层破甲（镜像层）** | 主注入块之外再落一份独立标记的镜像块（核心规则 + 自证口令重申）：长对话注意力衰减时兜底，宿主更新覆盖主块时兜底，任一层活着破甲就有效 |
+| **客户端全覆盖** | 13 个标记块客户端各自独立镜像块；Codex 进 managed-prompts、Cursor 独立成段、ZCode 追加 AGENTS.md、DSH 磁盘层 + 运行时守卫层、WorkBuddy 多点天然多层 |
+| **状态可见** | 体检面板直接显示「已破甲（双层：主注入 + 镜像层 ✓）」，缺层提示重跑补装；老用户点一次「破甲」自动补装 |
+| **开屏广告** | 启动就绪即弹：每次从广告位**随机**取一条，5 秒倒计时结束后才能手动关闭（右上角 × 或「关闭广告」） |
+| **广告云端管理** | 素材 / 链接 / 上下线 / 参与开屏全部在管理后台配置，客户端自动同步，不发版就能换广告 |
+| **巡检自愈** | 每小时基线比对，破甲状态被改动可自动修复（可选自动 / 仅提醒） |
+| **运维三件套** | 一键体检报告落桌面 txt、脱敏日志打包 zip（自动抹掉用户名与家目录路径）、网络超时 10s → 5s |
+| **更新链路修复** | v8.23 起的「更新焊死」改为服务器开关控制（`lock_ver`），版本比较逻辑恢复可生效；更新弹窗提供迅雷（国内快）/ GitHub 双渠道 |
 
 ### v8.26 —— 注入全程托管：杀进程重注入 + 托盘常驻 + 写后自检
 

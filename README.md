@@ -49,6 +49,9 @@
 > **它不修改软件本体**：只做**文本文件层面的替换**，不删包、不碰注册表 / 服务。
 > 想深入了解改了什么，看 [详细一点：它到底改了什么](#它到底改了什么)。
 
+> **四条设计原则**（口径参考社区版 dsh-purge，见[思路与致谢](#-思路与致谢)）：
+> **本机优先** —— 全部逻辑在本机运行，不上传提示词与配置；**每步可见** —— 每个动作都有状态与证据，不靠"应该生效了"；**随时可回滚** —— 应用/还原前自动快照，备份与校验清单一直都在；**不替你做决定** —— 改什么、开什么，都由你确认。
+
 ---
 
 ## 🚀 三步就能用
@@ -428,6 +431,9 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 |---|---|
 | [@YuJunZhiXue](https://github.com/YuJunZhiXue) / [dsh-purge](https://github.com/YuJunZhiXue/dsh-purge) | 运行时守卫的思路（pojia-guard 在其基础上重写加固，并加了原版没有的限次熔断）；写后自检 + 备份校验机制 |
 | [@ryfineZ](https://github.com/ryfineZ) / [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) | 「交付即验证」：注入结束主动验证补丁真实驻留，杜绝假成功 |
+| [@kingcharleslzy-ai](https://github.com/kingcharleslzy-ai) / [dsh-purge](https://github.com/kingcharleslzy-ai/dsh-purge)（社区版） | 「设计原则」的口径（本机优先 / 每步可见 / 随时可回滚 / 不替你做决定）；操作前自动快照、状态一屏给结论的体验（本项目的体检报告与备份还原在此基础上做成了一键化） |
+| [@JeffKeeping](https://github.com/JeffKeeping) / [dsh-purge-plus](https://github.com/JeffKeeping/dsh-purge-plus)、[@luowang-ui](https://github.com/luowang-ui) / [dsh-purge-plus](https://github.com/luowang-ui/dsh-purge-plus) | 宿主新版本适配优先：上游 Desktop 更新后第一时间跟进适配，而不是让用户卡在旧版本 |
+| [@dsh-market](https://github.com/dsh-market) / [dsh-market](https://github.com/dsh-market/dsh-market) | 可视化分发的一键安装体验参考——官网下载区按「下载即用、无需命令行」的思路组织 |
 
 > 「反抄袭」反的是**删除版权声明后收费换皮**，不是「做过类似的事」—— 思路借鉴、各自实现是开源社区的常态，上述仓库的许可与署名要求均被遵守。如果你认为某段内容应当单独标注出处，欢迎开 issue 指出（文件 + 位置），核实后补上。
 

@@ -402,26 +402,23 @@ def backup_file(path, suffix=None, bak_path=None, is_pristine=None):
 
 ### 校验下载的文件没被篡改（SHA256）
 
-仓库根目录有 [`SHA256SUMS.txt`](SHA256SUMS.txt)（覆盖仓库全部核心文件；**Release 附件另有一份 exe 版的精简校验 `SHA256SUMS-exe.txt`**：zip 下载后核一层，解压出来的 exe 再核一层），下载后自己核一遍：
+仓库根目录有 [`SHA256SUMS.txt`](SHA256SUMS.txt)（覆盖仓库全部文件）；**发行包另有精简校验 [`SHA256SUMS-exe.txt`](SHA256SUMS-exe.txt)**：zip 下载后核一层，解压出来的 exe 再核一层。下载后自己核一遍：
 
 ```powershell
 # Windows PowerShell
-Get-FileHash .\破甲一键通GUI.exe -Algorithm SHA256        # 与 Release 正文里的值对照
+Get-FileHash .\破甲一键通GUI-8.26.exe -Algorithm SHA256   # 与 SHA256SUMS-exe.txt / Release 正文对照
 ```
 ```bash
 # Linux / macOS
-sha256sum -c SHA256SUMS.txt          # 文件名对得上就直接逐项校验
+sha256sum -c SHA256SUMS-exe.txt      # 对着清单逐项校验
 ```
 
-当前版本（v8.26）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)）：
+当前版本（v8.26）发行包：
 
-| 文件 | MD5（完整值见清单） | 字节 |
+| 文件 | SHA256 | 说明 |
 |---|---|---|
-| `破甲一键通GUI.exe` | `ab43a0283ea9678586dd151768a98dde` | 20676678 |
-| `破甲一键通.py` | `4aa525cdfafe3d9fcaca2931605bb435`… | 380027 |
-| `破甲GUI.py` | `8a5006f75b1561f680ba6b8397e94cd2`… | 228944 |
-| `一键破甲.bat` | `829c50281e71f45d50199ceb9f670c08`… | 2958 |
-| `persona.md` | `58e03d1c8479786695a33ad020c74dc1`… | 3599 |
+| `pojia-next-v8.26-exe.zip` | `feb7cec1e764de8c0cb9844b7bbbeefe51d136acb96b0c368f0f69b6fd894db4` | Release 附件 |
+| `破甲一键通GUI-8.26.exe` | `9f0f213788c0cd028c345d44e59f6102a5fca3a580308ba52b980c0d4a48df30` | zip 解压所得 |
 
 > exe 的完整哈希发布在 **Release 页面正文**里 —— Release 附件是定版快照，
 > 在正文里写死才能一一对应（v7.8 前写在 README 里踩过"改一处两处都对不上"的循环引用坑）。

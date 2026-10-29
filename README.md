@@ -1,7 +1,7 @@
 # 破甲一键通
 
-> ### 🌐 官网（国内推荐从这里进）：**https://pursueray.cn/**
-> 下载、更新公告、交流群都在官网 —— [**pursueray.cn**](https://pursueray.cn/)
+> ### 🌐 官网（国内推荐从这里进）：**https://aaaa.yiye.pw/**
+> 下载、更新公告、交流群都在官网 —— [**aaaa.yiye.pw**](https://aaaa.yiye.pw/)
 
 **一句话：把你电脑上那几个 AI 客户端「自己改不到的内置提示词」，换成你自己写的那份 —— 双击 exe、点一个按钮的事。**
 
@@ -9,7 +9,7 @@
 **图形界面（原生窗口）+ 单文件 exe**：不装 Python、不敲命令、不进浏览器；
 仓库只发成品 exe（Release 附件），源码不再随仓库分发。
 
-[![官网](https://img.shields.io/badge/官网-pursueray.cn-ea580c?style=flat-square&logo=googlechrome&logoColor=white)](https://pursueray.cn/)
+[![官网](https://img.shields.io/badge/官网-aaaa.yiye.pw-ea580c?style=flat-square&logo=googlechrome&logoColor=white)](https://aaaa.yiye.pw/)
 [![Stars](https://img.shields.io/github/stars/z91772524-ai/pojia-next?style=flat-square&logo=github&label=Stars&color=ea580c)](https://github.com/z91772524-ai/pojia-next/stargazers)
 [![Release](https://img.shields.io/github/v/release/z91772524-ai/pojia-next?label=release&color=2ea043)](https://github.com/z91772524-ai/pojia-next/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -81,7 +81,7 @@
 > 没有代码签名证书的 exe，SmartScreen 可能会弹「Windows 已保护你的电脑」——
 > 这是无签名 exe 的常态。点 **「更多信息」→「仍要运行」** 即可。
 > 不放心的话：哈希对得上的附件才用（[怎么校验](#校验下载的文件没被篡改-sha256)），
-> 并**只认官方渠道**（官网 pursueray.cn / 本仓库 Release）。
+> 并**只认官方渠道**（官网 aaaa.yiye.pw / 本仓库 Release）。
 
 ---
 
@@ -110,7 +110,7 @@ v8.26 的窗口长这样（对应上面第一张截图）：
 |---|---|
 | **改坏了能不能恢复？** | **每个改动都先备份**。点「还原」一键变回官方原版（按"护照"名单精确还原，不误删别人的文件） |
 | **会不会偷偷联网 / 上传我的数据？** | **核心零网络请求**（CI 每次提交自动断言）；GUI 只在两处碰网络：本地回环 `127.0.0.1` 起界面服务（不对外），以及**你在环境页主动点「下载」**时访问官方下载源（URL 全是代码里的字面量，见 [安全审查](#安全审查你可以自己验)） |
-| **exe 会不会带毒？** | 构建全程 CI 自动跑三套安全扫描；附件哈希可校验；**只认官方渠道**（官网 pursueray.cn / 本仓库 Release）一个来源 |
+| **exe 会不会带毒？** | 构建全程 CI 自动跑三套安全扫描；附件哈希可校验；**只认官方渠道**（官网 aaaa.yiye.pw / 本仓库 Release）一个来源 |
 | **会不会删我的东西？** | 只做文件级补丁，**不删包、不碰注册表 / 服务、不装驱动**；连清缓存都默认**只统计不删** |
 | **是不是要花钱？** | **完全免费、开源**（MIT）。花钱买到的请立即申请退款 —— 官方仓库只有这一个 |
 

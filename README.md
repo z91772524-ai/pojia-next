@@ -1,12 +1,15 @@
 # 破甲一键通
 
+> ### 🌐 官网（国内推荐从这里进）：**https://pursueray.cn/**
+> 下载、更新公告、交流群都在官网 —— [**pursueray.cn**](https://pursueray.cn/)
+
 **一句话：把你电脑上那几个 AI 客户端「自己改不到的内置提示词」，换成你自己写的那份 —— 双击 exe、点一个按钮的事。**
 
 支持 **DSH / WorkBuddy / ZCode / Codex / Cursor / Claude Code / Gemini CLI / Qwen Code / iFlow / Trae / CodeBuddy / OpenCode / Windsurf / Cline / Copilot CLI** 十五个客户端，一个工具全管，口径完全一致。
 **图形界面（原生窗口）+ 单文件 exe**：不装 Python、不敲命令、不进浏览器；
 仓库只发成品 exe（Release 附件），源码不再随仓库分发。
 
-[![官网](https://img.shields.io/badge/官网-aaaa.yiye.pw-0f766e)](https://aaaa.yiye.pw/)
+[![官网](https://img.shields.io/badge/官网-pursueray.cn-ea580c?style=flat-square&logo=googlechrome&logoColor=white)](https://pursueray.cn/)
 [![Stars](https://img.shields.io/github/stars/z91772524-ai/pojia-next?style=flat-square&logo=github&label=Stars&color=ea580c)](https://github.com/z91772524-ai/pojia-next/stargazers)
 [![Release](https://img.shields.io/github/v/release/z91772524-ai/pojia-next?label=release&color=2ea043)](https://github.com/z91772524-ai/pojia-next/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -49,8 +52,12 @@
 ## 🚀 三步就能用
 
 ### 1️⃣ 下载
-打开 [**Releases 页面**](https://github.com/z91772524-ai/pojia-next/releases/latest)，
-下载 **`pojia-next-v8.27-exe.zip`**，解压得到 **`破甲一键通GUI-8.27.exe`** ——
+| 渠道 | 说明 |
+| --- | --- |
+| **迅雷网盘（国内推荐）** | [pan.xunlei.com/s/VP55t1eBBnS0L-2RfY9zYc6RA1](https://pan.xunlei.com/s/VP55t1eBBnS0L-2RfY9zYc6RA1?pwd=xs8s) 提取码 **`xs8s`**，国内直连快，进去下载最新版 `破甲一键通GUI-8.27.zip` |
+| GitHub Releases（备用） | [pojia-next/releases/latest](https://github.com/z91772524-ai/pojia-next/releases/latest) 下载 `pojia-next-v8.27-exe.zip` |
+
+两个渠道内容一致，哪个快用哪个。解压得到 **`破甲一键通GUI-8.27.exe`** ——
 单文件 exe，**电脑上不用装 Python**，放哪都行（桌面就行）。
 （GitHub 对附件文件名只认英文，所以 exe 装在 zip 里发行，解压一次就行。）
 

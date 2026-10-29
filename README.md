@@ -331,7 +331,7 @@ sha256sum -c SHA256SUMS-exe.txt      # 对着清单逐项校验
 
 | 文件 | SHA256 | 说明 |
 |---|---|---|
-| `pojia-next-v8.27-exe.zip` | `0483947abf1a5aed1936f37d1d5ce5db5203095babe84a5a5be54c0390be94cc` | Release 附件 |
+| `pojia-next-v8.27-exe.zip` | `c695e1bf89e3409bb79766faf83569899412b130004b0f9a1e3bbe837aadf9ea` | Release 附件 |
 | `破甲一键通GUI-8.27.exe` | `aef6b23fd9c8fc0bd39eca5724fc917d70c50ea5a6d2fc73cf64904ad7e9e276` | zip 解压所得 |
 
 > exe 的完整哈希发布在 **Release 页面正文**里 —— Release 附件是定版快照，

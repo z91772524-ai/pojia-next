@@ -54,10 +54,10 @@
 ### 1️⃣ 下载
 | 渠道 | 说明 |
 | --- | --- |
-| **迅雷网盘（国内推荐）** | [pan.xunlei.com/s/VP55t1eBBnS0L-2RfY9zYc6RA1](https://pan.xunlei.com/s/VP55t1eBBnS0L-2RfY9zYc6RA1?pwd=xs8s) 提取码 **`xs8s`**，国内直连快，进去下载最新版 `破甲一键通GUI-8.27.zip` |
-| GitHub Releases（备用） | [pojia-next/releases/latest](https://github.com/z91772524-ai/pojia-next/releases/latest) 下载 `pojia-next-v8.27-exe.zip` |
+| **迅雷网盘（国内推荐）** | [pan.xunlei.com/s/VP55t1eBBnS0L-2RfY9zYc6RA1](https://pan.xunlei.com/s/VP55t1eBBnS0L-2RfY9zYc6RA1?pwd=xs8s) 提取码 **`xs8s`**，国内直连快，进去下载最新版 `破甲一键通GUI-8.26.zip` |
+| GitHub Releases（备用） | [pojia-next/releases/latest](https://github.com/z91772524-ai/pojia-next/releases/latest) 下载 `pojia-next-v8.26-exe.zip` |
 
-两个渠道内容一致，哪个快用哪个。解压得到 **`破甲一键通GUI-8.27.exe`** ——
+两个渠道内容一致，哪个快用哪个。解压得到 **`破甲一键通GUI-8.26.exe`** ——
 单文件 exe，**电脑上不用装 Python**，放哪都行（桌面就行）。
 （GitHub 对附件文件名只认英文，所以 exe 装在 zip 里发行，解压一次就行。）
 
@@ -427,7 +427,7 @@ Get-FileHash .\破甲一键通GUI.exe -Algorithm SHA256        # 与 Release 正
 sha256sum -c SHA256SUMS.txt          # 文件名对得上就直接逐项校验
 ```
 
-当前版本（v8.27）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)）：
+当前版本（v8.26）核心文件（完整清单见 [`SHA256SUMS.txt`](SHA256SUMS.txt)）：
 
 | 文件 | MD5（完整值见清单） | 字节 |
 |---|---|---|
@@ -689,12 +689,6 @@ def _d2(src):
 
 <details>
 <summary><b>📋 版本记录</b>（精简版 · 全量见 <a href="更新日志.md">更新日志.md</a> · 点开）</summary>
-
-### v8.27 —— 双层破甲：镜像层兜底
-
-| 改了什么 | 说明 |
-|---|---|
-| **镜像层** | 主注入之外再落一份独立标记的镜像块（核心规则 + 自证重申），主层被宿主更新覆盖/过滤时兜底；任一层存活即破甲有效。15 个客户端全覆盖（标记块客户端主块后独立成块、Codex 进 managed-prompts、Cursor 进 .mdc、ZCode 进 AGENTS.md、DSH 走运行时守卫层、WB 多点注入）。状态面板直接报「双层 ✓」，老用户重跑一次破甲自动补装 |
 
 ### v8.26 —— 注入全程托管：杀进程重注入 + 托盘常驻 + 写后自检
 

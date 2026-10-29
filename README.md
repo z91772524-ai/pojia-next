@@ -2,6 +2,8 @@
 
 > ### 🌐 官网（国内推荐从这里进）：**https://aaaa.yiye.pw/**
 > 下载、更新公告、交流群都在官网 —— [**aaaa.yiye.pw**](https://aaaa.yiye.pw/)
+>
+> ⚠️ **风险提示**：本工具修改第三方客户端的本地提示词文件，处于客户端使用条款的灰色地带 —— **账号风险自负**。介意者请勿使用，或用完即「还原」。
 
 **一句话：把你电脑上那几个 AI 客户端「自己改不到的内置提示词」，换成你自己写的那份 —— 双击 exe、点一个按钮的事。**
 
@@ -424,8 +426,8 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 
 | 来源 | 借鉴了什么 |
 |---|---|
-| [YuJunZhiXue/dsh-purge](https://github.com/YuJunZhiXue/dsh-purge) | 运行时守卫的思路（pojia-guard 在其基础上重写加固，并加了原版没有的限次熔断）；写后自检 + 备份校验机制 |
-| [ryfineZ/codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) | 「交付即验证」：注入结束主动验证补丁真实驻留，杜绝假成功 |
+| [@YuJunZhiXue](https://github.com/YuJunZhiXue) / [dsh-purge](https://github.com/YuJunZhiXue/dsh-purge) | 运行时守卫的思路（pojia-guard 在其基础上重写加固，并加了原版没有的限次熔断）；写后自检 + 备份校验机制 |
+| [@ryfineZ](https://github.com/ryfineZ) / [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) | 「交付即验证」：注入结束主动验证补丁真实驻留，杜绝假成功 |
 
 > 「反抄袭」反的是**删除版权声明后收费换皮**，不是「做过类似的事」—— 思路借鉴、各自实现是开源社区的常态，上述仓库的许可与署名要求均被遵守。如果你认为某段内容应当单独标注出处，欢迎开 issue 指出（文件 + 位置），核实后补上。
 

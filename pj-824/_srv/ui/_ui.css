@@ -133,6 +133,7 @@ aside{
 .brand .ver{margin-left:auto;font:10.5px/1 var(--mono);color:var(--faint)}
 
 nav{overflow-y:auto;flex:1;padding:4px 10px 22px;scrollbar-width:thin}
+#gtabs[hidden]{display:none!important}
 nav .gt{
   padding:16px 8px 6px;font-size:12px;color:var(--faint);letter-spacing:.04em;
 }
@@ -292,13 +293,24 @@ td .btn.btn.d:hover{color:var(--err)}
 .tag.err{color:var(--err);border-color:color-mix(in oklab,var(--err) 38%,transparent);background:color-mix(in oklab,var(--err) 10%,transparent)}
 .tag.warn{color:var(--warn);border-color:color-mix(in oklab,var(--warn) 38%,transparent);background:color-mix(in oklab,var(--warn) 10%,transparent)}
 
-/* ---------- 柱状图 ---------- */
-.bar{display:flex;align-items:flex-end;gap:2px;height:64px;border-bottom:1px solid var(--line2)}
-.bar i{
-  flex:1;min-height:2px;position:relative;background:var(--acc);border-radius:2px 2px 0 0;
-  opacity:.72;transition:opacity .14s var(--ease),background .14s var(--ease);
+/* ---------- 波峰波谷图 ---------- */
+.wave{position:relative;height:76px;margin-top:20px}
+.wave>svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
+.wave .wd{
+  position:absolute;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;
+  background:var(--acc);opacity:0;transition:opacity .12s var(--ease);pointer-events:none;
 }
-.bar i:hover{opacity:1;background:var(--txt)}
+.wave:hover .wd{opacity:.42}
+.wave .wd:hover{opacity:1}
+.wave .pk{
+  position:absolute;transform:translate(-50%,-132%);white-space:nowrap;
+  font-size:11px;font-weight:600;color:var(--acc);
+  background:var(--pnl);border:1px solid color-mix(in oklab,var(--acc) 42%,var(--line2));
+  border-radius:5px;padding:0 6px;line-height:17px;
+}
+.wlab{display:flex;justify-content:space-between;gap:8px;margin-top:6px;font-size:10.5px;color:var(--faint)}
+.wlab .vl{color:var(--dim);flex:1;text-align:center;min-width:0}
+.wlab>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ---------- 字段 ---------- */
 .fields{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
@@ -356,6 +368,237 @@ textarea.code{font-family:var(--mono);font-size:12.5px;min-height:300px;line-hei
 }
 @keyframes shimmer{100%{transform:translateX(100%)}}
 
+/* ============================================================
+   外观可配置层：主题 / 菜单布局 / 菜单风格 / 主题色 / 圆角 / 背景图
+   全部由 localStorage 驱动，运行时只改 :root 上的变量与 #app 的属性
+   ============================================================ */
+
+/* ---------- 背景图层（在最底下，不挡点击） ---------- */
+#bg{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-repeat:no-repeat;background-position:50% 50%;background-size:cover;
+  opacity:0;transition:opacity .3s var(--ease);
+}
+#app{position:relative;z-index:1}
+
+/* ---------- 浅色主题：只换变量，其余全部继承 ---------- */
+:root[data-theme="light"]{
+  --bg:#f1f3ef;--pnl:#ffffff;--pnl2:#f5f7f4;--sunk:#f1f3ef;
+  --line:#e4e7e0;--line2:#d5dad2;--line3:#bbc3b8;
+  --txt:#1d2420;--dim:#5c6761;--faint:#87928a;
+  --ok:#2f8f5b;--warn:#a9740f;--err:#c0472f;
+  --sh:0 1px 2px rgba(22,32,26,.05),0 10px 24px -16px rgba(22,32,26,.22);
+}
+:root[data-theme="light"] #login{background:radial-gradient(760px 420px at 50% -8%,#ffffff,var(--bg) 60%)}
+:root[data-theme="light"] td{color:#4b554e}
+:root[data-theme="light"] .mono{color:#414b44}
+:root[data-theme="light"] .logbox{color:#39423b;background:#f8f9f6}
+:root[data-theme="light"] .btn.p,
+:root[data-theme="light"] .btn.p:hover{color:#fff}
+:root[data-theme="light"] .btn.p.isbusy:after{border-color:rgba(255,255,255,.35);border-top-color:#fff}
+:root[data-theme="light"] .skel:after{background:linear-gradient(90deg,transparent,rgba(20,30,24,.06),transparent)}
+:root[data-theme="light"] ::selection{color:#fff}
+:root[data-theme="light"] .wave .pk{background:#fff}
+
+/* ---------- 菜单布局：水平（顶栏下拉） ---------- */
+#app.lay-h{flex-direction:column}
+#app.lay-h aside{
+  width:100%;flex:0 0 58px;flex-direction:row;align-items:center;
+  border-right:0;border-bottom:1px solid var(--line);overflow:visible;padding-right:8px;
+}
+#app.lay-h .brand{flex:0 0 auto;height:58px}
+#app.lay-h #nav{
+  display:flex;flex:1;align-items:center;gap:2px;height:58px;
+  overflow:visible;padding:0;scrollbar-width:none;
+}
+#app.lay-h #nav .navdd{position:relative}
+#app.lay-h #nav .navdd>.gb{
+  display:inline-flex;align-items:center;gap:5px;background:none;border:0;
+  padding:8px 11px;border-radius:var(--rad-s);font-size:13.5px;color:var(--dim);
+}
+#app.lay-h #nav .navdd>.gb:hover{color:var(--txt);background:var(--pnl2)}
+#app.lay-h #nav .navdd>.gb i{
+  width:0;height:0;border-left:3.4px solid transparent;border-right:3.4px solid transparent;
+  border-top:4px solid currentColor;opacity:.6;transition:transform .18s var(--ease);
+}
+#app.lay-h #nav .navdd.open>.gb,
+#app.lay-h #nav .navdd:hover>.gb{color:var(--acc)}
+#app.lay-h #nav .navdd.open>.gb i{transform:rotate(180deg)}
+#app.lay-h #nav .sub{
+  position:absolute;left:0;top:100%;margin-top:0;min-width:190px;display:none;
+  background:var(--pnl);border:1px solid var(--line2);border-radius:var(--rad);
+  box-shadow:var(--sh);padding:6px;z-index:120;
+}
+#app.lay-h #nav .sub:before{content:"";position:absolute;left:0;right:0;top:-10px;height:10px}
+#app.lay-h #nav .navdd:hover>.sub,
+#app.lay-h #nav .navdd.open>.sub{display:block;animation:rise .16s var(--ease) both}
+#app.lay-h #nav .sub button{
+  display:block;width:100%;text-align:left;background:none;border:0;
+  padding:7px 9px;border-radius:var(--rad-s);font-size:13px;color:var(--dim);margin:0;
+}
+#app.lay-h #nav .sub button:hover{background:var(--pnl2);color:var(--txt)}
+#app.lay-h #nav .sub button.on{color:var(--acc);background:color-mix(in oklab,var(--acc) 12%,transparent);font-weight:600}
+#app.lay-h main{flex:1;min-height:0}
+
+/* ---------- 菜单布局：混合（分组横排 + 二级列表） ---------- */
+#app.lay-m #gtabs{
+  display:flex;flex-wrap:wrap;gap:4px;padding:0 10px 10px;overflow:visible;
+  flex:0 0 auto;height:auto;
+}
+#app.lay-m #gtabs::-webkit-scrollbar{display:none}
+#app.lay-m #gtabs button{
+  flex:0 0 auto;width:auto;background:var(--pnl2);border:1px solid transparent;
+  border-radius:99px;padding:5px 11px;font-size:12.5px;color:var(--dim);white-space:nowrap;
+}
+#app.lay-m #gtabs button:hover{color:var(--txt);border-color:var(--line2)}
+#app.lay-m #gtabs button.on{
+  color:#17190f;background:var(--acc);font-weight:600;
+}
+#app.lay-m #nav .gt{display:none}
+:root[data-theme="light"] #app.lay-m #gtabs button.on{color:#fff}
+
+/* ---------- 菜单布局：双列（分组窄轨 + 二级列表） ---------- */
+#app.lay-d aside{
+  width:306px;flex:0 0 306px;display:grid;grid-template-columns:96px minmax(0,1fr);
+  grid-template-rows:58px minmax(0,1fr);
+}
+#app.lay-d .brand{grid-column:1/-1;grid-row:1}
+#app.lay-d #gtabs{
+  grid-column:1;grid-row:2;display:flex;flex-direction:column;gap:2px;
+  border-right:1px solid var(--line);padding:6px 6px 16px;overflow-y:auto;scrollbar-width:thin;
+}
+#app.lay-d #gtabs button{
+  text-align:left;background:none;border:0;padding:7px 8px;border-radius:var(--rad-s);width:auto;
+  font-size:12.5px;color:var(--dim);
+}
+#app.lay-d #gtabs button:hover{background:var(--pnl2);color:var(--txt)}
+#app.lay-d #gtabs button.on{
+  color:var(--acc);font-weight:600;background:color-mix(in oklab,var(--acc) 12%,transparent);
+}
+#app.lay-d #nav{grid-column:2;grid-row:2;padding:6px 8px 16px}
+
+/* ---------- 菜单风格 ---------- */
+#app[data-ms="b"] nav button.on{
+  background:transparent;
+  box-shadow:inset 0 0 0 1px color-mix(in oklab,var(--acc) 52%,transparent);
+}
+#app[data-ms="c"] nav button{
+  padding:5px 9px;font-size:13px;border-radius:0;
+}
+#app[data-ms="c"] nav button.on{
+  background:transparent;box-shadow:inset 2px 0 0 var(--acc);
+  border-radius:0;font-weight:600;
+}
+#app[data-ms="c"] nav .gt{padding:12px 8px 3px;font-size:11.5px}
+
+/* ---------- 多标签栏 ---------- */
+#tabs{
+  display:none;gap:4px;padding:8px 14px 0;flex:0 0 auto;
+  overflow-x:auto;scrollbar-width:none;
+}
+#tabs::-webkit-scrollbar{display:none}
+#tabs.on{display:flex}
+#tabs .tb{
+  display:inline-flex;align-items:center;gap:7px;white-space:nowrap;
+  background:transparent;border:1px solid transparent;border-radius:var(--rad-s);
+  padding:4px 8px;font-size:12.5px;color:var(--dim);
+  transition:background .15s var(--ease),color .15s var(--ease),border-color .15s var(--ease);
+}
+#tabs .tb:hover{color:var(--txt);background:var(--pnl2)}
+#tabs .tb.on{color:var(--acc);background:var(--pnl);border-color:var(--line2);font-weight:600}
+#tabs .tb .x{
+  font-style:normal;font-size:14px;line-height:1;color:var(--faint);
+  border-radius:3px;padding:0 1px;
+}
+#tabs .tb .x:hover{color:var(--err)}
+#app[data-tabstyle="dot"] #tabs .tb.on:before{
+  content:"";width:5px;height:5px;border-radius:50%;background:var(--acc);flex:0 0 auto;
+}
+#app[data-tabstyle="card"] #tabs .tb{border-color:var(--line);background:var(--pnl)}
+#app[data-tabstyle="card"] #tabs .tb.on{
+  background:color-mix(in oklab,var(--acc) 13%,var(--pnl));
+  border-color:color-mix(in oklab,var(--acc) 40%,var(--line2));
+}
+
+/* ---------- 页面切换动画 ---------- */
+@keyframes slideL{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideU{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+#app[data-anim="l"] #view.a{animation:slideL .26s var(--ease) both}
+#app[data-anim="f"] #view.a{animation:fadeIn .22s var(--ease) both}
+#app[data-anim="u"] #view.a{animation:slideU .26s var(--ease) both}
+#app[data-anim="n"] #view.a{animation:none}
+
+/* ---------- 外观设置面板 ---------- */
+.grp{margin-bottom:24px}
+.grp:last-child{margin-bottom:0}
+.grp>.gh{
+  display:flex;align-items:center;gap:12px;margin-bottom:14px;
+  font-size:12.5px;color:var(--dim);
+}
+.grp>.gh:before,.grp>.gh:after{content:"";height:1px;background:var(--line);flex:1}
+.pick{display:flex;flex-wrap:wrap;gap:8px}
+.pcard{
+  display:flex;flex-direction:column;align-items:center;gap:7px;min-width:86px;
+  background:none;border:1px solid transparent;border-radius:var(--rad);
+  padding:6px 6px 7px;color:var(--dim);
+  transition:border-color .15s var(--ease),background .15s var(--ease),color .15s var(--ease);
+}
+.pcard:hover{border-color:var(--line2);color:var(--txt)}
+.pcard.on{
+  border-color:var(--acc);color:var(--acc);
+  background:color-mix(in oklab,var(--acc) 9%,transparent);
+}
+.pcard .pv{
+  display:block;width:74px;height:48px;border-radius:6px;overflow:hidden;
+  border:1px solid var(--line2);background:var(--sunk);line-height:0;
+}
+.pcard b{font-size:12.5px;font-weight:500}
+.cdot{
+  width:26px;height:26px;border-radius:50%;border:2px solid transparent;
+  background:var(--c);display:inline-grid;place-items:center;
+  color:#fff;font-size:12px;line-height:1;transition:box-shadow .15s var(--ease);
+}
+.cdot:hover{box-shadow:0 0 0 3px color-mix(in oklab,var(--c) 20%,transparent)}
+.cdot.on{
+  border-color:color-mix(in oklab,var(--c) 45%,var(--txt));
+  box-shadow:0 0 0 3px color-mix(in oklab,var(--c) 26%,transparent);
+}
+.cfg{margin-top:6px}
+.cr{
+  display:flex;align-items:center;gap:12px;padding:11px 0;
+  border-bottom:1px solid color-mix(in oklab,var(--line) 70%,transparent);
+}
+.cr:last-child{border-bottom:0}
+.cr>span:first-child{flex:1;font-size:13px;min-width:100px}
+.cr>select{width:auto;min-width:148px;flex:0 0 auto}
+.cr>input[type=color]{
+  width:44px;height:32px;min-width:0;padding:2px;flex:0 0 auto;cursor:pointer;
+}
+.cr>input[type=range]{width:170px;flex:0 0 auto;accent-color:var(--acc);padding:0;border:0;background:none}
+.tg{position:relative;display:inline-flex;width:40px;height:22px;flex:0 0 auto}
+.tg input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;z-index:1;cursor:pointer}
+.tg i{position:absolute;inset:0;background:var(--line3);border-radius:99px;transition:background .2s var(--ease)}
+.tg i:after{
+  content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .2s var(--ease);
+}
+.tg input:checked~i{background:var(--acc)}
+.tg input:checked~i:after{transform:translateX(18px)}
+.drop{
+  display:flex;flex-direction:column;gap:4px;justify-content:center;flex:1;min-width:0;
+  border:1px dashed var(--line3);border-radius:var(--rad);padding:14px 16px;cursor:pointer;
+  transition:border-color .15s var(--ease),background .15s var(--ease);
+}
+.drop:hover{border-color:var(--acc);background:color-mix(in oklab,var(--acc) 6%,transparent)}
+.drop span{font-size:13px;color:var(--txt)}
+.drop small{font-size:11.5px;color:var(--faint);line-height:1.5}
+.thum{
+  display:none;width:134px;height:78px;flex:0 0 auto;border-radius:var(--rad-s);
+  border:1px solid var(--line2);background-size:cover;background-position:50% 50%;
+}
+.thum.on{display:block}
+
 /* ---------- 移动端 ---------- */
 @media(max-width:900px){
   #login{align-items:center;padding:16px}
@@ -380,6 +623,17 @@ textarea.code{font-family:var(--mono);font-size:12.5px;min-height:300px;line-hei
   .grid>.kpi .n{font-size:20px}
   .card>.bd{padding:13px}
   th,td{padding:8px 9px}
+  /* 窄屏一律回到「单行横滚导航」，布局选择器在此失效（JS 也强制 v） */
+  #gtabs{display:none!important}
+  #app[data-ms] #nav button{border-radius:var(--rad-s);box-shadow:none!important;padding:7px 12px}
+  #tabs{padding:6px 12px 0;gap:3px}
+  #tabs .tb{padding:3px 7px;font-size:12px}
+  .pcard{min-width:72px}
+  .pcard .pv{width:62px;height:41px}
+  .cr>select{min-width:120px}
+  .cr>input[type=range]{width:120px}
+  .thum{width:96px;height:58px}
+  .wave{height:64px}
 }
 @media(prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important}

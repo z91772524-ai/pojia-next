@@ -34,7 +34,7 @@ s = s[:a] + "\n\n" + shell + "\n\n" + s[b:]
 s = re.sub(
     r'<link rel="icon" href="data:image/svg\+xml,[^"]*">',
     "<link rel=\"icon\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'"
-    " viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230c0e0d'/%3E"
+    " viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230d0f0e'/%3E"
     "%3Crect x='11' y='11' width='10' height='10' fill='%23f5b544'"
     " transform='rotate(45 16 16)'/%3E%3C/svg%3E\">",
     s, count=1)
@@ -47,17 +47,71 @@ rep("""function kpi(n, l, cls) { return '<div class="kpi ' + (cls || '') + '"><d
 # ---------------------------------------------------------------- 5) 骨架屏
 rep("""  $('#view').innerHTML = '<div class="note" style="padding:20px">加载中…</div>';""",
     """  $('#view').innerHTML = '<div class="card"><div class="bd">' +
-    '<div class="skel" style="width:26%"></div>' +
-    '<div class="skel" style="width:74%;margin-top:12px"></div>' +
-    '<div class="skel" style="width:58%;margin-top:10px"></div>' +
-    '<div class="skel" style="width:66%;margin-top:10px"></div></div></div>';""",
+    '<div class="skel" style="width:22%"></div>' +
+    '<div class="skel" style="width:64%;margin-top:14px"></div>' +
+    '<div class="skel" style="width:50%;margin-top:12px"></div>' +
+    '<div class="skel" style="width:58%;margin-top:12px"></div></div></div>';""",
     why="loading")
 
-# --------------------------------------------------- 6) 顶栏时钟 + 网络状态点
+# ------------------------ 5b) api() 挂上顶部加载条（结束后收掉按钮转圈）
+rep("""async function api(path, body, method) {
+  var opt = { method: method || (body !== undefined ? 'POST' : 'GET'), headers: {}, credentials: 'same-origin' };
+  if (body !== undefined) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body) }
+  var r = await fetch('/adm/api/' + path, opt);
+  if (r.status === 401) { showLogin('登录已过期，重新登录'); throw new Error('未登录') }
+  var t = await r.text();
+  try { return JSON.parse(t) } catch (e) { return { ok: 0, err: '响应不是 JSON：' + t.slice(0, 100) } }
+}""",
+    """async function api(path, body, method) {
+  pbStart();
+  try {
+    var opt = { method: method || (body !== undefined ? 'POST' : 'GET'), headers: {}, credentials: 'same-origin' };
+    if (body !== undefined) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body) }
+    var r = await fetch('/adm/api/' + path, opt);
+    if (r.status === 401) { showLogin('登录已过期，重新登录'); throw new Error('未登录') }
+    var t = await r.text();
+    try { return JSON.parse(t) } catch (e) { return { ok: 0, err: '响应不是 JSON：' + t.slice(0, 100) } }
+  } finally { pbEnd(); busyEnd() }
+}""", why="api()")
+
+# --------------------- 6) 运行时：顶部加载条 / 按钮转圈 / 时钟 / 网络状态
 anchor = """$('#btn-out').onclick = async function () { await api('logout', {}); showLogin('') };"""
 rep(anchor, anchor + """
 
-/* 顶栏时钟（浏览器本地时区 = 北京） */
+/* ---------- 顶部加载条 ---------- */
+var PBW = 0, PBT = null, PBHIDE = null, PBN = 0;
+function pbStart() {
+  PBN++; clearTimeout(PBHIDE);
+  var el = $('#pbar'); if (!el) return;
+  el.classList.add('on');
+  PBW = Math.min(88, PBW + 16); el.style.width = PBW + '%';
+  clearTimeout(PBT);
+  PBT = setTimeout(function () { PBW = Math.min(94, PBW + 5); el.style.width = PBW + '%' }, 800);
+}
+function pbEnd() {
+  PBN = Math.max(0, PBN - 1); if (PBN > 0) return;
+  var el = $('#pbar'); if (!el) return;
+  clearTimeout(PBT); el.style.width = '100%';
+  clearTimeout(PBHIDE);
+  PBHIDE = setTimeout(function () {           /* 连续请求之间不闪，留 320ms 缓冲 */
+    el.classList.remove('on');
+    setTimeout(function () { el.style.width = '0'; PBW = 0 }, 300);
+  }, 320);
+}
+
+/* ---------- 按钮转圈：点了先不动，超过 160ms 才转，避免闪 ---------- */
+var PBDONE = [];
+function busyEnd() { var f = PBDONE.splice(0); for (var i = 0; i < f.length; i++) f[i]() }
+document.addEventListener('click', function (e) {
+  var b = e.target && e.target.closest ? e.target.closest('.btn') : null;
+  if (!b || b.tagName === 'A' || b.disabled) return;
+  var t = setTimeout(function () { b.classList.add('isbusy') }, 160);
+  var done = function () { clearTimeout(t); b.classList.remove('isbusy') };
+  PBDONE.push(done);
+  setTimeout(done, 8000);
+});
+
+/* ---------- 顶栏时钟（浏览器本地时区 = 北京） ---------- */
 (function () {
   var c = $('#clock'); if (!c) return;
   var p = function (n) { return (n < 10 ? '0' : '') + n };
@@ -67,13 +121,13 @@ rep(anchor, anchor + """
   };
   tick(); setInterval(tick, 1000);
 })();
-/* 网络状态点：在线呼吸，掉线变灰 */
+/* ---------- 网络状态点：在线呼吸，掉线变灰 ---------- */
 window.addEventListener('offline', function () {
   var d = $('#netdot'); if (d) { d.className = 'dot off'; $('#hint').textContent = '离线' }
 });
 window.addEventListener('online', function () {
   var d = $('#netdot'); if (d) { d.className = 'dot on'; $('#hint').textContent = '已连接' }
-});""", why="clock")
+});""", why="runtime")
 
 # ------------------------------------------- 7) 通知面板：只留一个主按钮
 rep("""'<button class="btn p" id="nt-tg">发测试 Telegram</button>""",
@@ -145,6 +199,11 @@ rep("""  var html = '<div class="grid" style="margin-bottom:14px">' +
     """  var html = '<div class="grid c3" style="margin-bottom:14px">' +
     kpi(r.codes, '激活码') + kpi(r.codes_bound, '已绑定', 'g') +""",
     why="db grid")
+
+# ------------- 12b) toast 做成 aria-live，屏幕阅读器能听到 -------------
+rep("""var t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t) }""",
+    """var t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.setAttribute('aria-live', 'polite'); document.body.appendChild(t) }""",
+    why="toast a11y")
 
 open(OUT, "w", encoding="utf-8").write(s)
 print("patched ->", OUT, "size =", len(s))

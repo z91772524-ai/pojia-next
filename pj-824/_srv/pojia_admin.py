@@ -287,7 +287,12 @@ def health():
                              "pct": round(100.0 * (tot - avail) / tot, 1)}
     except Exception:
         pass
-    out["disk"] = {"text": sh("df -h / | tail -1").strip()}
+    line = sh("df -h / | tail -1").strip()
+    out["disk"] = {"text": line}
+    f = line.split()
+    if len(f) >= 6:   # Filesystem Size Used Avail Use% Mounted
+        out["disk"].update({"fs": f[0], "total": f[1], "used": f[2],
+                            "avail": f[3], "pct": f[4], "mnt": f[5]})
     # 证书到期
     try:
         pem = sh("timeout 6 openssl s_client -servername pursueray.cn -connect 127.0.0.1:443 "

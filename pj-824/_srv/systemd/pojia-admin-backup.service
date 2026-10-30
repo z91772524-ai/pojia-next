@@ -1,0 +1,9 @@
+[Unit]
+Description=pojia-admin 自动备份（打包云配置/数据库/人格/状态）
+After=network.target
+
+[Service]
+Type=oneshot
+Environment=PA_ROOT=/opt/pojia-admin
+Environment=PA_BAK_KEEP=14
+ExecStart=/usr/bin/python3 /opt/pojia-admin/admin.py --autobak

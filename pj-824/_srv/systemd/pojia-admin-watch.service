@@ -1,0 +1,8 @@
+[Unit]
+Description=pojia-admin 巡检（服务/端口/内存/磁盘/证书/NapCat + 桥接自愈）
+After=network.target
+
+[Service]
+Type=oneshot
+Environment=PA_ROOT=/opt/pojia-admin
+ExecStart=/usr/bin/python3 /opt/pojia-admin/admin.py --watch

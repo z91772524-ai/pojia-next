@@ -1,0 +1,9 @@
+[Unit]
+Description=pojia-admin 每 5 分钟巡检一次
+
+[Timer]
+OnBootSec=90s
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

@@ -331,6 +331,11 @@ rep("""  catch (e) { $('#view').innerHTML = card('出错了', '<div class="logbo
   animView();
 }""", why="go anim")
 
+# ------------- 19b) 掉线守卫：扫码页直接开 NapCat WebUI 登录页 -------------
+rep("""'<a class="btn" href="/qr/' + esc(nk.guard || '') + '/" target="_blank">打开扫码页</a>' +""",
+    """'<a class="btn" href="http://23.224.194.7:6099/webui/web_login" target="_blank" rel="noopener">打开扫码页</a>' +""",
+    why="qr link")
+
 # ------------- 12b) toast 做成 aria-live，屏幕阅读器能听到 -------------
 rep("""var t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t) }""",
     """var t = $('.toast'); if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.setAttribute('aria-live', 'polite'); document.body.appendChild(t) }""",
@@ -424,7 +429,14 @@ function bindNav() {
     b.onclick = function () { go(b.dataset.sec); closeDD() };
   });
   $$('#gtabs button[data-g]').forEach(function (b) {
-    b.onclick = function () { LKG = Number(b.dataset.g); buildNav(); markNav(CUR) };
+    b.onclick = function () {
+      var n = Number(b.dataset.g);
+      if (groupOf(CUR) === n) { LKG = n; buildNav(); markNav(CUR); return }
+      /* 当前面板不在这组：直接跳到这组第一个面板，
+         否则右边列表没有任何一项高亮，看着像点了没反应 */
+      LKG = n; CUR = '';
+      go(NAV[n][1][0][0]);
+    };
   });
   $$('#nav .navdd>.gb').forEach(function (b) {
     b.onclick = function (e) {

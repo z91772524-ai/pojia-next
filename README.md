@@ -7,6 +7,17 @@
 
 **一句话：把你电脑上那几个 AI 客户端「自己改不到的内置提示词」，换成你自己写的那份 —— 双击 exe、点一个按钮的事。**
 
+> ### 🙏 本项目的破甲来自谁（署名）
+> **破甲思路与部分实现来源（排名不分先后，各自实现，MIT 署名与许可要求均已保留）：**
+> [@YuJunZhiXue / dsh-purge](https://github.com/YuJunZhiXue/dsh-purge)（DSH 破甲的原始项目）、
+> [@kingcharleslzy-ai / dsh-purge](https://github.com/kingcharleslzy-ai/dsh-purge)（社区版）、
+> [@JeffKeeping / dsh-purge-plus](https://github.com/JeffKeeping/dsh-purge-plus)、
+> [@luowang-ui / dsh-purge-plus](https://github.com/luowang-ui/dsh-purge-plus)、
+> [@ryrfZ / codex-session-patcher](https://github.com/ryrfZ/codex-session-patcher)、
+> [@dsh-market / dsh-market](https://github.com/dsh-market/dsh-market)。
+> 本项目由 **@z91772524-ai** 维护（代码、文档、发布）；逐条对照见 [思路与致谢](#-思路与致谢)。
+> 若你认为某段内容应单独标注出处，欢迎开 issue 指出（文件 + 位置），核实后补上。
+
 支持 **DSH / WorkBuddy / ZCode / Codex / Cursor / Claude Code / Gemini CLI / Qwen Code / iFlow / Trae / CodeBuddy / OpenCode / Windsurf / Cline / Copilot CLI** 十五个客户端，一个工具全管，口径完全一致。
 **图形界面（原生窗口）+ 单文件 exe**：不装 Python、不敲命令、不进浏览器；
 仓库只发成品 exe（Release 附件），源码不再随仓库分发。

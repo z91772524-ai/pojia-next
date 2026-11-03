@@ -18,7 +18,7 @@
 > 本项目由 **@z91772524-ai** 维护（代码、文档、发布）；逐条对照见 [思路与致谢](#-思路与致谢)。
 > 若你认为某段内容应单独标注出处，欢迎开 issue 指出（文件 + 位置），核实后补上。
 
-支持 **DSH / WorkBuddy / ZCode / Codex / Cursor / Claude Code / Gemini CLI / Qwen Code / iFlow / Trae / CodeBuddy / OpenCode / Windsurf / Cline / Copilot CLI** 十五个客户端，一个工具全管，口径完全一致。
+支持 **DSH / WorkBuddy / ZCode** 三个客户端，一个工具全管，口径完全一致。
 **图形界面（原生窗口）+ 单文件 exe**：不装 Python、不敲命令、不进浏览器；
 仓库只发成品 exe（Release 附件），源码不再随仓库分发。
 
@@ -53,7 +53,7 @@
 | 换完之后 | 说明 |
 |---|---|
 | 用**你的**身份设定 | 而不是软件自带的默认身份 |
-| **十五个客户端一份口径** | 共用一个 `persona.md`，不用各改各的、也不会前后矛盾 |
+| **三个客户端一份口径** | 共用一个 `persona.md`，不用各改各的、也不会前后矛盾 |
 | **当场能自证** | 发一句固定口令验证真载入，不靠"感觉好像生效了" |
 | **随时能还原** | 点一下「还原」回到官方原版，备份一直都在 |
 
@@ -107,7 +107,7 @@ v8.27 的窗口长这样（对应上面第一张截图）：
 
 | 区域 | 干什么 |
 |---|---|
-| 顶部页签 **破甲** | 主页：十五个客户端一张卡一行，状态灯 / 版本 / 靶点数，勾选框 |
+| 顶部页签 **破甲** | 主页：三个客户端一张卡一行，状态灯 / 版本 / 靶点数，勾选框 |
 | 顶部页签 **环境** | 检测本机 Python / Java / Node / Git / WebView2 / ADB… 缺哪个一键装哪个（全部官方源） |
 | 顶部页签 **Skill** | 本机已装技能 / 市场可装技能 / 精选推荐三分节，搜索过滤，点「安装」直接装 |
 | 顶部页签 **日志** | 实时滚动执行日志（落盘日志在数据目录里） |
@@ -187,40 +187,19 @@ A：工具会自动扫 `Program Files`、`%LOCALAPPDATA%\Programs`、注册表�
 A：**把 exe 直接发过去就行**，对方双击即用，什么都不用装。**完全免费，别花钱买。**
 
 **Q：我的客户端不在支持的六个里？**
-A：那不支持。工具只处理下面列出的十五个目标，不会去猜、也不会乱动别的软件。
+A：那不支持。工具只处理下面列出的三个目标，不会去猜、也不会乱动别的软件。
 
 ---
 
 ## 📖 详细一点
 
-### 它管哪十五个客户端
+### 它管哪三个客户端
 
 | 目标 | 是什么 | 注入方式 |
 |---|---|---|
 | `dsh` | DeepSeek Harness（桌面端 / npm 全局 / npx 缓存 / 便携版） | 三层文件级补丁：提示词层、persona 层、区段层 |
 | `wb` | WorkBuddy | 六层靶点：模板 / `product.json` / 命令闸门 / 网页过滤 / 运行时缓存 / 会话快照 **＋ 账号级云记忆 `memoryBlock`**（每轮自动注入） |
 | `zcode` | ZCode 桌面端（智谱 [zcode.z.ai](https://zcode.z.ai/cn/docs)） | `~/.zcode/AGENTS.md` + Memory 文件 + 技能（**深度 1 直子目录**）；系统提示词补丁 v8.3 起**默认开启**（`--no-zpatch` 可关） |
-| `codex` | Codex（OpenAI Codex CLI，`~\.codex`） | `config.toml` 里加一行 `model_instructions_file` 指向 `managed-prompts\pojia-persona.md`（**直接替换**模型指令）；旧版写在 `AGENTS.md` 的标记块会自动清理 |
-| `cursor` | Cursor（`~\.cursor`） | `rules\pojia-inject.mdc`；`.cursorrules` 已存在才同步；**不扫你的项目目录** |
-| `claude` | Claude Code（`~\.claude`） | `CLAUDE.md` 标记块；**只处理用户级**，不碰各工程根目录的项目级文件 |
-| `gemini` | Gemini CLI（Google，`~\.gemini`） | `GEMINI.md` 标记块 |
-| `qwen` | Qwen Code（通义，`~\.qwen`） | `QWEN.md` 标记块 |
-| `iflow` | iFlow CLI 心流（`~\.iflow`） | `IFLOW.md` 标记块 |
-| `trae` | Trae（`~\.trae`） | `rules\project_rules.md` 标记块 |
-| `codebuddy` | CodeBuddy 腾讯（`~\.codebuddy`） | `CODEBUDDY.md` 标记块 |
-| `opencode` | OpenCode（`~\.config\opencode`） | `AGENTS.md` 标记块 |
-| `windsurf` | Windsurf（`~\.codeium`） | `windsurf\memories\global_rules.md` 标记块 |
-| `cline` | Cline（VS Code，`~/Documents/Cline/Rules`） | `pojia-inject.md` 标记块 |
-| `copilot` | GitHub Copilot CLI（`~\.copilot`） | `copilot-instructions.md` 标记块 |
-
-> 以上 9 个 v8.5 新目标与 Cursor / Claude 一样，全部走**标记块**注入：只往你的配置里追加
-> `<!-- POJIA-NEXT-INJECT:BEGIN -->` … `END` 之间那一段，**你原有的内容一律保留**，
-> 卸载时按标记精确删除，重复执行也不会堆叠。
->
-> **Codex 从 v7.8 起换了路子**：不再追加 `AGENTS.md`（那是"补充上下文"，会被项目级
-> `AGENTS.md` 和产品提示词稀释），改成在 `config.toml` 里加一行 `model_instructions_file`
-> 指向我们写的人格文件 —— 这是 Codex 官方的**替换模型指令**入口，破甲更彻底。
-> 只加这**一行**（外面套我们自己的注释标记），你其余的配置逐字节不动。
 
 ### 它到底改了什么
 
@@ -391,7 +370,7 @@ exe 里的立场文案（免费声明 / 防倒卖提示等）以**密文块**形
 |---|---|
 | **exe 云验证版**（首次启动输群号） | exe 不再内嵌核心：输官方 QQ 群号在线验证后自动获取（TLS + 签名校验，核心只在内存执行）；此后核心升级全自动，不用再换 exe。`.py` 用户不受影响 |
 | **核心三节硬化** | 思考槽封口（推理型模型的思考层动作必须正文执行）/ 拒绝自愈（中途拒绝措辞自动续命）/ 票根规矩（占位符填死、先交付能用的、动文件先拍快照） |
-| **补丁戳自愈** | DSH / WorkBuddy / CodeBuddy 自身升级把配置覆盖回出厂时，体检报「宿主更新覆盖」，一键重打 |
+| **补丁戳自愈** | DSH / WorkBuddy 自身升级把配置覆盖回出厂时，体检报「宿主更新覆盖」，一键重打 |
 | **爆破防护** | 同一网络输错群号次数过多临时锁定（约 30 分钟自动解除），正常用户无感 |
 
 ### v8.5 —— 图形界面成型：快、好看、会装技能
@@ -435,7 +414,7 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 
 ### v7.7 —— 目标扩到六个
 
-支持 DSH / WorkBuddy / ZCode / Codex / Cursor / Claude Code；三个新目标走标记块注入，幂等、精确卸载。
+支持 DSH / WorkBuddy / ZCode。DSH 走插件注入，WorkBuddy 走六层靶点，ZCode 走 AGENTS.md + Memory + 技能。全部幂等、精确卸载。
 
 ### v7.4 —— 只修 bug、不加功能（20 项，其中 4 类会造成用户数据静默丢失）
 
@@ -537,7 +516,7 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 | `build_exe.py` 等 | 构建工具脚本（不含客户端逻辑） |
 | ~~`破甲一键通.py` / `破甲GUI.py`~~ | **不再随仓库分发**（v8.26 起只发 exe 成品，主逻辑编译为机器码） |
 | `一键破甲.bat` | 纯 ASCII 启动器，通配符定位 `.py`，自动找 Python |
-| `persona.md` | 唯一共用人格源（十五个目标共用） |
+| `persona.md` | 唯一共用人格源（三个目标共用） |
 | `使用说明.md` | 完整说明书（图文步骤、找不到安装位置怎么办） |
 | `更新日志.md` | v7.4 → v8.6 每版改了什么、升级要注意什么 |
 | `小白教程.md` | 给完全没基础的朋友的六步图文教程 |

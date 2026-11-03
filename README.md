@@ -568,7 +568,7 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 ## 交流 & 支持
 
 - **QQ 交流群：`1121243020`** —— 使用问题、更新通知、新版本都发在群里，有问题直接来问
-- **Telegram 交流群：[t.me/shendusikao666](https://t.me/shendusikao666)** —— 墙外 / 海外的朋友走这边（群名「深度思考」）
+- **Telegram 交流群：[t.me/pojia666](https://t.me/pojia666)** —— 墙外 / 海外的朋友走这边
 - 有 bug 或想法，也可以在本仓库提 [Issue](https://github.com/z91772524-ai/pojia-next/issues)
 
 如果这个脚本帮到了你，可以请我喝杯奶茶 —— **不打赏是本分，打赏是对我的认可**：

@@ -1,4 +1,0 @@
-# 破甲一键通 v8.27 —— exe 发行包校验
-# zip 核一层，解压出的 exe 再核一层
-21838e1fe7afb9e7a865dc5a6823b75009082a97a06e6b8b3caaa725b6641f71 *pojia-next-v8.27-exe.zip
-e528889080b7efa3f8f8022d6b30d69373b5c85178ea69c4147eba282e0a66dc *破甲一键通GUI-8.27.exe

@@ -333,7 +333,7 @@ rep("""  catch (e) { $('#view').innerHTML = card('出错了', '<div class="logbo
 
 # ------------- 19b) 掉线守卫：扫码页直接开 NapCat WebUI 登录页 -------------
 rep("""'<a class="btn" href="/qr/' + esc(nk.guard || '') + '/" target="_blank">打开扫码页</a>' +""",
-    """'<a class="btn" href="http://23.224.194.7:6099/webui/web_login" target="_blank" rel="noopener">打开扫码页</a>' +""",
+    """'<a class="btn" href="http://85.189.41.16:6099/webui/web_login" target="_blank" rel="noopener">打开扫码页</a>' +""",
     why="qr link")
 
 # ------------- 12b) toast 做成 aria-live，屏幕阅读器能听到 -------------

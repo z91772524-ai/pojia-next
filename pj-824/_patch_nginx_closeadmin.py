@@ -2,7 +2,7 @@
 """关闭两个旧后台入口：pj80 的 /admin 与 qqbridge 的 8091 控制台，统一跳到 /adm/。幂等。"""
 import paramiko, time
 c=paramiko.SSHClient();c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-c.connect("23.224.194.7",22,"root","36925814Aa",timeout=25,look_for_keys=False,allow_agent=False)
+c.connect("85.189.41.16",22,"root","36925814Aa",timeout=25,look_for_keys=False,allow_agent=False)
 def sh(cmd,t=180):
     _,o,e=c.exec_command(cmd,timeout=t)
     return o.read().decode("utf-8","replace")+e.read().decode("utf-8","replace")

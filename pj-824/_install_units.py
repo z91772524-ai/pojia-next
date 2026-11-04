@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import paramiko, base64
 c=paramiko.SSHClient();c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-c.connect("23.224.194.7",22,"root","36925814Aa",timeout=25,look_for_keys=False,allow_agent=False)
+c.connect("85.189.41.16",22,"root","36925814Aa",timeout=25,look_for_keys=False,allow_agent=False)
 def sh(cmd,t=180):
     _,o,e=c.exec_command(cmd,timeout=t)
     return o.read().decode("utf-8","replace")+e.read().decode("utf-8","replace")

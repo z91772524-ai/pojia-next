@@ -13,7 +13,7 @@ const SECS = ['home', 'health', 'bot', 'role', 'model', 'social2', 'social1', 's
   pg.on('requestfailed', r => errs.push('REQFAIL ' + r.url()));
   pg.on('response', r => { if (r.status() >= 400) errs.push('HTTP ' + r.status() + ' ' + r.url()) });
 
-  await pg.goto('http://23.224.194.7/adm/', { waitUntil: 'networkidle', timeout: 40000 });
+  await pg.goto('http://85.189.41.16/adm/', { waitUntil: 'networkidle', timeout: 40000 });
   await pg.waitForSelector('#l-p', { state: 'visible' });
   await pg.fill('#l-p', '36925814A');
   await pg.click('#l-go');

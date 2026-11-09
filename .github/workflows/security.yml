@@ -24,8 +24,30 @@ permissions:
   contents: read
 
 jobs:
+  source-check:
+    name: source-check
+    runs-on: ubuntu-latest
+    outputs:
+      has_src: ${{ steps.c.outputs.has_src }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: c
+        name: 判断核心源码是否随仓库分发
+        run: |
+          # v8.26 起只发 exe 成品，源码不再入库。没有源码时静态审计直接跳过，
+          # 否则每次提交都会因为找不到 破甲一键通.py 而 failure，badge 常年红着。
+          if [ -f 破甲一键通.py ] && [ -f 破甲GUI.py ]; then
+            echo "has_src=true" >> "$GITHUB_OUTPUT"
+            echo "核心源码在仓库，执行静态审计"
+          else
+            echo "has_src=false" >> "$GITHUB_OUTPUT"
+            echo "核心源码不随仓库分发，跳过静态审计"
+          fi
+
   bandit:
     name: bandit
+    needs: source-check
+    if: needs.source-check.outputs.has_src == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +64,8 @@ jobs:
 
   semgrep:
     name: semgrep
+    needs: source-check
+    if: needs.source-check.outputs.has_src == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -83,6 +107,8 @@ jobs:
 
   call-audit:
     name: call-audit
+    needs: source-check
+    if: needs.source-check.outputs.has_src == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

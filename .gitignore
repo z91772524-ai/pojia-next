@@ -88,3 +88,21 @@ _srv/
 
 # ── 服务端运维日志（内部，勿公开）─────────────────────────────
 服务端更新日志.md
+
+# ── 2026-11-11 清理：本地工作产物与内部文档，一律不入公开仓库 ──────────
+_回归测试/
+evidence/
+_ad_coderelay/
+persona.md
+更新日志.md
+修复报告.md
+HANDOFF.md
+release-v8*-body.md
+release.py
+build_exe.py
+fill_hashes.py
+refresh_readme_hashes.py
+launcher.py
+preview.png
+preview-skills.png
+icon.ico

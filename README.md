@@ -53,7 +53,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-0078d4)](https://www.microsoft.com/windows)
 [![Portable](https://img.shields.io/badge/免安装-单文件%20exe-2ea043)](#-三步就能用)
-[![Dependencies](https://img.shields.io/badge/三方依赖-0%20个-brightgreen)](#安全审查你可以自己验)
+[![Dependencies](https://img.shields.io/badge/三方依赖-0%20个-brightgreen)](#-安全审计与安全设计)
 [![Online](https://img.shields.io/badge/启动时-联网校验激活码-blue)](#-三步就能用)
 [![security](https://github.com/z91772524-ai/pojia-next/actions/workflows/security.yml/badge.svg)](https://github.com/z91772524-ai/pojia-next/actions/workflows/security.yml)
 
@@ -137,7 +137,7 @@
 > ### ⚠️ Windows 拦我？
 > 没有代码签名证书的 exe，SmartScreen 可能会弹「Windows 已保护你的电脑」——
 > 这是无签名 exe 的常态。点 **「更多信息」→「仍要运行」** 即可。
-> 不放心的话：哈希对得上的附件才用（[怎么校验](#校验下载的文件没被篡改-sha256)），
+> 不放心的话：哈希对得上的附件才用（[怎么校验](#校验下载的文件没被篡改sha256)），
 > 并**只认官方渠道**（官网 pojiaduan.cn / 本仓库 Release）。
 
 ---
@@ -166,7 +166,7 @@
 | 你担心的 | 实际情况 |
 |---|---|
 | **改坏了能不能恢复？** | **每个改动都先备份**。点「还原」一键变回官方原版（按"护照"名单精确还原，不误删别人的文件） |
-| **会不会偷偷联网 / 上传我的数据？** | **核心零网络请求**（CI 每次提交自动断言）；GUI 只在两处碰网络：本地回环 `127.0.0.1` 起界面服务（不对外），以及**你在环境页主动点「下载」**时访问官方下载源（URL 全是代码里的字面量，见 [安全审查](#安全审查你可以自己验)） |
+| **会不会偷偷联网 / 上传我的数据？** | **核心零网络请求**（CI 每次提交自动断言）；GUI 只在两处碰网络：本地回环 `127.0.0.1` 起界面服务（不对外），以及**你在环境页主动点「下载」**时访问官方下载源（URL 全是代码里的字面量，见 [安全审查](#-安全审计与安全设计)） |
 | **exe 会不会带毒？** | 构建全程 CI 自动跑三套安全扫描；附件哈希可校验；**只认官方渠道**（官网 pojiaduan.cn / 本仓库 Release）一个来源 |
 | **会不会删我的东西？** | 只做文件级补丁，**不删包、不碰注册表 / 服务、不装驱动**；连清缓存都默认**只统计不删** |
 | **是不是要花钱？** | **激活码 5 元、开源**（MIT）。多设备按台数买（2~6 台，7 天 13.88 起）。花钱买到的请立即申请退款 —— 官方仓库只有这一个 |
@@ -202,7 +202,7 @@
 ## ❓ 常见问题
 
 **Q：双击 exe 提示「Windows 已保护你的电脑」？**
-A：SmartScreen 对无签名 exe 的标准提示。点「更多信息」→「仍要运行」。想彻底安心就先校验哈希（[方法](#校验下载的文件没被篡改-sha256)）。
+A：SmartScreen 对无签名 exe 的标准提示。点「更多信息」→「仍要运行」。想彻底安心就先校验哈希（[方法](#校验下载的文件没被篡改sha256)）。
 
 **Q：窗口闪退 / 打不开？**
 A：九成是 WebView2 运行时缺失（常见于深度精简系统）。换台正常电脑在「环境」页装好运行时再拷回来即可。
@@ -349,7 +349,7 @@ GUI 里每个目标的状态灯 + 「演练」就是体检入口，全程只读�
 
 ### 校验下载的文件没被篡改（SHA256）
 
-仓库根目录有 [`SHA256SUMS.txt`](SHA256SUMS.txt)（覆盖仓库全部文件）；**发行包另有精简校验 [`SHA256SUMS-exe.txt`](SHA256SUMS-exe.txt)**：zip 下载后核一层，解压出来的 exe 再核一层。下载后自己核一遍：
+仓库根目录有 [`SHA256SUMS.txt`](SHA256SUMS.txt)（覆盖仓库全部文件）；**发行包另有精简校验 `SHA256SUMS-exe.txt`**（随 Release 附件分发，不在仓库里）：zip 下载后核一层，解压出来的 exe 再核一层。下载后自己核一遍：
 
 ```powershell
 # Windows PowerShell

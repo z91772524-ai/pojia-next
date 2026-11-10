@@ -63,3 +63,22 @@ _版本归档/
 破甲一键通.py
 一键破甲.bat
 *.spec
+
+# ── 2026-11-10 排障临时产物（探针脚本 / 抓包结果 / 快照备份，不入库）────
+_c_*.bin
+_click_*.bin
+_ayirun.bin
+_ads_raw.json
+_ad_single.json
+_ad_local.json
+_*_probe*.py
+_probe_*.py
+_snap_*.py
+_smoke_exe_*.py
+_shot_exe_*.py
+_tmp_c841/
+_tmp_gate/
+_fetch.bin
+_donate_notice.jpg
+README.remote-new.md
+NIGHT-LOG.md

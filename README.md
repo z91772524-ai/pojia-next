@@ -7,14 +7,7 @@
 > | 项 | 值 |
 > |---|---|
 > | 官网 | `https://pojiaduan.cn/` |
-> | 领码 | `https://pojiaduan.cn/codeweb/` |
-> | 后台 | `https://pojiaduan.cn/bg/` |
-> | 下载 | `https://pojiaduan.cn/dist/pojia-next-exe.zip`（软链 → v8.41） |
-> | 主站 | `124.156.184.205`（只允许高防 `43.132.254.130` 回源） |
->
-> **要改代码 / 发版 / 排障，先读 [`HANDOFF.md`](./HANDOFF.md)** —— 目录结构、构建命令、接口清单、排错决策树、危险操作回滚全在里面。
->
-> **本文件（README）是 8.20 时代的历史说明**，讲「这个工具是什么、破甲原理、致谢」，架构部分已过时，以 `HANDOFF.md` 为准。
+> | 下载 | `https://pojiaduan.cn/dist/pojia-next-exe.zip`（永远指向最新版） |
 >
 > ---
 >

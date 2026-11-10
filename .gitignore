@@ -82,3 +82,9 @@ _fetch.bin
 _donate_notice.jpg
 README.remote-new.md
 NIGHT-LOG.md
+
+# ── 服务端源码与运维脚本（含后台逻辑，不入公开仓库）─────────────
+_srv/
+
+# ── 服务端运维日志（内部，勿公开）─────────────────────────────
+服务端更新日志.md

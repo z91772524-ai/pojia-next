@@ -1,5 +1,27 @@
 # 破甲一键通
 
+> ## 📌 当前状态（2026-11-10）
+>
+> **客户端 8.41** · 生产环境已上高防三层架构 · 后台带安全风控中心
+>
+> | 项 | 值 |
+> |---|---|
+> | 官网 | `https://pojiaduan.cn/` |
+> | 领码 | `https://pojiaduan.cn/codeweb/` |
+> | 后台 | `https://pojiaduan.cn/bg/` |
+> | 下载 | `https://pojiaduan.cn/dist/pojia-next-exe.zip`（软链 → v8.40；8.41 已构建，待切） |
+> | 主站 | `124.156.184.205`（只允许高防 `119.28.44.49` 回源） |
+>
+> **要改代码 / 发版 / 排障，先读 [`HANDOFF.md`](./HANDOFF.md)** —— 目录结构、构建命令、接口清单、排错决策树、危险操作回滚全在里面。
+>
+> **本文件（README）是 8.20 时代的历史说明**，讲「这个工具是什么、破甲原理、致谢」，架构部分已过时，以 `HANDOFF.md` 为准。
+>
+> ---
+>
+> **8.41 关键变更**：云记忆超限改为就地压缩（不再整段跳过）· 兜底人格真正生效（`persona.md` 缺失时不再只剩政策壳）· `--full` 的文件保护中和不再被 skip 分支丢弃 · GUI 一键破甲补上 `nofileguard` · 单实例改前缀枚举（跨版本不再静默退出）
+>
+> **8.37 关键变更**：单实例互斥 · 托盘退出硬杀 · 群号内置不联网 · 头像昵称本地落盘 · 锚点不符自动清缓存重拉 · 登录强制闸门（离线不算验证）· 破甲按钮随核心状态置灰 · 版本升级才清一次盘
+
 > ### 🌐 官网（国内推荐从这里进）：**https://pojiaduan.cn/**
 > 下载、更新公告、交流群都在官网 —— [**pojiaduan.cn**](https://pojiaduan.cn/)
 >
@@ -11,13 +33,14 @@
 
 > ### 🙏 本项目的破甲来自谁（署名）
 > **破甲思路与部分实现来源（排名不分先后，各自实现，MIT 署名与许可要求均已保留）：**
-> [@YuJunZhiXue / dsh-purge](https://github.com/YuJunZhiXue/dsh-purge)（DSH 破甲的原始项目）、
+> [@YuJunZhiXue](https://github.com/YuJunZhiXue)（DSH 破甲的原始项目，原仓库已下线）、
 > [@kingcharleslzy-ai / dsh-purge](https://github.com/kingcharleslzy-ai/dsh-purge)（社区版）、
-> [@JeffKeeping / dsh-purge-plus](https://github.com/JeffKeeping/dsh-purge-plus)、
+> [@JeffKeeping](https://github.com/JeffKeeping)（dsh-purge-plus，原仓库已下线）、
 > [@luowang-ui / dsh-purge-plus](https://github.com/luowang-ui/dsh-purge-plus)、
-> [@ryrfZ / codex-session-patcher](https://github.com/ryrfZ/codex-session-patcher)、
+> [@ryfineZ / codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher)、
 > [@dsh-market / dsh-market](https://github.com/dsh-market/dsh-market)。
 > 本项目由 **@z91772524-ai** 维护（代码、文档、发布）；逐条对照见 [思路与致谢](#-思路与致谢)。
+> 除「思路来源」外，[同一个章节](#-思路与致谢)还列了**代码里真正在用的开源组件**（Cython / PyInstaller / pywebview / pythonnet / MinGW-w64 / WebView2 / Python 标准库），每条都标了许可证和可核位置。
 > 若你认为某段内容应单独标注出处，欢迎开 issue 指出（文件 + 位置），核实后补上。
 
 支持 **DSH / WorkBuddy / ZCode / Codex** 四个客户端，一个工具全管，口径完全一致。
@@ -507,11 +530,29 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 
 | 来源 | 借鉴了什么 |
 |---|---|
-| [@YuJunZhiXue](https://github.com/YuJunZhiXue) / [dsh-purge](https://github.com/YuJunZhiXue/dsh-purge) | 运行时守卫的思路（pojia-guard 在其基础上重写加固，并加了原版没有的限次熔断）；写后自检 + 备份校验机制 |
+| [@YuJunZhiXue](https://github.com/YuJunZhiXue) / dsh-purge <sub>（原仓库已下线，链接指向作者主页）</sub> | DSH 破甲的原始项目。运行时守卫的思路（pojia-guard 在其基础上重写加固，并加了原版没有的限次熔断）；写后自检 + 备份校验机制 |
 | [@ryfineZ](https://github.com/ryfineZ) / [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) | 「交付即验证」：注入结束主动验证补丁真实驻留，杜绝假成功 |
 | [@kingcharleslzy-ai](https://github.com/kingcharleslzy-ai) / [dsh-purge](https://github.com/kingcharleslzy-ai/dsh-purge)（社区版） | 「设计原则」的口径（本机优先 / 每步可见 / 随时可回滚 / 不替你做决定）；操作前自动快照、状态一屏给结论的体验（本项目的体检报告与备份还原在此基础上做成了一键化） |
-| [@JeffKeeping](https://github.com/JeffKeeping) / [dsh-purge-plus](https://github.com/JeffKeeping/dsh-purge-plus)、[@luowang-ui](https://github.com/luowang-ui) / [dsh-purge-plus](https://github.com/luowang-ui/dsh-purge-plus) | 宿主新版本适配优先：上游 Desktop 更新后第一时间跟进适配，而不是让用户卡在旧版本 |
+| [@luowang-ui](https://github.com/luowang-ui) / [dsh-purge-plus](https://github.com/luowang-ui/dsh-purge-plus)、[@JeffKeeping](https://github.com/JeffKeeping) / dsh-purge-plus <sub>（原仓库已下线，链接指向作者主页）</sub> | 宿主新版本适配优先：上游 Desktop 更新后第一时间跟进适配，而不是让用户卡在旧版本 |
 | [@dsh-market](https://github.com/dsh-market) / [dsh-market](https://github.com/dsh-market/dsh-market) | 可视化分发的一键安装体验参考——官网下载区按「下载即用、无需命令行」的思路组织 |
+
+### 🧩 用到的开源组件（全部为构建期 / 运行期依赖，不 vendor 源码）
+
+上面那张表是「思路来源」；下面这张是「代码里真的在用的东西」——全部经 `pip` 安装或系统自带，仓库里没有一个字节的第三方源码，可以逐条对照构建脚本核验。
+
+| 组件 | 许可证 | 在本项目里承担什么 | 可核位置 |
+|---|---|---|---|
+| [Cython](https://github.com/cython/cython) | Apache-2.0 | 把 `pojia_gui.py` 编译成 C++ → `pyd`，`--no-docstrings` 去掉注释与文档串，成品 exe 里没有可直接反编译的 GUI pyc | `pj-838/_build_841.py:33` |
+| [PyInstaller](https://github.com/pyinstaller/pyinstaller) | GPL-2.0 + 启动器例外 | 把 `launcher.py` + `pojia_gui.pyd` + 图标/证书/收款码打成单文件 exe，用户免装 Python | `pj-838/_build_841.py:50`、`pj-838/ui-test-836.spec` |
+| [pywebview](https://github.com/r0x0r/pywebview) | BSD-3-Clause | 原生窗口壳 + WebView2 绑定，界面是本地 HTML 而不是浏览器标签页 | spec `hiddenimports`（`webview`、`webview.platforms.edgechromium`） |
+| [pythonnet](https://github.com/pythonnet/pythonnet) / [clr_loader](https://github.com/pythonnet/clr-loader) | MIT | pywebview 在 Windows 上的 WinForms 后端，负责把 .NET 窗口挂到 Python | spec `hiddenimports`（`pythonnet`、`clr_loader`） |
+| [MinGW-w64](https://www.mingw-w64.org/)（gcc） | GPL + 运行时例外 | `pyd` 的 C/C++ 编译器，`--compiler=mingw32` 编扩展，构建机不用装整套 MSVC | `pj-838/_build_841.py:38` |
+| [Microsoft Edge WebView2](https://learn.microsoft.com/microsoft-edge/webview2/) | 微软运行时（随 Win10/11 分发） | 真正的渲染内核，Win10/11 自带；缺失时「环境」页负责检测并引导安装 | `pojia_gui.py` 环境检测项 |
+| Python 标准库 [`http.server`](https://docs.python.org/3/library/http.server.html) | PSF | 只监听 `127.0.0.1` 的本地渲染服务，前端与 Python 侧通过它通信，不出本机 | `pj-838/pojia_gui.py:72` |
+
+> 依赖替换说明：本项目**没有**用 Electron / Tauri / Qt 做界面。选 pywebview + WebView2 的原因是包体小（免打包 Chromium）、Win10/11 自带内核、能直接调 Win32 API（单实例互斥、窗口置前、托盘）。这条技术选型的代价是**强依赖 WebView2 运行时**，所以安装文档把它列为第一项排查目标。
+>
+> 引入新依赖前请先跑 `python -m pip check`，并在 `pj-838/ui-test-836.spec` 的 `excludes` 里确认没有把重库（PIL/numpy/pandas 等）隐式拖进包 —— 历史上吃过一次 35 MB 白拖慢冷启动的亏。
 
 
 ---
@@ -562,11 +603,10 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 | `一键破甲.bat` | 纯 ASCII 启动器，通配符定位 `.py`，自动找 Python |
 | `persona.md` | 唯一共用人格源（三个目标共用） |
 | `使用说明.md` | 完整说明书（图文步骤、找不到安装位置怎么办） |
-| `更新日志.md` | v7.4 → v8.40 每版改了什么、升级要注意什么 |
+| `更新日志.md` | v7.4 → v8.41 每版改了什么、升级要注意什么 |
 | `小白教程.md` | 给完全没基础的朋友的六步图文教程 |
 | `修复报告.md` | v7.4 相比原工具修掉的缺陷逐条对照（每条都写了复现方式与修法） |
-| `赞赏码.png` | 聚合收款码，微信/支付宝/QQ钱包（**完全自愿**，不参与任何功能） |
-| `donate-qr.png` | v8.6 内置「捐赠」弹窗用的收款码（同样完全自愿，随 exe 打包） |
+| `donate-qr.png` | 收款码（微信/支付宝/QQ钱包），v8.6 内置「捐赠」弹窗也用这张（**完全自愿**，不参与任何功能） |
 | `preview.png` / `preview-skills.png` | 本文顶部的界面预览图（主界面 / Skill 页） |
 | `icon.ico` | 窗口与 exe 图标源文件 |
 | `LICENSE` | MIT 许可证 |
@@ -616,7 +656,7 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 
 如果这个脚本帮到了你，可以请我喝杯奶茶 —— **不打赏是本分，打赏是对我的认可**：
 
-![赞赏码](赞赏码.png)
+![赞赏码](donate-qr.png)
 
 <sub>微信 / 支付宝 / QQ钱包 都能扫。完全自愿，不打赏也照样用。</sub>
 

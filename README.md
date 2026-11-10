@@ -9,8 +9,8 @@
 > | 官网 | `https://pojiaduan.cn/` |
 > | 领码 | `https://pojiaduan.cn/codeweb/` |
 > | 后台 | `https://pojiaduan.cn/bg/` |
-> | 下载 | `https://pojiaduan.cn/dist/pojia-next-exe.zip`（软链 → v8.40；8.41 已构建，待切） |
-> | 主站 | `124.156.184.205`（只允许高防 `119.28.44.49` 回源） |
+> | 下载 | `https://pojiaduan.cn/dist/pojia-next-exe.zip`（软链 → v8.41） |
+> | 主站 | `124.156.184.205`（只允许高防 `43.132.254.130` 回源） |
 >
 > **要改代码 / 发版 / 排障，先读 [`HANDOFF.md`](./HANDOFF.md)** —— 目录结构、构建命令、接口清单、排错决策树、危险操作回滚全在里面。
 >

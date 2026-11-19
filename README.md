@@ -60,8 +60,7 @@
 
 ![Skill 页](preview-skills.png)
 
-> ### 💰 本项目**激活码 5 元**
-> 官网 <https://1pojia.cn/> 自助发卡领取；请不要从第三方渠道购买。
+> ### 💰 本项目> 官网 <https://1pojia.cn/> 自助发卡领取；请不要从第三方渠道购买。
 
 ---
 
@@ -101,8 +100,7 @@
 
 ### 2️⃣ 双击 → 输激活码
 弹出一个原生窗口（WebView2 内核，Win10/11 自带运行时）。
-第一次打开会看到一张声明卡 —— **激活码 5 元**，在官网 <https://1pojia.cn/codeweb/> 自助发卡领取。
-
+第一次打开会看到一张声明卡 —— 
 **领码流程**：填 QQ 号 + 自己设的密码 → 用这个 QQ 在任意官方群 **@登录验证机器人** 发一次网页给出的 13 位口令 → 付 5 元 → 页面直接给出激活码。
 
 拿到码后回到客户端**粘贴激活码完成在线验证**（不需要输群号；v8.6 起 exe 不再内嵌核心，验证通过后自动获取 ——
@@ -593,17 +591,23 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 
 ## 🙏 思路与致谢
 
-本项目站在开源社区的肩膀上，以下思路来源明确可追溯，一并致谢（排名不分先后）：
+本项目站在开源社区的肩膀上，以下所有思路来源均可追溯、可核验，一并致谢（排名不分先后）：
 
-| 来源 | 借鉴了什么 |
-|---|---|
-| [@YuJunZhiXue](https://github.com/YuJunZhiXue) / dsh-purge <sub>（原仓库已下线，链接指向作者主页）</sub> | DSH 破甲的原始项目。运行时守卫的思路（pojia-guard 在其基础上重写加固，并加了原版没有的限次熔断）；写后自检 + 备份校验机制 |
-| [@ryfineZ](https://github.com/ryfineZ) / [codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) | 「交付即验证」：注入结束主动验证补丁真实驻留，杜绝假成功 |
-| [@kingcharleslzy-ai](https://github.com/kingcharleslzy-ai) / [dsh-purge](https://github.com/kingcharleslzy-ai/dsh-purge)（社区版） | 「设计原则」的口径（本机优先 / 每步可见 / 随时可回滚 / 不替你做决定）；操作前自动快照、状态一屏给结论的体验（本项目的体检报告与备份还原在此基础上做成了一键化） |
-| [@luowang-ui](https://github.com/luowang-ui) / [dsh-purge-plus](https://github.com/luowang-ui/dsh-purge-plus)、[@JeffKeeping](https://github.com/JeffKeeping) / dsh-purge-plus <sub>（原仓库已下线，链接指向作者主页）</sub> | 宿主新版本适配优先：上游 Desktop 更新后第一时间跟进适配，而不是让用户卡在旧版本 |
-| [@dsh-market](https://github.com/dsh-market) / [dsh-market](https://github.com/dsh-market/dsh-market) | 可视化分发的一键安装体验参考——官网下载区按「下载即用、无需命令行」的思路组织 |
+### 一、思路来源
 
-### 🧩 用到的开源组件（全部为构建期 / 运行期依赖，不 vendor 源码）
+| 项目 | 地址 | 借鉴了什么 |
+|---|---|---|
+| **dsh-purge** <sub>（原创作者 @YuJunZhiXue，原仓库已下线）</sub> | [github.com/YuJunZhiXue](https://github.com/YuJunZhiXue) | DSH 破甲思路的起点。本项目的运行时守卫（pojia-guard）在其基础上重写加固，增加了原版没有的限次熔断与硬停表豁免 |
+| **dsh-purge（社区版）** | [github.com/kingcharleslzy-ai/dsh-purge](https://github.com/kingcharleslzy-ai/dsh-purge) | 「四条设计原则」的表述口径（本机优先 / 每步可见 / 随时可回滚 / 不替你做决定）；备份校验机制 |
+| **dsh-purge-plus** | [github.com/luowang-ui/dsh-purge-plus](https://github.com/luowang-ui/dsh-purge-plus) | 多目标适配的扩展思路 |
+| **dsh-purge-plus** <sub>（@JeffKeeping 分支，原仓库已下线）</sub> | [github.com/JeffKeeping](https://github.com/JeffKeeping) | 早期版本的目标探测策略 |
+| **codex-session-patcher** | [github.com/ryfineZ/codex-session-patcher](https://github.com/ryfineZ/codex-session-patcher) | 「交付即验证」：注入结束后主动验证补丁真实驻留，杜绝假成功 |
+| **dsh-market** | [github.com/dsh-market/dsh-market](https://github.com/dsh-market/dsh-market) | 可视化分发的一键安装体验参考 |
+
+### 二、用到的开源组件
+
+以上是「思路来源」；以下是「代码里真的在用的东西」—— 全部经 `pip` 安装或系统自带，仓库里没有一个字节的第三方源码，可以逐条对照构建脚本核验。
+
 
 上面那张表是「思路来源」；下面这张是「代码里真的在用的东西」——全部经 `pip` 安装或系统自带，仓库里没有一个字节的第三方源码，可以逐条对照构建脚本核验。
 
@@ -638,7 +642,6 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 3. **守法使用**：请在遵守所在地法律法规以及所涉软件服务条款的前提下使用；若当地法律禁止此类修改行为，请勿使用。
 4. **无隶属关系**：本项目与所涉及的第三方软件厂商（DeepSeek、腾讯、OpenAI 等）**没有任何隶属、授权、赞助或合作关系**；相关商标、名称与版权归各自权利人所有。
 5. **按现状提供**：本项目按「现状」（AS IS）提供，不附带任何明示或暗示的担保，包括但不限于适销性、特定用途适用性与不侵权担保。
-6. **激活码 5 元**：代码 MIT 开源；激活码 5 元是服务器运维费，除官网外任何人以本项目名义收费都请警惕。
 7. **权利主张**：若权利人认为本项目侵犯其合法权益，请联系作者，作者会第一时间删除相关内容。
 
 ### 二、技术层面（你可以自己验证）
@@ -655,7 +658,6 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 - **你可以自己验证**：建议第一次先看状态灯、点「演练」（纯只读）；不放心就把两个 `.py` 全文读一遍，或断网运行。
 - **风险自担**：本工具会修改第三方客户端的本地文件，可能导致其行为变化，也可能与官方服务条款相冲突。
   用不用、怎么用，由使用者自行判断并承担后果。
-- **激活码 5 元**：任何人向你收钱都不是作者行为（下方赞赏码纯属自愿）。
 </details>
 
 ---
@@ -673,7 +675,6 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 | `更新日志.md` | v7.4 → v8.41 每版改了什么、升级要注意什么 |
 | `小白教程.md` | 给完全没基础的朋友的六步图文教程 |
 | `修复报告.md` | v7.4 相比原工具修掉的缺陷逐条对照（每条都写了复现方式与修法） |
-| `donate-qr.png` | 收款码（微信/支付宝/QQ钱包），v8.6 内置「捐赠」弹窗也用这张（**完全自愿**，不参与任何功能） |
 | `preview.png` / `preview-skills.png` | 本文顶部的界面预览图（主界面 / Skill 页） |
 | `icon.ico` | 窗口与 exe 图标源文件 |
 | `LICENSE` | MIT 许可证 |
@@ -721,12 +722,6 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 - **Telegram 交流群：[t.me/pojia666](https://t.me/pojia666)** —— 墙外 / 海外的朋友走这边
 - 有 bug 或想法，也可以在本仓库提 [Issue](https://github.com/z91772524-ai/pojia-next/issues)
 
-如果这个脚本帮到了你，可以请我喝杯奶茶 —— **不打赏是本分，打赏是对我的认可**：
-
-![赞赏码](donate-qr.png)
-
-<sub>微信 / 支付宝 / QQ钱包 都能扫。完全自愿，不打赏也照样用。</sub>
-
 ---
 
 ## 许可证
@@ -735,5 +730,4 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 
 ---
 
-*仅供本地自用与学习研究。把 exe 直接发给朋友就能用 —— 对方什么都不用装。激活码 5 元，别花钱买。*
 

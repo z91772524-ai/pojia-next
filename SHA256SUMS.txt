@@ -1,5 +1,5 @@
-# 破甲一键通 v8.44 发行包校验
-# 更新于 2026-11-19
+# 破甲一键通 v8.45 发行包校验
+# 更新于 2026-11-20
 
-5b2bef7bac76ea4208ca1abac9954f4510e7fa11981e231b5f744cc9c67d1af5  pojia-next-v8.44-exe.zip
-72df4b52bf4f401040b27bcce4574022ea7ea2b70ee9c9db5eda4c198f1c5399  破甲一键通GUI-8.44.exe
+efeac17d538c145c72ef067c280b54e9728d5e3c5fe08bb48229e6375f1d465c  pojia-next-v8.45-exe.zip
+2e207a67f618491fe0dcf5fbea662d6df10f9026caac572080fffc304fffbcb0  破甲一键通GUI-8.45.exe

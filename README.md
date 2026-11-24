@@ -52,7 +52,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-0078d4)](https://www.microsoft.com/windows)
 [![Portable](https://img.shields.io/badge/免安装-单文件%20exe-2ea043)](#-三步就能用)
-[![Dependencies](https://img.shields.io/badge/三方依赖-0%20个-brightgreen)](#-安全审计与安全设计)
+[![Dependencies](https://img.shields.io/badge/核心依赖-0%20个-brightgreen)](#-安全审计与安全设计)
 [![Online](https://img.shields.io/badge/启动时-联网校验激活码-blue)](#-三步就能用)
 [![security](https://github.com/z91772524-ai/pojia-next/actions/workflows/security.yml/badge.svg)](https://github.com/z91772524-ai/pojia-next/actions/workflows/security.yml)
 
@@ -611,23 +611,49 @@ Python 运行时和脚本一起打包成**一个 exe**，双击就跑。exe 放�
 
 ### 二、用到的开源组件
 
-以上是「思路来源」；以下是「代码里真的在用的东西」—— 全部经 `pip` 安装或系统自带，仓库里没有一个字节的第三方源码，可以逐条对照构建脚本核验。
+以上是「思路来源」；以下是「代码里**真的在跑**的东西」—— 全部经 `pip` 安装或系统自带，
+仓库里没有一个字节的第三方源码，每条都附 `文件:行号` 可核位置，能逐条对照核验。
 
-上面那张表是「思路来源」；下面这张是「代码里真的在用的东西」——全部经 `pip` 安装或系统自带，仓库里没有一个字节的第三方源码，可以逐条对照构建脚本核验。
+#### 2.1 运行时（随 exe 打包，或系统自带）
 
 | 组件 | 许可证 | 在本项目里承担什么 | 可核位置 |
 |---|---|---|---|
-| [Cython](https://github.com/cython/cython) | Apache-2.0 | 把 `pojia_gui.py` 编译成 C++ → `pyd`，`--no-docstrings` 去掉注释与文档串，成品 exe 里没有可直接反编译的 GUI pyc | `pj-838/_build_841.py:33` |
-| [PyInstaller](https://github.com/pyinstaller/pyinstaller) | GPL-2.0 + 启动器例外 | 把 `launcher.py` + `pojia_gui.pyd` + 图标/证书/收款码打成单文件 exe，用户免装 Python | `pj-838/_build_841.py:50`、`pj-838/ui-test-836.spec` |
-| [pywebview](https://github.com/r0x0r/pywebview) | BSD-3-Clause | 原生窗口壳 + WebView2 绑定，界面是本地 HTML 而不是浏览器标签页 | spec `hiddenimports`（`webview`、`webview.platforms.edgechromium`） |
-| [pythonnet](https://github.com/pythonnet/pythonnet) / [clr_loader](https://github.com/pythonnet/clr-loader) | MIT | pywebview 在 Windows 上的 WinForms 后端，负责把 .NET 窗口挂到 Python | spec `hiddenimports`（`pythonnet`、`clr_loader`） |
-| [MinGW-w64](https://www.mingw-w64.org/)（gcc） | GPL + 运行时例外 | `pyd` 的 C/C++ 编译器，`--compiler=mingw32` 编扩展，构建机不用装整套 MSVC | `pj-838/_build_841.py:38` |
+| [pywebview](https://github.com/r0x0r/pywebview) | BSD-3-Clause | 原生窗口壳 + WebView2 绑定，界面是本地 HTML 而不是浏览器标签页 | `ui-test-836.spec:12`、`pojia_gui.py:5769` |
+| [pythonnet](https://github.com/pythonnet/pythonnet) | MIT | pywebview 在 Windows 上的 WinForms 后端，把 .NET 窗口挂到 Python | `ui-test-836.spec:13` |
+| [clr_loader](https://github.com/pythonnet/clr-loader) | MIT | pythonnet 的 .NET 运行时加载器（含 `clr_loader.ffi`） | `ui-test-836.spec:13` |
+| [comtypes](https://github.com/enthought/comtypes) | MIT | Win32 COM 桥接，读 Windows 音频端点状态（静音切换前的状态比对） | `pojia_gui.py:7236` |
+| [PyObjC / AppKit](https://github.com/ronaldoussoren/pyobjc) | MIT | **仅 macOS**：`NSWindow.miniaturize_` 实现窗口最小化（Windows 走 `ShowWindowAsync`） | `pojia_gui.py:11772` |
 | [Microsoft Edge WebView2](https://learn.microsoft.com/microsoft-edge/webview2/) | 微软运行时（随 Win10/11 分发） | 真正的渲染内核，Win10/11 自带；缺失时「环境」页负责检测并引导安装 | `pojia_gui.py` 环境检测项 |
-| Python 标准库 [`http.server`](https://docs.python.org/3/library/http.server.html) | PSF | 只监听 `127.0.0.1` 的本地渲染服务，前端与 Python 侧通过它通信，不出本机 | `pj-838/pojia_gui.py:72` |
+| Python 标准库 [`http.server`](https://docs.python.org/3/library/http.server.html) | PSF | 只监听 `127.0.0.1` 的本地渲染服务，前端与 Python 侧通过它通信，不出本机 | `pojia_gui.py` `_pick_port` |
+
+> **核心本体零第三方依赖**：`破甲一键通.py`（补丁引擎）只 import 标准库，`pip list` 空着也能跑。
+> 上表所有三方包都属于 **GUI 外壳**这一层 —— 去掉 GUI 走 `--cli` 模式，功能一样不少。
+
+#### 2.2 构建链（只在构建机跑，不进发行版）
+
+| 组件 | 许可证 | 在本项目里承担什么 | 可核位置 |
+|---|---|---|---|
+| [Cython](https://github.com/cython/cython) | Apache-2.0 | 把 `pojia_gui.py` 编译成 C++ → `pyd`；`--no-docstrings` 去掉注释与文档串，成品里没有可直接反编译的 GUI pyc | `_build_846.py:33` |
+| [setuptools](https://github.com/pypa/setuptools) | MIT | 驱动 `build_ext`，把 Cython 产出的 `.cpp` 编成 `.pyd` 扩展模块 | `setup_pyd.py:5`、`setup_pyd.py:21` |
+| [MinGW-w64](https://www.mingw-w64.org/)（gcc/g++） | GPL + 运行时例外 | `pyd` 的 C/C++ 编译器，`--compiler=mingw32` 编扩展，构建机不用装整套 MSVC | `setup_pyd.py:21` |
+| [PyInstaller](https://github.com/pyinstaller/pyinstaller) | GPL-2.0 + 启动器例外 | 把 `launcher.py` + `pojia_gui.pyd` + 图标/证书/收款码打成单文件 exe，用户免装 Python | `ui-test-836.spec`、`_build_846.py:50` |
+
+#### 2.3 CI 与文档工具（不进发行版）
+
+| 组件 | 许可证 | 在本项目里承担什么 | 可核位置 |
+|---|---|---|---|
+| [bandit](https://github.com/PyCQA/bandit) | Apache-2.0 | 每次提交跑 Python 安全静态扫描，**HIGH / MEDIUM 必须为 0** 否则 CI 失败 | `.github/workflows/security.yml:57` |
+| [Semgrep](https://github.com/semgrep/semgrep) | LGPL-2.1 | 通用安全规则集（`p/python` + `p/security-audit`），ERROR / WARNING 为 0 才放行 | `.github/workflows/security.yml:75` |
+| [actions/checkout](https://github.com/actions/checkout) | MIT | CI 拉代码 | `.github/workflows/security.yml:33` |
+| [actions/setup-python](https://github.com/actions/setup-python) | MIT | CI 装指定版本 Python | `.github/workflows/security.yml:54` |
+| [Shields.io](https://shields.io/) | CC0-1.0 | README 顶部的 star / release / 许可证徽章 | `README.md` 徽章区 |
+| [star-history.com](https://star-history.com/) | MIT | README 里的 star 增长曲线（`api.star-history.com/svg`） | `README.md` 曲线区 |
+
+---
 
 > 依赖替换说明：本项目**没有**用 Electron / Tauri / Qt 做界面。选 pywebview + WebView2 的原因是包体小（免打包 Chromium）、Win10/11 自带内核、能直接调 Win32 API（单实例互斥、窗口置前、托盘）。这条技术选型的代价是**强依赖 WebView2 运行时**，所以安装文档把它列为第一项排查目标。
 >
-> 引入新依赖前请先跑 `python -m pip check`，并在 `pj-838/ui-test-836.spec` 的 `excludes` 里确认没有把重库（PIL/numpy/pandas 等）隐式拖进包 —— 历史上吃过一次 35 MB 白拖慢冷启动的亏。
+> 引入新依赖前请先跑 `python -m pip check`，并在 `ui-test-836.spec` 的 `excludes` 里确认没有把重库（PIL/numpy/pandas 等）隐式拖进包 —— 历史上吃过一次 35 MB 白拖慢冷启动的亏。
 
 ---
 

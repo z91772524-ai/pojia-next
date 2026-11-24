@@ -1,5 +1,7 @@
-﻿# 破甲一键通 v8.46 发行包校验
-# 更新于 2026-11-22
+# 破甲一键通 v8.48 发行包校验
+# 更新于 2026-11-24
+# 校验：sha256sum -c SHA256SUMS.txt
+# 或 Windows：Get-FileHash .\破甲一键通-8.48.exe -Algorithm SHA256
 
-5134a702a37050e65a245cb9b483b23dda1aaa4fb99424d2823a177159af73da  pojia-next-exe.zip
-698cf5910fce09d6262fbb89d729e270f85e894ade266c2104e462a45c566d6c  pojia sync-daemon.exe
+40166b5cac3a1e242575c3bdd4bdca22caca0c3a107e91d64af01277f1e00201  pojia-next-v8.48-exe.zip
+a1394a7b5a0983f75eb24dbb0535c6f8a5f593a23cd78b06f8f10991cfd84958  破甲一键通-8.48.exe

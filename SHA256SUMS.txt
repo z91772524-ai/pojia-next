@@ -1,8 +1,12 @@
 # 破甲一键通 v8.48 发行包校验
 # 更新于 2026-11-24
 # 校验：sha256sum -c SHA256SUMS.txt
-# 或 Windows：Get-FileHash .\pojia-next-8.48.exe -Algorithm SHA256
+# 或 Windows：Get-FileHash .\pojia-next.exe -Algorithm SHA256
 # 压缩包无解压密码
 
+# ── 推荐：固定文件名的稳定发行包（永久指向最新版，链接不会失效）──
+a1394a7b5a0983f75eb24dbb0535c6f8a5f593a23cd78b06f8f10991cfd84958  pojia-next.exe
+
+# ── 带版本号的发行包（与上面同一份文件）──
 a1394a7b5a0983f75eb24dbb0535c6f8a5f593a23cd78b06f8f10991cfd84958  pojia-next-8.48.exe
 9a2fef8b33dc95de8d3b554959258050fe16f47a1c9ff223e9384996f19a5c93  pojia-next-v8.48-exe.zip

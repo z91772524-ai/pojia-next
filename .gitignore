@@ -106,3 +106,6 @@ launcher.py
 preview.png
 preview-skills.png
 icon.ico
+
+# 内部设计上下文文档，不对外
+.impeccable.md
